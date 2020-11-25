@@ -13,14 +13,14 @@ class BasicOperationTest {
 
         connection.use { conn ->
             conn.prepareStatement("""
-                create table mytable(
+                create table mytable (
                     id text
                 )
             """.trimIndent()).use {
                 it.executeUpdate()
             }
 
-            conn.prepareStatement("""insert into mytable(id) values(?)""").use {
+            conn.prepareStatement("""insert into mytable ( id ) values ( ? )""").use {
                 it.setString(1,"secretkey")
                 it.executeUpdate()
             }

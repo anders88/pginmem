@@ -6,6 +6,8 @@ import java.util.logging.Logger
 import javax.sql.DataSource
 
 class PgInMemDatasource:DataSource {
+    private val dbStore:DbStore = DbStore()
+
     override fun getLogWriter(): PrintWriter {
         TODO("Not yet implemented")
     }
@@ -35,7 +37,7 @@ class PgInMemDatasource:DataSource {
     }
 
     override fun getConnection(): Connection {
-        TODO("Not yet implemented")
+        return DbConnection(dbStore)
     }
 
     override fun getConnection(username: String?, password: String?): Connection {
