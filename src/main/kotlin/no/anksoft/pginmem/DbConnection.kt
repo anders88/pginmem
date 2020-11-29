@@ -15,7 +15,7 @@ class DbConnection(private val dbStore: DbStore):Connection {
     }
 
     override fun close() {
-        TODO("Not yet implemented")
+
     }
 
     override fun createStatement(): Statement {

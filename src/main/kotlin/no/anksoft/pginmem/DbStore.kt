@@ -1,5 +1,7 @@
 package no.anksoft.pginmem
 
+
+
 class DbStore {
     private val tables:MutableMap<String,Table> = mutableMapOf()
 
@@ -8,6 +10,7 @@ class DbStore {
     }
 
     fun tableForUpdate(name:String):Table? = tables[name]
+    fun tableForRead(name:String):Table? = tables[name]
 
 
 }

@@ -13,5 +13,6 @@ class Table(val name:String,defColumns:List<Column>) {
         rows.add(row)
     }
 
+    fun rowsForReading():List<Row> = rows
 
 }

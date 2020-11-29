@@ -5,13 +5,12 @@ import java.sql.SQLException
 
 private class LinkedValue(var value:String?)
 
-class InsertIntoStatement(private val words: List<String>, private val dbStore: DbStore) : DbPreparedStatement() {
-    private val tableForUpdate:Table
+class InsertIntoStatement(words: List<String>, dbStore: DbStore) : DbPreparedStatement() {
+    private val tableForUpdate:Table = dbStore.tableForUpdate(words[2])?:throw SQLException("Unkown table ${words[2]}")
     private val columns:List<Column>
     private val linkedValues:List<LinkedValue>
 
     init {
-        tableForUpdate = dbStore.tableForUpdate(words[2])?:throw SQLException("Unkown table ${words[2]}")
         val cols:MutableList<Column> = mutableListOf()
         var ind = 4
         while (true) {
