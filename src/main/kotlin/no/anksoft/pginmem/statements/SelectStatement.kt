@@ -25,7 +25,7 @@ private fun analyseSelect(words: List<String>, dbStore: DbStore):Pair<List<Table
         }
         usedTables.add(dbStore.tableForRead(word)?:throw SQLException("Unknown table $word"))
     }
-    val whereClause:WhereClause = createWhereClause(words.subList(ind,words.size),usedTables)
+    val whereClause:WhereClause = if (ind < words.size) createWhereClause(words.subList(ind,words.size),usedTables) else MatchAllClause()
     return Pair(usedTables,whereClause)
 }
 

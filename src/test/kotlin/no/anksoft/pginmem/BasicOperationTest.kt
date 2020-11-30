@@ -13,14 +13,14 @@ class BasicOperationTest {
     fun createTableTestInsertReadTest() {
         connection.use { conn ->
             conn.prepareStatement("""
-                create table mytable (
+                create table mytable(
                     id text
                 )
             """.trimIndent()).use {
                 it.executeUpdate()
             }
 
-            conn.prepareStatement("""insert into mytable ( id ) values ( ? )""").use {
+            conn.prepareStatement("""insert into mytable(id) values (?)""").use {
                 it.setString(1,"secretkey")
                 it.executeUpdate()
             }
@@ -47,11 +47,11 @@ class BasicOperationTest {
                 it.executeUpdate()
             }
 
-            conn.prepareStatement("""insert into mytable ( id ) values ( ? )""").use {
+            conn.prepareStatement("""insert into mytable (id) values (?)""").use {
                 it.setString(1,"secretkey")
                 it.executeUpdate()
             }
-            conn.prepareStatement("""insert into mytable ( id ) values ( ? )""").use {
+            conn.prepareStatement("""insert into mytable (id) values (?)""").use {
                 it.setString(1,"anotherKey")
                 it.executeUpdate()
             }
@@ -74,14 +74,14 @@ class BasicOperationTest {
         connection.use { conn ->
             conn.prepareStatement("""
                 create table mytable (
-                    id text ,
+                    id text,
                     created timestamp
                 )
             """.trimIndent()).use {
                 it.executeUpdate()
             }
 
-            conn.prepareStatement("""insert into mytable ( id , created ) values ( ? , ? )""").use {
+            conn.prepareStatement("""insert into mytable (id,created) values (?,?)""").use {
                 it.setString(1,"secretkey")
                 it.setTimestamp(2, Timestamp.valueOf(aDate))
                 it.executeUpdate()

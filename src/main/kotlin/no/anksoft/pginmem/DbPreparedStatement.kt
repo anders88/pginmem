@@ -11,9 +11,42 @@ import java.sql.*
 import java.sql.Date
 import java.util.*
 
+private fun splitStringToWords(sql:String):List<String> {
+    val result:MutableList<String> = mutableListOf()
+    val trimmed = sql.toLowerCase().trim().replace("\n"," ")
+    var index = 0
+    var previndex = 0
+    while (index < trimmed.length) {
+        val charAtPos:Char = trimmed[index]
+
+        if ((charAtPos.isWhitespace())) {
+            if (index > previndex) {
+                result.add(trimmed.substring(previndex,index))
+            }
+            index++
+            previndex = index
+            continue
+        }
+        if ((charAtPos == '(') || (charAtPos == ')') || (charAtPos == ',')) {
+            if (index > previndex) {
+                result.add(trimmed.substring(previndex,index))
+            }
+            result.add(trimmed.substring(index,index+1))
+            index++
+            previndex=index
+            continue
+        }
+        index++
+    }
+    if (index > previndex) {
+        result.add(trimmed.substring(previndex,index))
+    }
+    return result
+}
+
 fun createPreparedStatement(sql:String,dbStore: DbStore):DbPreparedStatement {
 
-    val words:List<String> = sql.split("\\s+".toRegex())
+    val words:List<String> = splitStringToWords(sql)
     when {
         words.size >= 2 && words[0] == "create" && words[1] == "table" -> return CreateTableStatement(words,dbStore)
         words.size >= 2 && words[0] == "insert" && words[1] == "into" -> return InsertIntoStatement(words,dbStore)
