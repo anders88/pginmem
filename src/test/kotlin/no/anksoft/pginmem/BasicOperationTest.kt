@@ -2,7 +2,8 @@ package no.anksoft.pginmem
 
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
-import javax.sql.DataSource
+import java.sql.Timestamp
+import java.time.LocalDateTime
 
 class BasicOperationTest {
     private val datasource = PgInMemDatasource()
@@ -65,7 +66,39 @@ class BasicOperationTest {
                 }
             }
         }
+    }
 
+    @Test
+    fun multipleDifferentColumns() {
+        val aDate:LocalDateTime = LocalDateTime.now()
+        connection.use { conn ->
+            conn.prepareStatement("""
+                create table mytable (
+                    id text ,
+                    created timestamp
+                )
+            """.trimIndent()).use {
+                it.executeUpdate()
+            }
+
+            conn.prepareStatement("""insert into mytable ( id , created ) values ( ? , ? )""").use {
+                it.setString(1,"secretkey")
+                it.setTimestamp(2, Timestamp.valueOf(aDate))
+                it.executeUpdate()
+            }
+
+            conn.prepareStatement("select * from mytable where id = ?").use { statement ->
+                statement.setString(1,"secretkey")
+                statement.executeQuery().use {
+                    Assertions.assertThat(it.next()).isTrue()
+                    val res = it.getString("id")
+                    val readDate:LocalDateTime = it.getTimestamp("created").toLocalDateTime()
+                    Assertions.assertThat(res).isEqualTo("secretkey")
+                    Assertions.assertThat(readDate).isEqualTo(aDate)
+                    Assertions.assertThat(it.next()).isFalse()
+                }
+            }
+        }
     }
 
 }

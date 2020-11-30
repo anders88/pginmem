@@ -12,9 +12,8 @@ class CreateTableStatement(val words:List<String>,val dbStore: DbStore):DbPrepar
         var ind = 4
         val columns:MutableList<Column> = mutableListOf()
         while (true) {
-            val colname = words[ind]
+            columns.add(Column(words[ind],words[ind+1]))
             ind+=2
-            columns.add(Column(colname))
             if (words[ind] == ")") {
                 break
             }

@@ -32,12 +32,27 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
     }
 
     override fun getString(columnLabel: String?): String? {
+        val cell = readCell(columnLabel)
+        return cell.value?.toString()
+    }
+
+    private fun readCell(columnLabel: String?): Cell {
         val ind = colums.indexOfFirst { it.name == columnLabel }
         if (ind == -1) {
             throw SQLException("Unknown column $columnLabel")
         }
-        return rows[rowindex][ind].value?.toString()
+        val cell = rows[rowindex][ind]
+        return cell
     }
+
+    override fun getTimestamp(columnLabel: String?): Timestamp? {
+        val cell = readCell(columnLabel)
+        if (cell.value == null) return null
+        if (cell.value !is Timestamp) throw SQLException("Column $columnLabel is not timestamp")
+        return cell.value
+    }
+
+
 
 
     override fun wasNull(): Boolean {
@@ -165,9 +180,6 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
         TODO("Not yet implemented")
     }
 
-    override fun getTimestamp(columnLabel: String?): Timestamp {
-        TODO("Not yet implemented")
-    }
 
     override fun getTimestamp(columnIndex: Int, cal: Calendar?): Timestamp {
         TODO("Not yet implemented")
