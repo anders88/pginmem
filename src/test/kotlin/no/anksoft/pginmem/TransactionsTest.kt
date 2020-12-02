@@ -32,4 +32,33 @@ class TransactionsTest {
             }
         }
     }
+
+    @Test
+    fun sequentialTransactions() {
+        datasource.connection.use { conn ->
+            conn.autoCommit = false
+            conn.prepareStatement(
+                """
+                create table mytable(
+                    id text
+                )
+            """.trimIndent()
+            ).use {
+                it.executeUpdate()
+            }
+
+            conn.prepareStatement("""insert into mytable(id) values (?)""").use {
+                it.setString(1, "secretkey")
+                it.executeUpdate()
+            }
+            conn.commit()
+        }
+        datasource.connection.use { conn ->
+            conn.prepareStatement("select * from mytable").use { statement ->
+                statement.executeQuery().use {
+                    Assertions.assertThat(it.next()).isTrue()
+                }
+            }
+        }
+    }
 }

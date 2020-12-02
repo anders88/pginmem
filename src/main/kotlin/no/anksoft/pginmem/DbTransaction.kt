@@ -37,4 +37,13 @@ class DbTransaction(private val dbStore: DbStore) {
         updatingTables.forEach { dbStore.releaseLock(it.key)}
         updatingTables.clear()
     }
+
+    fun commit() {
+        updatingTables.forEach { dbStore.updateTableContent(it.value)}
+        updatingTables.clear()
+    }
+
+    fun close() {
+        rollback()
+    }
 }

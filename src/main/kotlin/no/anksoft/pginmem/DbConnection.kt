@@ -15,7 +15,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun close() {
-
+        transaction.close()
     }
 
     override fun createStatement(): Statement {
@@ -89,7 +89,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun commit() {
-        TODO("Not yet implemented")
+        transaction.commit()
     }
 
     override fun rollback() {
