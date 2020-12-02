@@ -3,6 +3,7 @@ package no.anksoft.pginmem
 import no.anksoft.pginmem.statements.CreateTableStatement
 import no.anksoft.pginmem.statements.InsertIntoStatement
 import no.anksoft.pginmem.statements.SelectStatement
+import no.anksoft.pginmem.statements.UpdateStatement
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -50,7 +51,8 @@ fun createPreparedStatement(sql:String,dbStore: DbStore):DbPreparedStatement {
     when {
         words.size >= 2 && words[0] == "create" && words[1] == "table" -> return CreateTableStatement(words,dbStore)
         words.size >= 2 && words[0] == "insert" && words[1] == "into" -> return InsertIntoStatement(words,dbStore)
-        words.size >= 1 && words[0] == "select" -> return SelectStatement(words,dbStore)
+        words.isNotEmpty() && words[0] == "select" -> return SelectStatement(words,dbStore)
+        words.isNotEmpty() && words[0] == "update" -> return UpdateStatement(words,dbStore)
         else -> throw SQLException("Unknown statement $sql")
     }
 }

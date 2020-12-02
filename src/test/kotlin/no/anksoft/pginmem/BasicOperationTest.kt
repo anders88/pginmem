@@ -69,21 +69,23 @@ class BasicOperationTest {
     }
 
     @Test
-    fun multipleDifferentColumns() {
+    fun multipleDifferentColumnsWithUpdate() {
         val aDate:LocalDateTime = LocalDateTime.now()
         connection.use { conn ->
             conn.prepareStatement("""
                 create table mytable (
                     id text,
+                    name text,
                     created timestamp
                 )
             """.trimIndent()).use {
                 it.executeUpdate()
             }
 
-            conn.prepareStatement("""insert into mytable (id,created) values (?,?)""").use {
+            conn.prepareStatement("""insert into mytable (id,name,created) values (?,?,?)""").use {
                 it.setString(1,"secretkey")
-                it.setTimestamp(2, Timestamp.valueOf(aDate))
+                it.setString(2,"Darth Vader")
+                it.setTimestamp(3, Timestamp.valueOf(aDate))
                 it.executeUpdate()
             }
 
@@ -95,10 +97,31 @@ class BasicOperationTest {
                     val readDate:LocalDateTime = it.getTimestamp("created").toLocalDateTime()
                     Assertions.assertThat(res).isEqualTo("secretkey")
                     Assertions.assertThat(readDate).isEqualTo(aDate)
+                    Assertions.assertThat(it.getString("name")).isEqualTo("Darth Vader")
+                    Assertions.assertThat(it.next()).isFalse()
+                }
+            }
+
+            conn.prepareStatement("""update mytable set name = ? where id = ?""").use {
+                it.setString(1,"Anakin Skywalker")
+                it.setString(2,"secretkey")
+                it.executeUpdate()
+            }
+
+            conn.prepareStatement("select * from mytable where id = ?").use { statement ->
+                statement.setString(1,"secretkey")
+                statement.executeQuery().use {
+                    Assertions.assertThat(it.next()).isTrue()
+                    val res = it.getString("id")
+                    val readDate:LocalDateTime = it.getTimestamp("created").toLocalDateTime()
+                    Assertions.assertThat(res).isEqualTo("secretkey")
+                    Assertions.assertThat(readDate).isEqualTo(aDate)
+                    Assertions.assertThat(it.getString("name")).isEqualTo("Anakin Skywalker")
                     Assertions.assertThat(it.next()).isFalse()
                 }
             }
         }
     }
+
 
 }

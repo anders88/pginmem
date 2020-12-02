@@ -5,12 +5,12 @@ import no.anksoft.pginmem.Column
 import no.anksoft.pginmem.Table
 import java.sql.SQLException
 
-fun createWhereClause(words:List<String>,tables:List<Table>):WhereClause {
+fun createWhereClause(words:List<String>,tables:List<Table>,nextIndexToUse:Int):WhereClause {
     val columns:List<Column> = tables.map { it.colums }.flatten()
     if (getFromWords(words,1) == "=") {
         val columnName = getFromWords(words,0)
         val column:Column = columns.firstOrNull { it.name == columnName}?:throw SQLException("Unknown column $columnName")
-        return EqualCase(column,1)
+        return EqualCase(column,nextIndexToUse)
     }
     throw SQLException("Syntax error in where clause")
 }
