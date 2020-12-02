@@ -7,7 +7,7 @@ import no.anksoft.pginmem.clauses.createWhereClause
 import java.sql.ResultSet
 import java.sql.SQLException
 
-private fun analyseSelect(words: List<String>, dbStore: DbStore):Pair<List<Table>,WhereClause> {
+private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction):Pair<List<Table>,WhereClause> {
     val usedTables = mutableListOf<Table>()
     var picking = false
     var ind = 0;
@@ -23,14 +23,14 @@ private fun analyseSelect(words: List<String>, dbStore: DbStore):Pair<List<Table
         if (word == "where") {
             break
         }
-        usedTables.add(dbStore.tableForRead(word)?:throw SQLException("Unknown table $word"))
+        usedTables.add(dbTransaction.tableForRead(word)?:throw SQLException("Unknown table $word"))
     }
     val whereClause:WhereClause = if (ind < words.size) createWhereClause(words.subList(ind,words.size),usedTables,1) else MatchAllClause()
     return Pair(usedTables,whereClause)
 }
 
-class SelectStatement(words: List<String>, dbStore: DbStore):DbPreparedStatement() {
-    private val pair = analyseSelect(words,dbStore)
+class SelectStatement(words: List<String>, dbTransaction: DbTransaction):DbPreparedStatement() {
+    private val pair = analyseSelect(words,dbTransaction)
 
     private val tables:List<Table> = pair.first
     private val whereClause:WhereClause = pair.second

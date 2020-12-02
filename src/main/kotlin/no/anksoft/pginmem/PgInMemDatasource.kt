@@ -37,7 +37,7 @@ class PgInMemDatasource:DataSource {
     }
 
     override fun getConnection(): Connection {
-        return DbConnection(dbStore)
+        return dbStore.createConnection()
     }
 
     override fun getConnection(username: String?, password: String?): Connection {

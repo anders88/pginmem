@@ -45,14 +45,14 @@ private fun splitStringToWords(sql:String):List<String> {
     return result
 }
 
-fun createPreparedStatement(sql:String,dbStore: DbStore):DbPreparedStatement {
+fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedStatement {
 
     val words:List<String> = splitStringToWords(sql)
     when {
-        words.size >= 2 && words[0] == "create" && words[1] == "table" -> return CreateTableStatement(words,dbStore)
-        words.size >= 2 && words[0] == "insert" && words[1] == "into" -> return InsertIntoStatement(words,dbStore)
-        words.isNotEmpty() && words[0] == "select" -> return SelectStatement(words,dbStore)
-        words.isNotEmpty() && words[0] == "update" -> return UpdateStatement(words,dbStore)
+        words.size >= 2 && words[0] == "create" && words[1] == "table" -> return CreateTableStatement(words,dbTransaction)
+        words.size >= 2 && words[0] == "insert" && words[1] == "into" -> return InsertIntoStatement(words,dbTransaction)
+        words.isNotEmpty() && words[0] == "select" -> return SelectStatement(words,dbTransaction)
+        words.isNotEmpty() && words[0] == "update" -> return UpdateStatement(words,dbTransaction)
         else -> throw SQLException("Unknown statement $sql")
     }
 }

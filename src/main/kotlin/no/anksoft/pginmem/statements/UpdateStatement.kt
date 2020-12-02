@@ -15,13 +15,13 @@ private class CellToUpdate(val column:Column) {
 
 
 
-class UpdateStatement(words: List<String>, private val dbStore: DbStore) : DbPreparedStatement() {
+class UpdateStatement(words: List<String>, private val dbTransaction: DbTransaction) : DbPreparedStatement() {
     private val table:Table
     private val whereClause: WhereClause
     private val toUpdate:List<CellToUpdate>
 
     init {
-        table = dbStore.tableForUpdate(wordvalue(words,1))?:throw SQLException("Unknown table ${wordvalue(words,1)}")
+        table = dbTransaction.tableForUpdate(wordvalue(words,1))
         var ind = 3
         val updates:MutableList<CellToUpdate> = mutableListOf()
         while (true) {
@@ -67,7 +67,7 @@ class UpdateStatement(words: List<String>, private val dbStore: DbStore) : DbPre
             }
             newTable.addRow(Row(newCells))
         }
-        dbStore.addTable(newTable)
+        dbTransaction.registerTableUpdate(newTable)
         return hits
     }
 }

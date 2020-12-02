@@ -4,7 +4,7 @@ import java.sql.*
 import java.util.*
 import java.util.concurrent.Executor
 
-class DbConnection(private val dbStore: DbStore):Connection {
+class DbConnection(private val transaction: DbTransaction):Connection {
 
     override fun <T : Any?> unwrap(iface: Class<T>?): T {
         TODO("Not yet implemented")
@@ -31,7 +31,7 @@ class DbConnection(private val dbStore: DbStore):Connection {
     }
 
     override fun prepareStatement(sql: String?): PreparedStatement {
-        return createPreparedStatement(sql!!.toLowerCase(),dbStore)
+        return createPreparedStatement(sql!!.toLowerCase(),transaction)
     }
 
     override fun prepareStatement(sql: String?, resultSetType: Int, resultSetConcurrency: Int): PreparedStatement {
@@ -81,7 +81,7 @@ class DbConnection(private val dbStore: DbStore):Connection {
     }
 
     override fun setAutoCommit(autoCommit: Boolean) {
-        TODO("Not yet implemented")
+        transaction.setAutoCommit(autoCommit)
     }
 
     override fun getAutoCommit(): Boolean {
@@ -93,7 +93,7 @@ class DbConnection(private val dbStore: DbStore):Connection {
     }
 
     override fun rollback() {
-        TODO("Not yet implemented")
+        transaction.rollback()
     }
 
     override fun rollback(savepoint: Savepoint?) {

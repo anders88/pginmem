@@ -6,8 +6,8 @@ import java.sql.Timestamp
 
 private class LinkedValue(var value:Any?)
 
-class InsertIntoStatement(words: List<String>, dbStore: DbStore) : DbPreparedStatement() {
-    private val tableForUpdate:Table = dbStore.tableForUpdate(words[2])?:throw SQLException("Unkown table ${words[2]}")
+class InsertIntoStatement(words: List<String>, dbTransaction: DbTransaction) : DbPreparedStatement() {
+    private val tableForUpdate:Table = dbTransaction.tableForUpdate(words[2])?:throw SQLException("Unkown table ${words[2]}")
     private val columns:List<Column>
     private val linkedValues:List<LinkedValue>
 

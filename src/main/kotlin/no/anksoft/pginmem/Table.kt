@@ -15,4 +15,10 @@ class Table(val name:String,defColumns:List<Column>) {
 
     fun rowsForReading():List<Row> = rows
 
+    fun clone():Table {
+        val cloned = Table(name,colums)
+        rows.forEach { cloned.addRow(it) }
+        return cloned
+    }
+
 }
