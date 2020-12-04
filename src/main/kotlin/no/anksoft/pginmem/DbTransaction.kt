@@ -3,6 +3,7 @@ package no.anksoft.pginmem
 class DbTransaction(private val dbStore: DbStore) {
     private var autoCommit:Boolean = true
 
+
     fun createAlterTableSetup(table: Table) {
         dbStore.createAlterTableSetup(table)
     }
@@ -32,6 +33,8 @@ class DbTransaction(private val dbStore: DbStore) {
     fun setAutoCommit(value: Boolean) {
         this.autoCommit = value
     }
+
+    fun isAutoCommit():Boolean = autoCommit
 
     fun rollback() {
         updatingTables.forEach { dbStore.releaseLock(it.key)}

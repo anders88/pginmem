@@ -17,7 +17,6 @@ class PgInMemDatasource:DataSource {
     }
 
     override fun setLoginTimeout(seconds: Int) {
-        TODO("Not yet implemented")
     }
 
     override fun getLoginTimeout(): Int {

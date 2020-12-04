@@ -1,9 +1,6 @@
 package no.anksoft.pginmem
 
-import no.anksoft.pginmem.statements.CreateTableStatement
-import no.anksoft.pginmem.statements.InsertIntoStatement
-import no.anksoft.pginmem.statements.SelectStatement
-import no.anksoft.pginmem.statements.UpdateStatement
+import no.anksoft.pginmem.statements.*
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -49,6 +46,13 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
 
     val words:List<String> = splitStringToWords(sql)
     when {
+        sql.toLowerCase().startsWith("select count(*) from pg_namespace") -> return MockCountStatement(1)
+        sql.toLowerCase().startsWith("select set_config") -> return NoopStatement()
+        sql.toLowerCase().startsWith("set role") -> return NoopStatement()
+        sql.toLowerCase() == "select current_schema" -> return SelectOneValueStatement("public")
+        sql.toLowerCase() == "select current_user" -> return SelectOneValueStatement("user")
+        sql.toLowerCase() == "select version()" -> return SelectOneValueStatement("PostgreSQL 10.6 Pginmemver")
+        sql.toLowerCase() == "show search_path" -> return SelectOneValueStatement("\"\$user\", public")
         words.size >= 2 && words[0] == "create" && words[1] == "table" -> return CreateTableStatement(words,dbTransaction)
         words.size >= 2 && words[0] == "insert" && words[1] == "into" -> return InsertIntoStatement(words,dbTransaction)
         words.isNotEmpty() && words[0] == "select" -> return SelectStatement(words,dbTransaction)

@@ -85,7 +85,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun getAutoCommit(): Boolean {
-        TODO("Not yet implemented")
+        return transaction.isAutoCommit()
     }
 
     override fun commit() {
@@ -105,15 +105,15 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun getMetaData(): DatabaseMetaData {
-        TODO("Not yet implemented")
+        return DbDatabaseMetadata()
     }
 
     override fun setReadOnly(readOnly: Boolean) {
-        TODO("Not yet implemented")
+
     }
 
     override fun isReadOnly(): Boolean {
-        TODO("Not yet implemented")
+        return false
     }
 
     override fun setCatalog(catalog: String?) {
@@ -121,7 +121,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun getCatalog(): String {
-        TODO("Not yet implemented")
+        return "public"
     }
 
     override fun setTransactionIsolation(level: Int) {
@@ -129,7 +129,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun getTransactionIsolation(): Int {
-        TODO("Not yet implemented")
+        return Connection.TRANSACTION_READ_UNCOMMITTED
     }
 
     override fun getWarnings(): SQLWarning {
@@ -185,7 +185,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun isValid(timeout: Int): Boolean {
-        TODO("Not yet implemented")
+        return true
     }
 
     override fun setClientInfo(name: String?, value: String?) {
@@ -225,10 +225,10 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun setNetworkTimeout(executor: Executor?, milliseconds: Int) {
-        TODO("Not yet implemented")
+
     }
 
     override fun getNetworkTimeout(): Int {
-        TODO("Not yet implemented")
+        return 0
     }
 }

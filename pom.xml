@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>no.anksoft</groupId>
     <artifactId>pginmem</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.1-SNAPSHOT</version>
     <name>pginmem</name>
     <description>pginmem</description>
     <properties>
