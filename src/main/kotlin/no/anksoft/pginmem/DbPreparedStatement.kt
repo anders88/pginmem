@@ -1,6 +1,7 @@
 package no.anksoft.pginmem
 
 import no.anksoft.pginmem.statements.*
+import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -42,11 +43,113 @@ private fun splitStringToWords(sql:String):List<String> {
     return result
 }
 
-fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedStatement {
+private val logger = LoggerFactory.getLogger(DbPreparedStatement::class.java)
 
+/*
+private val x =
+bool,B
+bytea,U
+char,S
+name,S
+int8,N
+int2,N
+int2vector,A
+int4,N
+regproc,N
+text,S
+oid,N
+tid,U
+xid,U
+cid,U
+oidvector,A
+json,U
+xml,U
+pg_node_tree,S
+pg_ndistinct,S
+pg_dependencies,S
+pg_ddl_command,P
+smgr,U
+point,G
+lseg,G
+path,G
+box,G
+polygon,G
+line,G
+float4,N
+float8,N
+abstime,D
+reltime,T
+tinterval,T
+unknown,X
+circle,G
+money,N
+macaddr,U
+inet,I
+cidr,I
+macaddr8,U
+aclitem,U
+bpchar,S
+varchar,S
+date,D
+time,D
+timestamp,D
+timestamptz,D
+interval,T
+timetz,D
+bit,V
+varbit,V
+numeric,N
+refcursor,U
+regprocedure,N
+regoper,N
+regoperator,N
+regclass,N
+regtype,N
+regrole,N
+regnamespace,N
+uuid,U
+pg_lsn,U
+tsvector,U
+gtsvector,U
+tsquery,U
+regconfig,N
+regdictionary,N
+jsonb,U
+txid_snapshot,U
+int4range,R
+numrange,R
+tsrange,R
+tstzrange,R
+daterange,R
+int8range,R
+record,P
+cstring,P
+any,P
+anyarray,P
+void,P
+trigger,P
+event_trigger,P
+language_handler,P
+internal,P
+opaque,P
+anyelement,P
+anynonarray,P
+anyenum,P
+fdw_handler,P
+index_am_handler,P
+tsm_handler,P
+anyrange,P
+*/
+
+fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedStatement {
+    logger.debug("Called $sql")
     val words:List<String> = splitStringToWords(sql)
     when {
-        sql.toLowerCase().startsWith("select count(*) from pg_namespace") -> return MockCountStatement(1)
+        sql.toLowerCase().startsWith("select t.table_name from information_schema.tables") -> return StatementToReturnFixed(emptyList())
+        sql.toLowerCase().startsWith("select relname from pg_catalog.pg_class") -> return StatementToReturnFixed(emptyList())
+        sql.toLowerCase().startsWith("select exists (") -> return StatementToReturnFixed(listOf(listOf(Pair("",false))))
+        //sql.toLowerCase().startsWith("select count(*) from pg_namespace") -> return MockCountStatement(1)
+        sql.toLowerCase().startsWith("select count(*) from pg_namespace") -> return StatementToReturnFixed(listOf(listOf(Pair("",1))))
         sql.toLowerCase().startsWith("select set_config") -> return NoopStatement()
         sql.toLowerCase().startsWith("set role") -> return NoopStatement()
         sql.toLowerCase() == "select current_schema" -> return SelectOneValueStatement("public")
@@ -61,7 +164,8 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
     }
 }
 
-open abstract class DbPreparedStatement:PreparedStatement {
+abstract class DbPreparedStatement:PreparedStatement {
+    private val logger = LoggerFactory.getLogger(this::class.java)
     override fun <T : Any?> unwrap(iface: Class<T>?): T {
         TODO("Not yet implemented")
     }
@@ -115,11 +219,11 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun setMaxRows(max: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setMaxRows $max")
     }
 
     override fun setEscapeProcessing(enable: Boolean) {
-        TODO("Not yet implemented")
+        logger.warn("Base setEscapeProcessing $enable")
     }
 
     override fun getQueryTimeout(): Int {
@@ -127,11 +231,12 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun setQueryTimeout(seconds: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setQueryTimeout $seconds")
+
     }
 
     override fun cancel() {
-        TODO("Not yet implemented")
+        logger.warn("Base cancel")
     }
 
     override fun getWarnings(): SQLWarning {
@@ -139,11 +244,11 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun clearWarnings() {
-        TODO("Not yet implemented")
+        logger.warn("Base clearWarnings")
     }
 
     override fun setCursorName(name: String?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setCursorName")
     }
 
     override fun execute(): Boolean {
@@ -183,7 +288,7 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun setFetchDirection(direction: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setFetchDirection $direction")
     }
 
     override fun getFetchDirection(): Int {
@@ -191,7 +296,7 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun setFetchSize(rows: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setFetchSize $rows")
     }
 
     override fun getFetchSize(): Int {
@@ -207,15 +312,16 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun addBatch() {
-        TODO("Not yet implemented")
+        logger.warn("Base addBatch")
+
     }
 
     override fun addBatch(sql: String?) {
-        TODO("Not yet implemented")
+        logger.warn("Base $sql")
     }
 
     override fun clearBatch() {
-        TODO("Not yet implemented")
+        logger.warn("Base clearBatch")
     }
 
     override fun executeBatch(): IntArray {
@@ -239,7 +345,7 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun setPoolable(poolable: Boolean) {
-        TODO("Not yet implemented")
+        logger.warn("Base setPoolable $poolable")
     }
 
     override fun isPoolable(): Boolean {
@@ -247,7 +353,7 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun closeOnCompletion() {
-        TODO("Not yet implemented")
+        logger.warn("Base closeOnCompletion")
     }
 
     override fun isCloseOnCompletion(): Boolean {
@@ -255,163 +361,163 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun setNull(parameterIndex: Int, sqlType: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setNull $parameterIndex $sqlType")
     }
 
     override fun setNull(parameterIndex: Int, sqlType: Int, typeName: String?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setNull")
     }
 
     override fun setBoolean(parameterIndex: Int, x: Boolean) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBoolean")
     }
 
     override fun setByte(parameterIndex: Int, x: Byte) {
-        TODO("Not yet implemented")
+        logger.warn("Base setByte")
     }
 
     override fun setShort(parameterIndex: Int, x: Short) {
-        TODO("Not yet implemented")
+        logger.warn("Base setShort")
     }
 
     override fun setInt(parameterIndex: Int, x: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setInt")
     }
 
     override fun setLong(parameterIndex: Int, x: Long) {
-        TODO("Not yet implemented")
+        logger.warn("Base setLong")
     }
 
     override fun setFloat(parameterIndex: Int, x: Float) {
-        TODO("Not yet implemented")
+        logger.warn("Base setFloat")
     }
 
     override fun setDouble(parameterIndex: Int, x: Double) {
-        TODO("Not yet implemented")
+        logger.warn("Base setDouble")
     }
 
     override fun setBigDecimal(parameterIndex: Int, x: BigDecimal?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBigDecimal")
     }
 
     override fun setString(parameterIndex: Int, x: String?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setString")
     }
 
     override fun setBytes(parameterIndex: Int, x: ByteArray?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBytes")
     }
 
     override fun setDate(parameterIndex: Int, x: Date?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setDate")
     }
 
     override fun setDate(parameterIndex: Int, x: Date?, cal: Calendar?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setDate")
     }
 
     override fun setTime(parameterIndex: Int, x: Time?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setTime")
     }
 
     override fun setTime(parameterIndex: Int, x: Time?, cal: Calendar?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setTime")
     }
 
     override fun setTimestamp(parameterIndex: Int, x: Timestamp?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setTimestamp")
     }
 
     override fun setTimestamp(parameterIndex: Int, x: Timestamp?, cal: Calendar?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setTimestamp")
     }
 
     override fun setAsciiStream(parameterIndex: Int, x: InputStream?, length: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setAsciiStream")
     }
 
     override fun setAsciiStream(parameterIndex: Int, x: InputStream?, length: Long) {
-        TODO("Not yet implemented")
+        logger.warn("Base setAsciiStream")
     }
 
     override fun setAsciiStream(parameterIndex: Int, x: InputStream?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setAsciiStream")
     }
 
     override fun setUnicodeStream(parameterIndex: Int, x: InputStream?, length: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setUnicodeStream")
     }
 
     override fun setBinaryStream(parameterIndex: Int, x: InputStream?, length: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBinaryStream")
     }
 
     override fun setBinaryStream(parameterIndex: Int, x: InputStream?, length: Long) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBinaryStream")
     }
 
     override fun setBinaryStream(parameterIndex: Int, x: InputStream?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBinaryStream")
     }
 
     override fun clearParameters() {
-        TODO("Not yet implemented")
+        logger.warn("Base clearParameters")
     }
 
     override fun setObject(parameterIndex: Int, x: Any?, targetSqlType: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setObject")
     }
 
     override fun setObject(parameterIndex: Int, x: Any?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setObject")
     }
 
     override fun setObject(parameterIndex: Int, x: Any?, targetSqlType: Int, scaleOrLength: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setObject")
     }
 
     override fun setCharacterStream(parameterIndex: Int, reader: Reader?, length: Int) {
-        TODO("Not yet implemented")
+        logger.warn("Base setCharacterStream")
     }
 
     override fun setCharacterStream(parameterIndex: Int, reader: Reader?, length: Long) {
-        TODO("Not yet implemented")
+        logger.warn("Base setCharacterStream")
     }
 
     override fun setCharacterStream(parameterIndex: Int, reader: Reader?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setCharacterStream")
     }
 
     override fun setRef(parameterIndex: Int, x: Ref?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setRef")
     }
 
     override fun setBlob(parameterIndex: Int, x: Blob?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBlob")
     }
 
     override fun setBlob(parameterIndex: Int, inputStream: InputStream?, length: Long) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBlob")
     }
 
     override fun setBlob(parameterIndex: Int, inputStream: InputStream?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setBlob")
     }
 
     override fun setClob(parameterIndex: Int, x: Clob?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setClob")
     }
 
     override fun setClob(parameterIndex: Int, reader: Reader?, length: Long) {
-        TODO("Not yet implemented")
+        logger.warn("Base setClob")
     }
 
     override fun setClob(parameterIndex: Int, reader: Reader?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setClob")
     }
 
     override fun setArray(parameterIndex: Int, x: java.sql.Array?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setArray")
     }
 
     override fun getMetaData(): ResultSetMetaData {
@@ -419,7 +525,7 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun setURL(parameterIndex: Int, x: URL?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setURL")
     }
 
     override fun getParameterMetaData(): ParameterMetaData {
@@ -427,35 +533,35 @@ open abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun setRowId(parameterIndex: Int, x: RowId?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setRowId")
     }
 
     override fun setNString(parameterIndex: Int, value: String?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setNString")
     }
 
     override fun setNCharacterStream(parameterIndex: Int, value: Reader?, length: Long) {
-        TODO("Not yet implemented")
+        logger.warn("Base setNCharacterStream")
     }
 
     override fun setNCharacterStream(parameterIndex: Int, value: Reader?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setNCharacterStream")
     }
 
     override fun setNClob(parameterIndex: Int, value: NClob?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setNClob")
     }
 
     override fun setNClob(parameterIndex: Int, reader: Reader?, length: Long) {
-        TODO("Not yet implemented")
+        logger.warn("Base setNClob")
     }
 
     override fun setNClob(parameterIndex: Int, reader: Reader?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setNClob")
     }
 
     override fun setSQLXML(parameterIndex: Int, xmlObject: SQLXML?) {
-        TODO("Not yet implemented")
+        logger.warn("Base setSQLXML")
     }
 
 
