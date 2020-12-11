@@ -1,5 +1,6 @@
 package no.anksoft.pginmem
 
+import no.anksoft.pginmem.statements.DbStatement
 import java.sql.*
 import java.util.*
 import java.util.concurrent.Executor
@@ -19,7 +20,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun createStatement(): Statement {
-        TODO("Not yet implemented")
+        return DbStatement(transaction)
     }
 
     override fun createStatement(resultSetType: Int, resultSetConcurrency: Int): Statement {

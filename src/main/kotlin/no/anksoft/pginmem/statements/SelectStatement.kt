@@ -7,7 +7,7 @@ import no.anksoft.pginmem.clauses.createWhereClause
 import java.sql.ResultSet
 import java.sql.SQLException
 
-private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction):Pair<List<Table>,WhereClause> {
+private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction,sql:String):Pair<List<Table>,WhereClause> {
     val usedTables = mutableListOf<Table>()
     var picking = false
     var ind = 0;
@@ -29,8 +29,8 @@ private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction):Pai
     return Pair(usedTables,whereClause)
 }
 
-class SelectStatement(words: List<String>, dbTransaction: DbTransaction):DbPreparedStatement() {
-    private val pair = analyseSelect(words,dbTransaction)
+class SelectStatement(words: List<String>, dbTransaction: DbTransaction,private val sqlOrig:String):DbPreparedStatement() {
+    private val pair = analyseSelect(words,dbTransaction,sqlOrig)
 
     private val tables:List<Table> = pair.first
     private val whereClause:WhereClause = pair.second

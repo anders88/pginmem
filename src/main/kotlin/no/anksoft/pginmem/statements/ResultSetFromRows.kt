@@ -9,7 +9,7 @@ import java.sql.Array
 import java.sql.Date
 import java.util.*
 
-class ResultSetFromRows(private val rows:List<List<Pair<String,Any?>>>):ResultSet {
+class ResultSetFromRows(private val rows:List<List<Pair<String,Any?>>>,private val sql:String):ResultSet {
     private var index:Int = -1
     override fun <T : Any?> unwrap(iface: Class<T>?): T {
         TODO("Not yet implemented")
@@ -36,8 +36,8 @@ class ResultSetFromRows(private val rows:List<List<Pair<String,Any?>>>):ResultSe
         return rows[index][columnIndex-1].second?.let { if (it is String) it else null }
     }
 
-    override fun getString(columnLabel: String?): String {
-        TODO("Not yet implemented")
+    override fun getString(columnLabel: String?): String? {
+        return rows[index].firstOrNull { it.first == columnLabel }?.second?.let { if (it is String) it else null }
     }
 
     override fun getBoolean(columnIndex: Int): Boolean {
