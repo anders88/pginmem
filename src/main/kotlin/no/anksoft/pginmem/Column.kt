@@ -4,7 +4,7 @@ import java.sql.SQLException
 import java.sql.Timestamp
 
 enum class ColumnType() {
-    TEXT, TIMESTAMP;
+    TEXT, TIMESTAMP,INTEGER,BOOLEAN;
 
     fun validateValue(value:Any?) {
         if (value == null) {
@@ -13,6 +13,8 @@ enum class ColumnType() {
         val ok:Boolean = when (this) {
             TEXT -> (value is String)
             TIMESTAMP -> (value is Timestamp)
+            INTEGER -> (value is Int)
+            BOOLEAN -> (value is Boolean)
         }
         if (!ok) {
             throw SQLException("Binding value not valid for $this")

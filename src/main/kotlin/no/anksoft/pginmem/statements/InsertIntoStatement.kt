@@ -38,6 +38,14 @@ class InsertIntoStatement(words: List<String>, dbTransaction: DbTransaction) : D
         bindValue(parameterIndex,x)
     }
 
+    override fun setInt(parameterIndex: Int, x: Int) {
+        bindValue(parameterIndex,x)
+    }
+
+    override fun setBoolean(parameterIndex: Int, x: Boolean) {
+        bindValue(parameterIndex,x)
+    }
+
     override fun setTimestamp(parameterIndex: Int, x: Timestamp?) {
         bindValue(parameterIndex,x)
     }

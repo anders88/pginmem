@@ -4,6 +4,18 @@ import java.sql.SQLException
 import java.util.concurrent.ConcurrentHashMap
 
 
+fun stripSeachName(searchName:String):String {
+    var actualName:String = searchName
+    actualName = actualName.indexOf(".").let { if (it == -1) actualName else actualName.substring(it+1) }
+    if (actualName.startsWith("\"")) {
+        actualName = actualName.substring(1)
+    }
+    if (actualName.endsWith("\"")) {
+        actualName = actualName.substring(0,actualName.length-1)
+    }
+    return actualName
+}
+
 class DbStore {
     private val tables:MutableMap<String,Table> = mutableMapOf()
 
@@ -13,15 +25,20 @@ class DbStore {
 
     private val lockedTables:ConcurrentHashMap<String,String> = ConcurrentHashMap()
 
+    private fun findTable(tablename:String):Table {
+        val table = tables[stripSeachName(tablename)]?:throw SQLException("Unknown table $tablename")
+        return table
+    }
+
     fun tableForUpdate(name:String):Table {
-        val table = tables[name]?:throw SQLException("Unknown table $name")
+        val table = findTable(name)
         if (lockedTables[table.name] != null) {
             throw NotImplementedError("Wait for lock not implemented")
         }
         lockedTables[table.name] = table.name
         return table.clone()
     }
-    fun tableForRead(name:String):Table = tables[name]?:throw SQLException("Unknown table $name")
+    fun tableForRead(name:String):Table = findTable(name)
 
     fun createConnection():DbConnection {
         return DbConnection(DbTransaction(this))

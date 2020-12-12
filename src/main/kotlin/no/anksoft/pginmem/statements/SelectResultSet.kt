@@ -52,6 +52,12 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
         return cell.value
     }
 
+    override fun getInt(columnLabel: String?): Int {
+        val cell = readCell(columnLabel)
+        if (cell.value == null) return 0
+        if (cell.value !is Int) throw SQLException("Column $columnLabel is not integer")
+        return cell.value
+    }
 
 
 
@@ -69,7 +75,10 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
     }
 
     override fun getBoolean(columnLabel: String?): Boolean {
-        TODO("Not yet implemented")
+        val cell = readCell(columnLabel)
+        if (cell.value == null) return false
+        if (cell.value !is Boolean) throw SQLException("Column $columnLabel is not integer")
+        return cell.value
     }
 
     override fun getByte(columnIndex: Int): Byte {
@@ -92,9 +101,6 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
         TODO("Not yet implemented")
     }
 
-    override fun getInt(columnLabel: String?): Int {
-        TODO("Not yet implemented")
-    }
 
     override fun getLong(columnIndex: Int): Long {
         TODO("Not yet implemented")
