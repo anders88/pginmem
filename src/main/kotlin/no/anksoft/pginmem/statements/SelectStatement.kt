@@ -35,7 +35,6 @@ class SelectStatement(words: List<String>, dbTransaction: DbTransaction,private 
     private val tables:List<Table> = pair.first
     private val whereClause:WhereClause = pair.second
 
-    private val colums = tables.map { it.colums }.flatten()
 
     private val rows:List<List<Cell>> by lazy {
         tables.map { it.rowsForReading() }.flatten().map { it.cells }.filter { whereClause.isMatch(it) }
@@ -47,6 +46,10 @@ class SelectStatement(words: List<String>, dbTransaction: DbTransaction,private 
     }
 
     override fun setString(parameterIndex: Int, x: String?) {
+        whereClause.registerBinding(parameterIndex,x)
+    }
+
+    override fun setInt(parameterIndex: Int, x: Int) {
         whereClause.registerBinding(parameterIndex,x)
     }
 
