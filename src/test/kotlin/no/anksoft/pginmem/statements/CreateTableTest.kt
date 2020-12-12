@@ -1,7 +1,6 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.PgInMemDatasource
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -21,11 +20,10 @@ class CreateTableTest {
                     description text)
                 """.trimIndent())
             }
-            conn.prepareStatement("""insert into "public"."mytable"("id","num","success",description) values (?,?,?,?)""").use {
+            conn.prepareStatement("""insert into "public"."mytable"("id","success","num") values (?,?,?)""").use {
                 it.setString(1,"myid")
-                it.setInt(2,42)
-                it.setBoolean(3,true)
-                it.setString(4,null)
+                it.setBoolean(2,true)
+                it.setInt(3,42)
                 it.executeUpdate()
             }
             connection.prepareStatement("select * from mytable").executeQuery().use { resultSet ->

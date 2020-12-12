@@ -6,7 +6,7 @@ import java.sql.Timestamp
 
 private class LinkedValue(var value:Any?)
 
-class InsertIntoStatement(words: List<String>, dbTransaction: DbTransaction) : DbPreparedStatement() {
+class InsertIntoStatement constructor(words: List<String>, dbTransaction: DbTransaction,private val sql:String) : DbPreparedStatement() {
     private val tableForUpdate:Table = dbTransaction.tableForUpdate(words[2])?:throw SQLException("Unkown table ${words[2]}")
     private val columns:List<Column>
     private val linkedValues:List<LinkedValue>
@@ -53,8 +53,10 @@ class InsertIntoStatement(words: List<String>, dbTransaction: DbTransaction) : D
 
 
     override fun executeUpdate(): Int {
-        val cells:List<Cell> = tableForUpdate.colums.mapIndexed{ index,col ->
-            Cell(col,linkedValues[index].value)
+        val cells:List<Cell> = tableForUpdate.colums.map{ col ->
+            val index = columns.indexOfFirst { it.name == col.name }
+            val value:Any? = if (index == -1) null else linkedValues[index].value
+            Cell(col,value)
         }
         tableForUpdate.addRow(Row(cells))
         return 1
