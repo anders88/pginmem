@@ -13,6 +13,7 @@ import java.util.*
 
 class SelectResultSet(private val colums:List<Column>,private val rows:List<List<Cell>>):ResultSet {
     private var rowindex = -1
+    private var lastWasNull:Boolean = false
 
     override fun <T : Any?> unwrap(iface: Class<T>?): T {
         TODO("Not yet implemented")
@@ -48,11 +49,14 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
             throw SQLException("Unknown column $columnLabel")
         }
         val cell = rows[rowindex][ind]
+        lastWasNull = (cell.value == null)
         return cell
     }
 
     private fun readCell(columnIndex: Int):Cell {
-        return rows[rowindex][columnIndex-1]
+        val cell = rows[rowindex][columnIndex - 1]
+        lastWasNull = (cell.value == null)
+        return cell
     }
 
     override fun getTimestamp(columnLabel: String?): Timestamp? {
@@ -79,9 +83,7 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
 
 
 
-    override fun wasNull(): Boolean {
-        TODO("Not yet implemented")
-    }
+    override fun wasNull(): Boolean = lastWasNull
 
 
 
