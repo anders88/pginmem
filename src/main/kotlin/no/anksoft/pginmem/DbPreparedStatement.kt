@@ -270,7 +270,6 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         sql.toLowerCase().startsWith("select set_config('search_path',") -> return NoopStatement()
         sql.toLowerCase().startsWith("select pg_try_advisory_lock(") -> return StatementToReturnFixed(listOf(listOf(Pair("pg_try_advisory_lock","t"))),sql)
         sql.toLowerCase().startsWith("select pg_advisory_unlock(") -> return StatementToReturnFixed(listOf(listOf(Pair("pg_advisory_unlock","t"))),sql)
-        sql.toLowerCase().startsWith("select") && sql.toLowerCase().contains("from \"public\".\"flyway_schema_history\"") -> return StatementToReturnFixed(emptyList(),sql)
         sql.toLowerCase().startsWith("drop materialized view") -> return NoopStatement()
         sql.toLowerCase().startsWith("drop view if exists") -> return NoopStatement()
         sql.toLowerCase().startsWith("select proname, oidvectortypes(proargtypes)") -> return StatementToReturnFixed(emptyList(),sql)

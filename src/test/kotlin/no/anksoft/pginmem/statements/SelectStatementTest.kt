@@ -39,4 +39,33 @@ class SelectStatementTest {
 
         }
     }
+
+    @Test
+    fun selectWithColumns() {
+        connection.use { conn ->
+            conn.createStatement().execute(
+                """
+                    create table mytable(
+                        id  integer,
+                        description text,
+                        dummy text)
+                """.trimIndent()
+            )
+            val insertSql = "insert into mytable(id,description,dummy) values (?,?,?)"
+            conn.prepareStatement(insertSql).use {
+                it.setInt(1, 1)
+                it.setString(2, "one")
+                it.setString(3, "dummy")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("""select "description",id from mytable""").use { statement ->
+                statement.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("one")
+                    assertThat(it.getInt("id")).isEqualTo(1)
+                }
+            }
+
+        }
+    }
 }

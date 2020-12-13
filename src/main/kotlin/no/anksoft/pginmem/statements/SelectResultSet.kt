@@ -36,6 +36,12 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
         return cell.value?.toString()
     }
 
+    override fun getString(columnIndex: Int): String? {
+        val cell = readCell(columnIndex)
+        return cell.value?.toString()
+    }
+
+
     private fun readCell(columnLabel: String?): Cell {
         val ind = colums.indexOfFirst { it.name == columnLabel }
         if (ind == -1) {
@@ -45,6 +51,10 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
         return cell
     }
 
+    private fun readCell(columnIndex: Int):Cell {
+        return rows[rowindex][columnIndex-1]
+    }
+
     override fun getTimestamp(columnLabel: String?): Timestamp? {
         val cell = readCell(columnLabel)
         if (cell.value == null) return null
@@ -52,11 +62,19 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
         return cell.value
     }
 
-    override fun getInt(columnLabel: String?): Int {
-        val cell = readCell(columnLabel)
+    private fun getInt(cell:Cell):Int {
         if (cell.value == null) return 0
-        if (cell.value !is Int) throw SQLException("Column $columnLabel is not integer")
+        if (cell.value !is Int) throw SQLException("Column ${cell.column.name} is not integer")
         return cell.value
+    }
+
+    override fun getInt(columnLabel: String?): Int {
+        return getInt(readCell(columnLabel))
+
+    }
+
+    override fun getInt(columnIndex: Int): Int {
+        return getInt(readCell(columnIndex))
     }
 
 
@@ -65,9 +83,6 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
         TODO("Not yet implemented")
     }
 
-    override fun getString(columnIndex: Int): String {
-        TODO("Not yet implemented")
-    }
 
 
     override fun getBoolean(columnIndex: Int): Boolean {
@@ -97,9 +112,7 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
         TODO("Not yet implemented")
     }
 
-    override fun getInt(columnIndex: Int): Int {
-        TODO("Not yet implemented")
-    }
+
 
 
     override fun getLong(columnIndex: Int): Long {

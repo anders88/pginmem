@@ -7,50 +7,54 @@ import no.anksoft.pginmem.clauses.createWhereClause
 import java.sql.ResultSet
 import java.sql.SQLException
 
-private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction,sql:String):Pair<List<Table>,WhereClause> {
-    val usedTables = mutableListOf<Table>()
-    var picking = false
-    var ind = 0;
-    while (ind < words.size) {
-        val word = words[ind]
-        ind++
-        if (!picking) {
-            if (word == "from") {
-                picking = true
-            }
-            continue
-        }
-        if (word == "where") {
-            break
-        }
-        usedTables.add(dbTransaction.tableForRead(word)?:throw SQLException("Unknown table $word"))
+private class SelectAnalyze(val selectedColumns:List<Pair<Column,Table>>,val allColumns:List<Pair<Column,Table>>,val whereClause: WhereClause, val usedTable:Table)
+
+private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction,sql:String):SelectAnalyze {
+    val fromInd = words.indexOf("from")
+    if (fromInd == -1) {
+        throw SQLException("Expected from keyword in select $sql")
     }
-    val whereClause:WhereClause = if (ind < words.size) createWhereClause(words.subList(ind,words.size),usedTables,1) else MatchAllClause()
-    return Pair(usedTables,whereClause)
+    val usedTable:Table  = dbTransaction.tableForRead(words[fromInd+1]?:throw SQLException("Unknown table ${words[fromInd+1]}"))
+
+    val allColumns:List<Pair<Column,Table>> = usedTable.colums.map { Pair(it,usedTable) }
+
+    val selectedColumns:List<Pair<Column,Table>> = if (words[1] == "*") allColumns else {
+        var ind = 1
+        val addedSelected:MutableList<Pair<Column,Table>> = mutableListOf()
+        while (ind < fromInd) {
+            val colname = stripSeachName(words[ind])
+            addedSelected.add(allColumns.firstOrNull { it.first.name == colname }?:throw SQLException("Unknown column ${words[ind]}"))
+            ind+=2
+        }
+        addedSelected
+    }
+
+    val whereClause:WhereClause = if (fromInd+3 < words.size) createWhereClause(words.subList(fromInd+3,words.size), listOf(usedTable),1) else MatchAllClause()
+    return SelectAnalyze(selectedColumns,allColumns,whereClause,usedTable)
 }
 
 class SelectStatement(words: List<String>, dbTransaction: DbTransaction,private val sqlOrig:String):DbPreparedStatement() {
-    private val pair = analyseSelect(words,dbTransaction,sqlOrig)
-
-    private val tables:List<Table> = pair.first
-    private val whereClause:WhereClause = pair.second
+    private val selectAnalyze:SelectAnalyze = analyseSelect(words,dbTransaction,sqlOrig)
 
 
-    private val rows:List<List<Cell>> by lazy {
-        tables.map { it.rowsForReading() }.flatten().map { it.cells }.filter { whereClause.isMatch(it) }
-    }
+
 
     override fun executeQuery(): ResultSet {
-        val columns = tables.map { it.colums }.flatten()
-        return SelectResultSet(columns,rows)
+        val rows:List<List<Cell>> = selectAnalyze.usedTable.rowsForReading().filter { selectAnalyze.whereClause.isMatch(it.cells) }.map { row ->
+            selectAnalyze.selectedColumns.map { selColumn ->
+                row.cells.first { it.column.name == selColumn.first.name }
+            }
+        }
+
+        return SelectResultSet(selectAnalyze.selectedColumns.map { it.first },rows)
     }
 
     override fun setString(parameterIndex: Int, x: String?) {
-        whereClause.registerBinding(parameterIndex,x)
+        selectAnalyze.whereClause.registerBinding(parameterIndex,x)
     }
 
     override fun setInt(parameterIndex: Int, x: Int) {
-        whereClause.registerBinding(parameterIndex,x)
+        selectAnalyze.whereClause.registerBinding(parameterIndex,x)
     }
 
 }
