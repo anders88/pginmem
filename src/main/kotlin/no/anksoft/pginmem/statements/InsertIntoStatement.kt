@@ -55,7 +55,11 @@ class InsertIntoStatement constructor(words: List<String>, dbTransaction: DbTran
     override fun executeUpdate(): Int {
         val cells:List<Cell> = tableForUpdate.colums.map{ col ->
             val index = columns.indexOfFirst { it.name == col.name }
-            val value:Any? = if (index == -1) null else linkedValues[index].value
+            val value:Any? = if (index == -1) {
+                if (col.defaultValue != null) {
+                    col.defaultValue.invoke()
+                } else null
+            } else linkedValues[index].value
             Cell(col,value)
         }
         tableForUpdate.addRow(Row(cells))

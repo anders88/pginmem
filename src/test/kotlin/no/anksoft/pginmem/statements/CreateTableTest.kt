@@ -35,4 +35,30 @@ class CreateTableTest {
             }
         }
     }
+
+    @Test
+    fun createWithDefaultvalue() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                create table mytable(
+                    id  text,
+                    created timestamp default now()
+                    )
+                """.trimIndent()
+                )
+            }
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"myindex")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable").use { statement ->
+                statement.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getTimestamp("created")).isNotNull()
+                }
+            }
+        }
+    }
 }
