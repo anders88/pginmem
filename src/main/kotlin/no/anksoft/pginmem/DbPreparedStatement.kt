@@ -18,7 +18,7 @@ private fun splitStringToWords(sql:String):List<String> {
     while (index < trimmed.length) {
         val charAtPos:Char = trimmed[index]
 
-        if ((charAtPos.isWhitespace())) {
+        if (charAtPos.isWhitespace()) {
             if (index > previndex) {
                 result.add(trimmed.substring(previndex,index))
             }
@@ -26,7 +26,7 @@ private fun splitStringToWords(sql:String):List<String> {
             previndex = index
             continue
         }
-        if ((charAtPos == '(') || (charAtPos == ')') || (charAtPos == ',')) {
+        if ("(),=<>".indexOf(charAtPos) != -1) {
             if (index > previndex) {
                 result.add(trimmed.substring(previndex,index))
             }

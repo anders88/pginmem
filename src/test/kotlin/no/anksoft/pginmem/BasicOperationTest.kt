@@ -102,7 +102,7 @@ class BasicOperationTest {
                 }
             }
 
-            conn.prepareStatement("""update mytable set name = ? where id = ?""").use {
+            conn.prepareStatement("""update mytable set name= ? where id = ?""").use {
                 it.setString(1,"Anakin Skywalker")
                 it.setString(2,"secretkey")
                 it.executeUpdate()
