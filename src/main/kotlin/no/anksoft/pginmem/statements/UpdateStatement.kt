@@ -5,6 +5,7 @@ import no.anksoft.pginmem.clauses.MatchAllClause
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
 import java.sql.SQLException
+import java.sql.Timestamp
 
 private fun <T> wordvalue(list:List<T>, index:Int):T = if (index >= 0 && index < list.size) list[index] else throw SQLException("Unexpected end of statement")
 
@@ -40,13 +41,25 @@ class UpdateStatement(words: List<String>, private val dbTransaction: DbTransact
         whereClause = if (ind < words.size) createWhereClause(words.subList(ind+1,words.size), listOf(table),toUpdate.size+1) else MatchAllClause()
     }
 
-    override fun setString(parameterIndex: Int, x: String?) {
+    private fun setSomething(parameterIndex: Int, x: Any?) {
         if (parameterIndex-1 < toUpdate.size) {
             toUpdate[parameterIndex-1].column.columnType.validateValue(x)
             toUpdate[parameterIndex-1].value = x
             return
         }
         whereClause.registerBinding(parameterIndex,x)
+    }
+
+    override fun setString(parameterIndex: Int, x: String?) {
+        setSomething(parameterIndex,x)
+    }
+
+    override fun setTimestamp(parameterIndex: Int, x: Timestamp?) {
+        setSomething(parameterIndex,x)
+    }
+
+    override fun setInt(parameterIndex: Int, x: Int) {
+        setSomething(parameterIndex,x)
     }
 
     override fun executeUpdate(): Int {
