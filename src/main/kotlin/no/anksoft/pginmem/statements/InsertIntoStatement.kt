@@ -6,8 +6,8 @@ import java.sql.Timestamp
 
 private class LinkedValue(var value:Any?)
 
-class InsertIntoStatement constructor(words: List<String>, dbTransaction: DbTransaction,private val sql:String) : DbPreparedStatement() {
-    private val tableForUpdate:Table = dbTransaction.tableForUpdate(words[2])?:throw SQLException("Unkown table ${words[2]}")
+class InsertIntoStatement constructor(words: List<String>, dbTransaction: DbTransaction,private val sql:String) : StatementWithSet() {
+    private val tableForUpdate:Table = dbTransaction.tableForUpdate(words[2])
     private val columns:List<Column>
     private val linkedValues:List<LinkedValue>
 
@@ -29,26 +29,11 @@ class InsertIntoStatement constructor(words: List<String>, dbTransaction: DbTran
         linkedValues = (1..columns.size).map { LinkedValue(null) }
     }
 
-    private fun bindValue(parameterIndex: Int,x: Any?) {
+    override fun setSomething(parameterIndex: Int, x: Any?) {
         columns[parameterIndex-1].columnType.validateValue(x)
         linkedValues[parameterIndex-1].value=x
     }
 
-    override fun setString(parameterIndex: Int, x: String?) {
-        bindValue(parameterIndex,x)
-    }
-
-    override fun setInt(parameterIndex: Int, x: Int) {
-        bindValue(parameterIndex,x)
-    }
-
-    override fun setBoolean(parameterIndex: Int, x: Boolean) {
-        bindValue(parameterIndex,x)
-    }
-
-    override fun setTimestamp(parameterIndex: Int, x: Timestamp?) {
-        bindValue(parameterIndex,x)
-    }
 
 
 

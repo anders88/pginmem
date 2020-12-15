@@ -289,6 +289,7 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         words.size >= 2 && words[0] == "insert" && words[1] == "into" -> return InsertIntoStatement(words,dbTransaction,sql)
         words.isNotEmpty() && words[0] == "select" -> return SelectStatement(words,dbTransaction,sql)
         words.isNotEmpty() && words[0] == "update" -> return UpdateStatement(words,dbTransaction)
+        words.isNotEmpty() && words[0] == "delete" -> return DeleteStatement(words,dbTransaction,sql)
         else -> throw SQLException("Unknown statement $sql")
     }
 }

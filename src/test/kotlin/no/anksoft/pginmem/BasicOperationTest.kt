@@ -120,6 +120,7 @@ class BasicOperationTest {
                     Assertions.assertThat(it.next()).isFalse()
                 }
             }
+
         }
     }
 

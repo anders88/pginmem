@@ -16,7 +16,7 @@ private class CellToUpdate(val column:Column) {
 
 
 
-class UpdateStatement(words: List<String>, private val dbTransaction: DbTransaction) : DbPreparedStatement() {
+class UpdateStatement(words: List<String>, private val dbTransaction: DbTransaction) : StatementWithSet() {
     private val table:Table
     private val whereClause: WhereClause
     private val toUpdate:List<CellToUpdate>
@@ -41,7 +41,7 @@ class UpdateStatement(words: List<String>, private val dbTransaction: DbTransact
         whereClause = if (ind < words.size) createWhereClause(words.subList(ind+1,words.size), listOf(table),toUpdate.size+1) else MatchAllClause()
     }
 
-    private fun setSomething(parameterIndex: Int, x: Any?) {
+    override fun setSomething(parameterIndex: Int, x: Any?) {
         if (parameterIndex-1 < toUpdate.size) {
             toUpdate[parameterIndex-1].column.columnType.validateValue(x)
             toUpdate[parameterIndex-1].value = x
@@ -50,17 +50,6 @@ class UpdateStatement(words: List<String>, private val dbTransaction: DbTransact
         whereClause.registerBinding(parameterIndex,x)
     }
 
-    override fun setString(parameterIndex: Int, x: String?) {
-        setSomething(parameterIndex,x)
-    }
-
-    override fun setTimestamp(parameterIndex: Int, x: Timestamp?) {
-        setSomething(parameterIndex,x)
-    }
-
-    override fun setInt(parameterIndex: Int, x: Int) {
-        setSomething(parameterIndex,x)
-    }
 
     override fun executeUpdate(): Int {
         val newTable = Table(table.name,table.colums)
