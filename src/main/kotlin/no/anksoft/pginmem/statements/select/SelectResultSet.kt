@@ -1,7 +1,6 @@
-package no.anksoft.pginmem.statements
+package no.anksoft.pginmem.statements.select
 
 import no.anksoft.pginmem.Cell
-import no.anksoft.pginmem.Column
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -11,7 +10,7 @@ import java.sql.Array
 import java.sql.Date
 import java.util.*
 
-class SelectResultSet(private val colums:List<Column>,private val rows:List<List<Cell>>):ResultSet {
+class SelectResultSet(private val colums:List<SelectColumnProvider>,private val selectRowProvider: SelectRowProvider):ResultSet {
     private var rowindex = -1
     private var lastWasNull:Boolean = false
 
@@ -29,47 +28,47 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
 
     override fun next(): Boolean {
         rowindex++
-        return (rowindex < rows.size)
+        return (rowindex < selectRowProvider.size())
     }
 
     override fun getString(columnLabel: String?): String? {
-        val cell = readCell(columnLabel)
-        return cell.value?.toString()
+        val value = readCell(columnLabel)
+        return value?.toString()
     }
 
     override fun getString(columnIndex: Int): String? {
-        val cell = readCell(columnIndex)
-        return cell.value?.toString()
+        val value = readCell(columnIndex)
+        return value?.toString()
     }
 
 
-    private fun readCell(columnLabel: String?): Cell {
-        val ind = colums.indexOfFirst { it.name == columnLabel }
-        if (ind == -1) {
-            throw SQLException("Unknown column $columnLabel")
+    private fun readCell(columnLabel: String?): Any? {
+        if (columnLabel == null) {
+            throw SQLException("Cannot get null")
         }
-        val cell = rows[rowindex][ind]
-        lastWasNull = (cell.value == null)
-        return cell
+        val columnProvider:SelectColumnProvider = colums.first { it.match(columnLabel) }
+        val value = columnProvider.readValue(selectRowProvider,rowindex)
+        lastWasNull = (value == null)
+        return value
     }
 
-    private fun readCell(columnIndex: Int):Cell {
-        val cell = rows[rowindex][columnIndex - 1]
-        lastWasNull = (cell.value == null)
-        return cell
+    private fun readCell(columnIndex: Int):Any? {
+        val columnProvider:SelectColumnProvider = colums.first { it.isMatch(columnIndex) }
+        val value = columnProvider.readValue(selectRowProvider,rowindex)
+        lastWasNull = (value == null)
+        return value
     }
 
     override fun getTimestamp(columnLabel: String?): Timestamp? {
-        val cell = readCell(columnLabel)
-        if (cell.value == null) return null
-        if (cell.value !is Timestamp) throw SQLException("Column $columnLabel is not timestamp")
-        return cell.value
+        val value = readCell(columnLabel)?:return null
+        if (value !is Timestamp) throw SQLException("Column $columnLabel is not timestamp")
+        return value
     }
 
-    private fun getInt(cell:Cell):Int {
-        if (cell.value == null) return 0
-        if (cell.value !is Int) throw SQLException("Column ${cell.column.name} is not integer")
-        return cell.value
+    private fun getInt(value:Any?):Int {
+        if (value == null) return 0
+        if (value !is Int) throw SQLException("Column is not integer")
+        return value
     }
 
     override fun getInt(columnLabel: String?): Int {
@@ -92,10 +91,9 @@ class SelectResultSet(private val colums:List<Column>,private val rows:List<List
     }
 
     override fun getBoolean(columnLabel: String?): Boolean {
-        val cell = readCell(columnLabel)
-        if (cell.value == null) return false
-        if (cell.value !is Boolean) throw SQLException("Column $columnLabel is not integer")
-        return cell.value
+        val value = readCell(columnLabel) ?: return false
+        if (value !is Boolean) throw SQLException("Column $columnLabel is not integer")
+        return value
     }
 
     override fun getByte(columnIndex: Int): Byte {
