@@ -43,8 +43,8 @@ class UpdateStatement(words: List<String>, private val dbTransaction: DbTransact
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
         if (parameterIndex-1 < toUpdate.size) {
-            toUpdate[parameterIndex-1].column.columnType.validateValue(x)
-            toUpdate[parameterIndex-1].value = x
+            val updatedValue = toUpdate[parameterIndex-1].column.columnType.validateValue(x)
+            toUpdate[parameterIndex-1].value = updatedValue
             return
         }
         whereClause.registerBinding(parameterIndex,x)

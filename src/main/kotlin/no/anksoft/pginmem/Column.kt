@@ -6,19 +6,20 @@ import java.sql.Timestamp
 enum class ColumnType() {
     TEXT, TIMESTAMP,INTEGER,BOOLEAN;
 
-    fun validateValue(value:Any?) {
+    fun validateValue(value:Any?):Any? {
         if (value == null) {
-            return
+            return null
         }
-        val ok:Boolean = when (this) {
-            TEXT -> (value is String)
-            TIMESTAMP -> (value is Timestamp)
-            INTEGER -> (value is Int)
-            BOOLEAN -> (value is Boolean)
+        val returnValue:Any? = when (this) {
+            TEXT -> if (value is String) value else null
+            TIMESTAMP -> if (value is Timestamp) value else null
+            INTEGER -> if (value is Number) value.toLong() else null
+            BOOLEAN -> if (value is Boolean) value else null
         }
-        if (!ok) {
+        if (returnValue == null) {
             throw SQLException("Binding value not valid for $this")
         }
+        return returnValue
     }
 }
 

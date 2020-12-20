@@ -67,8 +67,8 @@ class SelectResultSet(private val colums:List<SelectColumnProvider>,private val 
 
     private fun getInt(value:Any?):Int {
         if (value == null) return 0
-        if (value !is Int) throw SQLException("Column is not integer")
-        return value
+        if (value !is Number) throw SQLException("Column is not integer")
+        return value.toInt()
     }
 
     override fun getInt(columnLabel: String?): Int {

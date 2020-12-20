@@ -37,7 +37,8 @@ abstract class BinaryClause:WhereClause {
 
     override fun registerBinding(index: Int, value: Any?):Boolean {
         if (expectedIndex == index) {
-            valueToMatch = value
+            val givenValue = column.columnType.validateValue(value)
+            valueToMatch = givenValue
             isRegistered = true
             return true
         }

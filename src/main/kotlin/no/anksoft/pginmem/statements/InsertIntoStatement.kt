@@ -30,8 +30,8 @@ class InsertIntoStatement constructor(words: List<String>, dbTransaction: DbTran
     }
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
-        columns[parameterIndex-1].columnType.validateValue(x)
-        linkedValues[parameterIndex-1].value=x
+        val setVal = columns[parameterIndex-1].columnType.validateValue(x)
+        linkedValues[parameterIndex-1].value=setVal
     }
 
 
