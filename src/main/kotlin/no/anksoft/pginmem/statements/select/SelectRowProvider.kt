@@ -24,5 +24,13 @@ class TablesSelectRowProvider(val table: Table,val whereClause: WhereClause):Sel
         val cell = row.first { it.column == column }
         return cell.value
     }
+}
+
+class ImplicitOneRowSelectProvider:SelectRowProvider {
+    override fun size(): Int = 1
+
+    override fun readValue(column: Column, rowno: Int): Any? {
+        throw SQLException("No columns in select")
+    }
 
 }

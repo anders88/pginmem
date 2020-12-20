@@ -19,8 +19,8 @@ class SequenceTest {
 
     }
 
-    private fun readSeqVal(conn: Connection) {
-        conn.prepareStatement("select nextval('numgenerator')").use { ps ->
+    private fun readSeqVal(conn: Connection):Long {
+        return conn.prepareStatement("select nextval('numgenerator')").use { ps ->
             ps.executeQuery().use {
                 assertThat(it.next()).isTrue()
                 it.getLong(1)

@@ -1,5 +1,7 @@
 package no.anksoft.pginmem
 
+import java.sql.SQLException
+
 class DbTransaction(private val dbStore: DbStore) {
     private var autoCommit:Boolean = true
 
@@ -49,4 +51,9 @@ class DbTransaction(private val dbStore: DbStore) {
     fun close() {
         rollback()
     }
+
+    fun sequence(name: String):Sequence = dbStore.sequence(name)
+
+    fun addSequence(name: String) = dbStore.addSequence(name)
+
 }

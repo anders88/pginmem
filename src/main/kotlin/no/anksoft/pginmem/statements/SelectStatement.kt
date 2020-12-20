@@ -12,22 +12,27 @@ private class SelectAnalyze(val selectedColumns:List<SelectColumnProvider>,val s
 
 private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction,sql:String):SelectAnalyze {
     val fromInd = words.indexOf("from")
-    if (fromInd == -1) {
-        throw SQLException("Expected from keyword in select $sql")
-    }
-    val usedTable:Table  = dbTransaction.tableForRead(words[fromInd+1])
+    val usedTable:Table?  = if (fromInd != -1) dbTransaction.tableForRead(words[fromInd+1]) else null
 
 
 
-    val allColumns = usedTable.colums
+    val allColumns = usedTable?.colums?: emptyList()
 
     val selectedColumns:List<SelectColumnProvider> = if (words[1] == "*") allColumns.mapIndexed { index, column -> SelectDbColumn(column,index+1) } else {
         var ind = 1
         var colindex = 1
 
         val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
-        while (ind < fromInd) {
+        val loopUntil = if (fromInd != -1) fromInd else words.size
+        while (ind < loopUntil) {
             val colname = stripSeachName(words[ind])
+            if (colname == "nextval" && ind+3 < loopUntil && words[ind+1] == "(" && words[ind+3] == ")" && words[ind+2].length >= 3 && words[ind+2].startsWith("'") and words[ind+2].endsWith("'")) {
+                val sequence:Sequence = dbTransaction.sequence(words[ind+2].substring(1,words[ind+2].length-1))
+                addedSelected.add(SelectFromSequence(sequence,colindex))
+                colindex++
+                ind+=4
+                continue
+            }
             val column:Column = allColumns.firstOrNull { it.name == colname }?:throw SQLException("Unknown column ${words[ind]}")
             addedSelected.add(SelectDbColumn(column,colindex))
             colindex++
@@ -36,8 +41,8 @@ private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction,sql:
         addedSelected
     }
 
-    val whereClause:WhereClause = if (fromInd+3 < words.size) createWhereClause(words.subList(fromInd+3,words.size), listOf(usedTable),1) else MatchAllClause()
-    val selectRowProvider = TablesSelectRowProvider(usedTable,whereClause)
+    val whereClause:WhereClause = if (usedTable != null && fromInd+3 < words.size) createWhereClause(words.subList(fromInd+3,words.size), listOf(usedTable),1) else MatchAllClause()
+    val selectRowProvider = if (usedTable != null) TablesSelectRowProvider(usedTable,whereClause) else ImplicitOneRowSelectProvider()
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause)
 }
 

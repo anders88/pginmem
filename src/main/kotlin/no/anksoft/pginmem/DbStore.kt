@@ -18,6 +18,7 @@ fun stripSeachName(searchName:String):String {
 
 class DbStore {
     private val tables:MutableMap<String,Table> = mutableMapOf()
+    private val sequences:MutableMap<String,Sequence> = mutableMapOf()
 
     fun createAlterTableSetup(table: Table) {
         tables[table.name] = table
@@ -53,6 +54,13 @@ class DbStore {
         lockedTables.remove(tablename)
     }
 
+    fun sequence(name: String):Sequence = sequences[name]?:throw SQLException("Unknown sequence $name")
 
+    fun addSequence(name: String) {
+        if (sequences[name] != null) {
+            throw SQLException("Sequence $name already exsists")
+        }
+        sequences[name] = Sequence(name)
+    }
 
 }

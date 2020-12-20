@@ -113,14 +113,19 @@ class SelectResultSet(private val colums:List<SelectColumnProvider>,private val 
     }
 
 
+    private fun getLong(value:Any?):Long {
+        if (value == null) return 0L
+        if (value !is Long) throw SQLException("Not long value")
+        return value
+    }
 
 
     override fun getLong(columnIndex: Int): Long {
-        TODO("Not yet implemented")
+        return getLong(readCell(columnIndex))
     }
 
     override fun getLong(columnLabel: String?): Long {
-        TODO("Not yet implemented")
+        return getLong(readCell(columnLabel))
     }
 
     override fun getFloat(columnIndex: Int): Float {

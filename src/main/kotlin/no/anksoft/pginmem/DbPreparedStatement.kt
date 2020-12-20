@@ -286,6 +286,7 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         sql.toLowerCase() == "select version()" -> return SelectOneValueStatement("PostgreSQL 10.6 Pginmemver")
         sql.toLowerCase() == "show search_path" -> return SelectOneValueStatement("\"\$user\", public")
         words.size >= 2 && words[0] == "create" && words[1] == "table" -> return CreateTableStatement(words,dbTransaction)
+        words.size >= 2 && words[0] == "create" && words[1] == "sequence" -> return CreateSequenceStatement(words,dbTransaction)
         words.size >= 2 && words[0] == "insert" && words[1] == "into" -> return InsertIntoStatement(words,dbTransaction,sql)
         words.isNotEmpty() && words[0] == "select" -> return SelectStatement(words,dbTransaction,sql)
         words.isNotEmpty() && words[0] == "update" -> return UpdateStatement(words,dbTransaction)
