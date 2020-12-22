@@ -23,7 +23,7 @@ enum class ColumnType() {
     }
 }
 
-class Column constructor(val name:String,columnTypeText:String,val defaultValue:(()->Any?)?) {
+class Column constructor(val name:String,columnTypeText:String,val defaultValue:(()->Any?)?,val isNotNull:Boolean) {
     val columnType:ColumnType = ColumnType.values().firstOrNull { it.name.toLowerCase() == columnTypeText }?:throw SQLException("Unknown column type $columnTypeText")
 
     override fun equals(other: Any?): Boolean {

@@ -45,6 +45,9 @@ class InsertIntoStatement constructor(words: List<String>, dbTransaction: DbTran
                     col.defaultValue.invoke()
                 } else null
             } else linkedValues[index].value
+            if (col.isNotNull && value == null) {
+                throw SQLException("Cannot insert null into column ${col.name}")
+            }
             Cell(col,value)
         }
         tableForUpdate.addRow(Row(cells))

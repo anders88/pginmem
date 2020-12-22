@@ -23,7 +23,11 @@ class CreateTableStatement(val words:List<String>,private val dbTransaction: DbT
                 } else throw SQLException("Unknown default value for column $columnName")
 
             } else null
-            columns.add(Column(columnName,colType,defaultValue))
+            val isNotNull = if (words[ind] == "not" && words[ind+1] == "null") {
+                ind+=2
+                true
+            } else false
+            columns.add(Column(columnName,colType,defaultValue,isNotNull))
             if (words[ind] == ")") {
                 break
             }

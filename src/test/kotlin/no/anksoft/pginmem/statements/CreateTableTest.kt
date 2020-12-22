@@ -3,6 +3,8 @@ package no.anksoft.pginmem.statements
 import no.anksoft.pginmem.PgInMemDatasource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
+import java.sql.SQLException
 
 class CreateTableTest {
     private val datasource = PgInMemDatasource()
@@ -59,6 +61,30 @@ class CreateTableTest {
                     assertThat(it.getTimestamp("created")).isNotNull()
                 }
             }
+        }
+    }
+
+    @Test
+    fun notNullFlag() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute("""
+                    create table mytable(
+                        id  text not null,
+                        description text)
+                """.trimIndent())
+            }
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"myid")
+                it.executeUpdate()
+            }
+            try {
+                conn.prepareStatement("insert into mytable(description) values (?)").use {
+                    it.setString(1,"a text")
+                    it.executeUpdate()
+                }
+                fail("Expected sqlexception not null")
+            } catch (s:SQLException) { }
         }
     }
 }
