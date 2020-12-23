@@ -10,30 +10,30 @@ import java.sql.SQLException
 
 private class SelectAnalyze(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause)
 
-private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction,sql:String):SelectAnalyze {
-    val fromInd = words.indexOf("from")
-    val usedTable:Table?  = if (fromInd != -1) dbTransaction.tableForRead(words[fromInd+1]) else null
+private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,sql:String):SelectAnalyze {
+    val fromInd = statementAnalyzer.indexOf("from")
+    val usedTable:Table?  = if (fromInd != -1) dbTransaction.tableForRead(statementAnalyzer.wordAt(fromInd+1)!!) else null
 
 
 
     val allColumns = usedTable?.colums?: emptyList()
 
-    val selectedColumns:List<SelectColumnProvider> = if (words[1] == "*") allColumns.mapIndexed { index, column -> SelectDbColumn(column,index+1) } else {
+    val selectedColumns:List<SelectColumnProvider> = if (statementAnalyzer.wordAt(1) == "*") allColumns.mapIndexed { index, column -> SelectDbColumn(column,index+1) } else {
         var ind = 1
         var colindex = 1
 
         val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
-        val loopUntil = if (fromInd != -1) fromInd else words.size
+        val loopUntil = if (fromInd != -1) fromInd else statementAnalyzer.size
         while (ind < loopUntil) {
-            val colname = stripSeachName(words[ind])
-            if (colname == "nextval" && ind+3 < loopUntil && words[ind+1] == "(" && words[ind+3] == ")" && words[ind+2].length >= 3 && words[ind+2].startsWith("'") and words[ind+2].endsWith("'")) {
-                val sequence:Sequence = dbTransaction.sequence(words[ind+2].substring(1,words[ind+2].length-1))
+            val colname = stripSeachName(statementAnalyzer.wordAt(ind)!!)
+            if (colname == "nextval" && ind+3 < loopUntil && statementAnalyzer.wordAt(ind+1) == "(" && statementAnalyzer.wordAt(ind+3) == ")" && statementAnalyzer.wordAt(ind+2)!!.length >= 3 && statementAnalyzer.wordAt(ind+2)!!.startsWith("'") and (statementAnalyzer.wordAt(ind+2)?:"").endsWith("'")) {
+                val sequence:Sequence = dbTransaction.sequence(statementAnalyzer.wordAt(ind+2)!!.substring(1,statementAnalyzer.wordAt(ind+2)!!.length-1))
                 addedSelected.add(SelectFromSequence(sequence,colindex))
                 colindex++
                 ind+=4
                 continue
             }
-            val column:Column = allColumns.firstOrNull { it.name == colname }?:throw SQLException("Unknown column ${words[ind]}")
+            val column:Column = allColumns.firstOrNull { it.name == colname }?:throw SQLException("Unknown column ${statementAnalyzer.wordAt(ind)}")
             addedSelected.add(SelectDbColumn(column,colindex))
             colindex++
             ind+=2
@@ -41,13 +41,13 @@ private fun analyseSelect(words: List<String>, dbTransaction: DbTransaction,sql:
         addedSelected
     }
 
-    val whereClause:WhereClause = if (usedTable != null && fromInd+3 < words.size) createWhereClause(words.subList(fromInd+3,words.size), listOf(usedTable),1) else MatchAllClause()
+    val whereClause:WhereClause = if (usedTable != null && fromInd+3 < statementAnalyzer.size) createWhereClause(statementAnalyzer.subList(fromInd+3,statementAnalyzer.size), listOf(usedTable),1) else MatchAllClause()
     val selectRowProvider = if (usedTable != null) TablesSelectRowProvider(usedTable,whereClause) else ImplicitOneRowSelectProvider()
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause)
 }
 
-class SelectStatement(words: List<String>, dbTransaction: DbTransaction,private val sqlOrig:String):DbPreparedStatement() {
-    private val selectAnalyze:SelectAnalyze = analyseSelect(words,dbTransaction,sqlOrig)
+class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction,private val sqlOrig:String):DbPreparedStatement() {
+    private val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,sqlOrig)
 
 
 

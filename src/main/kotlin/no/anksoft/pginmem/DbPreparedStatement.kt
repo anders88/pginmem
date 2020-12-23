@@ -10,136 +10,9 @@ import java.sql.*
 import java.sql.Date
 import java.util.*
 
-private fun splitStringToWords(sql:String):List<String> {
-    val result:MutableList<String> = mutableListOf()
-    val trimmed = sql.toLowerCase().trim().replace("\n"," ")
-    var index = 0
-    var previndex = 0
-    while (index < trimmed.length) {
-        val charAtPos:Char = trimmed[index]
-
-        if (charAtPos.isWhitespace()) {
-            if (index > previndex) {
-                result.add(trimmed.substring(previndex,index))
-            }
-            index++
-            previndex = index
-            continue
-        }
-        if ("(),=<>".indexOf(charAtPos) != -1) {
-            if (index > previndex) {
-                result.add(trimmed.substring(previndex,index))
-            }
-            result.add(trimmed.substring(index,index+1))
-            index++
-            previndex=index
-            continue
-        }
-        index++
-    }
-    if (index > previndex) {
-        result.add(trimmed.substring(previndex,index))
-    }
-    return result
-}
 
 private val logger = LoggerFactory.getLogger(DbPreparedStatement::class.java)
 
-/*
-private val x =
-bool,B
-bytea,U
-char,S
-name,S
-int8,N
-int2,N
-int2vector,A
-int4,N
-regproc,N
-text,S
-oid,N
-tid,U
-xid,U
-cid,U
-oidvector,A
-json,U
-xml,U
-pg_node_tree,S
-pg_ndistinct,S
-pg_dependencies,S
-pg_ddl_command,P
-smgr,U
-point,G
-lseg,G
-path,G
-box,G
-polygon,G
-line,G
-float4,N
-float8,N
-abstime,D
-reltime,T
-tinterval,T
-unknown,X
-circle,G
-money,N
-macaddr,U
-inet,I
-cidr,I
-macaddr8,U
-aclitem,U
-bpchar,S
-varchar,S
-date,D
-time,D
-timestamp,D
-timestamptz,D
-interval,T
-timetz,D
-bit,V
-varbit,V
-numeric,N
-refcursor,U
-regprocedure,N
-regoper,N
-regoperator,N
-regclass,N
-regtype,N
-regrole,N
-regnamespace,N
-uuid,U
-pg_lsn,U
-tsvector,U
-gtsvector,U
-tsquery,U
-regconfig,N
-regdictionary,N
-jsonb,U
-txid_snapshot,U
-int4range,R
-numrange,R
-tsrange,R
-tstzrange,R
-daterange,R
-int8range,R
-record,P
-cstring,P
-any,P
-anyarray,P
-void,P
-trigger,P
-event_trigger,P
-language_handler,P
-internal,P
-opaque,P
-anyelement,P
-anynonarray,P
-anyenum,P
-fdw_handler,P
-index_am_handler,P
-tsm_handler,P
-anyrange,P
-*/
 
 private val relnames:List<List<Pair<String,Any?>>> = listOf(
 listOf(Pair("relname","pg_shadow")),
@@ -265,7 +138,7 @@ listOf(Pair("relname","user_mappings")),
 
 fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedStatement {
     logger.debug("Called $sql")
-    val words:List<String> = splitStringToWords(sql)
+    val statementAnalyzer = StatementAnalyzer(sql)
     when {
         sql.toLowerCase().startsWith("select set_config('search_path',") -> return NoopStatement()
         sql.toLowerCase().startsWith("select pg_try_advisory_lock(") -> return StatementToReturnFixed(listOf(listOf(Pair("pg_try_advisory_lock","t"))),sql)
@@ -285,12 +158,12 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         sql.toLowerCase() == "select current_user" -> return SelectOneValueStatement("localdevuser")
         sql.toLowerCase() == "select version()" -> return SelectOneValueStatement("PostgreSQL 10.6 Pginmemver")
         sql.toLowerCase() == "show search_path" -> return SelectOneValueStatement("\"\$user\", public")
-        words.size >= 2 && words[0] == "create" && words[1] == "table" -> return CreateTableStatement(words,dbTransaction)
-        words.size >= 2 && words[0] == "create" && words[1] == "sequence" -> return CreateSequenceStatement(words,dbTransaction)
-        words.size >= 2 && words[0] == "insert" && words[1] == "into" -> return InsertIntoStatement(words,dbTransaction,sql)
-        words.isNotEmpty() && words[0] == "select" -> return SelectStatement(words,dbTransaction,sql)
-        words.isNotEmpty() && words[0] == "update" -> return UpdateStatement(words,dbTransaction)
-        words.isNotEmpty() && words[0] == "delete" -> return DeleteStatement(words,dbTransaction,sql)
+        statementAnalyzer.word(0) == "create" && statementAnalyzer.word(1) == "table" -> return CreateTableStatement(statementAnalyzer,dbTransaction)
+        statementAnalyzer.word(0) == "create" && statementAnalyzer.word(1) == "sequence" -> return CreateSequenceStatement(statementAnalyzer,dbTransaction)
+        statementAnalyzer.word(0) == "insert" && statementAnalyzer.word(1) == "into" -> return InsertIntoStatement(statementAnalyzer,dbTransaction,sql)
+        statementAnalyzer.word(0) == "select" -> return SelectStatement(statementAnalyzer,dbTransaction,sql)
+        statementAnalyzer.word(0) == "update" -> return UpdateStatement(statementAnalyzer,dbTransaction)
+        statementAnalyzer.word(0) == "delete" -> return DeleteStatement(statementAnalyzer,dbTransaction,sql)
         else -> throw SQLException("Unknown statement $sql")
     }
 }

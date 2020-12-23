@@ -87,4 +87,33 @@ class CreateTableTest {
             } catch (s:SQLException) { }
         }
     }
+
+    @Test
+    fun differentDefaults() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        currency text default 'NOK'::text,
+                        isused boolean default true
+                        )
+                """.trimIndent()
+                )
+            }
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"mykey")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable").use { statement ->
+                statement.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("mykey")
+                    assertThat(it.getString("currency")).isEqualTo("NOK")
+                    assertThat(it.getBoolean("isused")).isTrue()
+                }
+            }
+        }
+    }
 }

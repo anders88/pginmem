@@ -2,14 +2,16 @@ package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.Column
 import no.anksoft.pginmem.DbTransaction
+import no.anksoft.pginmem.StatementAnalyzer
 import no.anksoft.pginmem.Table
 import no.anksoft.pginmem.clauses.MatchAllClause
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
+import java.sql.SQLException
 
-class DeleteStatement constructor(words: List<String>, private val dbTransaction: DbTransaction, private val sql:String):StatementWithSet() {
-    private val tableForUpdate: Table = dbTransaction.tableForUpdate(words[2])
-    private val whereClause:WhereClause = if (words.size > 4  && words[3] == "where") createWhereClause(words.subList(4,words.size), listOf(tableForUpdate),1) else MatchAllClause()
+class DeleteStatement constructor(statementAnalyzer:StatementAnalyzer, private val dbTransaction: DbTransaction, private val sql:String):StatementWithSet() {
+    private val tableForUpdate: Table = dbTransaction.tableForUpdate(statementAnalyzer.word(2)?:throw SQLException("Expected tablename"))
+    private val whereClause:WhereClause = if (statementAnalyzer.size > 4  && statementAnalyzer.wordAt(3) == "where") createWhereClause(statementAnalyzer.subList(4,statementAnalyzer.size), listOf(tableForUpdate),1) else MatchAllClause()
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
         whereClause.registerBinding(parameterIndex,x)
@@ -20,7 +22,7 @@ class DeleteStatement constructor(words: List<String>, private val dbTransaction
         val table = Table(tableForUpdate.name,tableForUpdate.colums)
         for (row in tableForUpdate.rowsForReading()) {
             if (whereClause.isMatch(row.cells)) {
-                hits
+                hits++
             } else {
                 table.addRow(row)
             }

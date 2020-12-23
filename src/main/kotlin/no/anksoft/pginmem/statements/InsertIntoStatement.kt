@@ -6,24 +6,24 @@ import java.sql.Timestamp
 
 private class LinkedValue(var value:Any?)
 
-class InsertIntoStatement constructor(words: List<String>, dbTransaction: DbTransaction,private val sql:String) : StatementWithSet() {
-    private val tableForUpdate:Table = dbTransaction.tableForUpdate(words[2])
+class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction,private val sql:String) : StatementWithSet() {
+    private val tableForUpdate:Table = dbTransaction.tableForUpdate(statementAnalyzer.word(2)?:throw SQLException("Expected table name"))
     private val columns:List<Column>
     private val linkedValues:List<LinkedValue>
 
     init {
         val cols:MutableList<Column> = mutableListOf()
-        var ind = 4
+        statementAnalyzer.addIndex(4)
         while (true) {
-            cols.add(tableForUpdate.findColumn(words[ind])?:throw SQLException("Unknown column ${words[ind]}"))
-            ind++
-            if (words[ind] == ")") {
+            cols.add(statementAnalyzer.word()?.let {  tableForUpdate.findColumn(it)}?:throw SQLException("Unknown column ${statementAnalyzer.word()}"))
+            statementAnalyzer.addIndex()
+            if (statementAnalyzer.word() == ")") {
                 break
             }
-            if (words[ind] != ",") {
-                throw SQLException("Expected , or ) got ${words[ind]}")
+            if (statementAnalyzer.word() != ",") {
+                throw SQLException("Expected , or ) got ${statementAnalyzer.word()}")
             }
-            ind++
+            statementAnalyzer.addIndex()
         }
         columns = cols
         linkedValues = (1..columns.size).map { LinkedValue(null) }

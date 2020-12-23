@@ -16,29 +16,29 @@ private class CellToUpdate(val column:Column) {
 
 
 
-class UpdateStatement(words: List<String>, private val dbTransaction: DbTransaction) : StatementWithSet() {
+class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction) : StatementWithSet() {
     private val table:Table
     private val whereClause: WhereClause
     private val toUpdate:List<CellToUpdate>
 
     init {
-        table = dbTransaction.tableForUpdate(wordvalue(words,1))
+        table = dbTransaction.tableForUpdate(statementAnalyzer.wordAt(1)?:throw SQLException("Unexpected end of statement") )
         var ind = 3
         val updates:MutableList<CellToUpdate> = mutableListOf()
         while (true) {
-            val column:Column = table.findColumn(wordvalue(words,ind))?:throw SQLException("Unknown column ${wordvalue(words,ind)}")
+            val column:Column = table.findColumn(statementAnalyzer.wordAt(ind)?:throw SQLException("Unexpected end of statement"))?:throw SQLException("Unknown column ${statementAnalyzer.wordAt(ind)?:throw SQLException("Unexpected end of statement") }")
             updates.add(CellToUpdate(column))
             ind+=3
-            if (ind == words.size || wordvalue(words,ind) == "where") {
+            if (ind == statementAnalyzer.size || (statementAnalyzer.wordAt(ind)?:throw SQLException("Unexpected end of statement")) == "where") {
                 break
             }
-            if (wordvalue(words,ind) != ",") {
+            if ((statementAnalyzer.wordAt(ind)?:throw SQLException("Unexpected end of statement")) != ",") {
                 throw SQLException("Expected , or where")
             }
             ind++
         }
         toUpdate = updates
-        whereClause = if (ind < words.size) createWhereClause(words.subList(ind+1,words.size), listOf(table),toUpdate.size+1) else MatchAllClause()
+        whereClause = if (ind < statementAnalyzer.size) createWhereClause(statementAnalyzer.subList(ind+1,statementAnalyzer.size), listOf(table),toUpdate.size+1) else MatchAllClause()
     }
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
