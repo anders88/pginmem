@@ -119,6 +119,21 @@ class SelectResultSet(private val colums:List<SelectColumnProvider>,private val 
         return value
     }
 
+    private fun getBigDecimal(value:Any?):BigDecimal? {
+        if (value == null) return null
+        if (value !is BigDecimal) throw SQLException("Not bigdecimal value")
+        return value
+    }
+
+    override fun getBigDecimal(columnIndex: Int): BigDecimal? {
+        return getBigDecimal(readCell(columnIndex))
+    }
+
+    override fun getBigDecimal(columnLabel: String?): BigDecimal? {
+        return getBigDecimal(readCell(columnLabel))
+    }
+
+
 
     override fun getLong(columnIndex: Int): Long {
         return getLong(readCell(columnIndex))
@@ -152,13 +167,6 @@ class SelectResultSet(private val colums:List<SelectColumnProvider>,private val 
         TODO("Not yet implemented")
     }
 
-    override fun getBigDecimal(columnIndex: Int): BigDecimal {
-        TODO("Not yet implemented")
-    }
-
-    override fun getBigDecimal(columnLabel: String?): BigDecimal {
-        TODO("Not yet implemented")
-    }
 
     override fun getBytes(columnIndex: Int): ByteArray {
         TODO("Not yet implemented")

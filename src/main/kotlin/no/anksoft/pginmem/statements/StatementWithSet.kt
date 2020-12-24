@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.DbPreparedStatement
+import java.math.BigDecimal
 import java.sql.Timestamp
 
 abstract class StatementWithSet:DbPreparedStatement() {
@@ -23,6 +24,13 @@ abstract class StatementWithSet:DbPreparedStatement() {
         setSomething(parameterIndex,x)
     }
 
+    override fun setDouble(parameterIndex: Int, x: Double) {
+        setSomething(parameterIndex, x)
+    }
+
+    override fun setBigDecimal(parameterIndex: Int, x: BigDecimal?) {
+        setSomething(parameterIndex, x)
+    }
 
 
 }

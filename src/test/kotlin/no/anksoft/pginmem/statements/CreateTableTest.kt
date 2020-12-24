@@ -2,8 +2,10 @@ package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.PgInMemDatasource
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.data.Offset
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
+import java.math.BigDecimal
 import java.sql.SQLException
 
 class CreateTableTest {
@@ -112,6 +114,34 @@ class CreateTableTest {
                     assertThat(it.getString("id")).isEqualTo("mykey")
                     assertThat(it.getString("currency")).isEqualTo("NOK")
                     assertThat(it.getBoolean("isused")).isTrue()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun numericType() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        number numeric
+                        )
+                """.trimIndent()
+                )
+            }
+            conn.prepareStatement("insert into mytable(id,number) values (?,?)").use {
+                it.setString(1,"mykey")
+                it.setDouble(2,3.14)
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable").use { statement ->
+                statement.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("mykey")
+                    assertThat(it.getBigDecimal("number")).isCloseTo(BigDecimal.valueOf(3.14), Offset.offset(BigDecimal.valueOf(0.0001)))
                 }
             }
         }

@@ -1,10 +1,11 @@
 package no.anksoft.pginmem
 
+import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
 
 enum class ColumnType() {
-    TEXT, TIMESTAMP,INTEGER,BOOLEAN;
+    TEXT, TIMESTAMP,INTEGER,BOOLEAN,NUMERIC;
 
     fun validateValue(value:Any?):Any? {
         if (value == null) {
@@ -15,6 +16,7 @@ enum class ColumnType() {
             TIMESTAMP -> if (value is Timestamp) value else null
             INTEGER -> if (value is Number) value.toLong() else null
             BOOLEAN -> if (value is Boolean) value else null
+            NUMERIC -> if (value is Number) BigDecimal.valueOf(value.toDouble()) else null
         }
         if (returnValue == null) {
             throw SQLException("Binding value not valid for $this")
