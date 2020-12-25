@@ -15,19 +15,7 @@ class CreateTableStatement(val statementAnalyzer: StatementAnalyzer,private val 
 
         val columns:MutableList<Column> = mutableListOf()
         while (true) {
-            val columnName = statementAnalyzer.word()?:throw SQLException("Expecting column name")
-            val colType = statementAnalyzer.word(1)?:throw SQLException("Expecting column type")
-            statementAnalyzer.addIndex(2)
-
-            val defaultValue:(()->Any?)? = if (statementAnalyzer.word() == "default") {
-                statementAnalyzer.addIndex()
-                statementAnalyzer.readConstantValue()
-            } else null
-            val isNotNull = if (statementAnalyzer.word() == "not" && statementAnalyzer.word(1) == "null") {
-                statementAnalyzer.addIndex(2)
-                true
-            } else false
-            columns.add(Column(columnName,colType,defaultValue,isNotNull))
+            columns.add(Column.create(statementAnalyzer))
 
             while (statementAnalyzer.word() != ",") {
                 if (statementAnalyzer.word() == ")") {

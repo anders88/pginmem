@@ -27,8 +27,29 @@ enum class ColumnType() {
     }
 }
 
-class Column constructor(val name:String,columnTypeText:String,val defaultValue:(()->Any?)?,val isNotNull:Boolean) {
+class Column private constructor(val name:String,columnTypeText:String,val defaultValue:(()->Any?)?,val isNotNull:Boolean) {
+    companion object {
+        fun create(statementAnalyzer: StatementAnalyzer):Column {
+            val columnName = statementAnalyzer.word()?:throw SQLException("Expecting column name")
+            val colType = statementAnalyzer.word(1)?:throw SQLException("Expecting column type")
+            statementAnalyzer.addIndex(2)
+
+            val defaultValue:(()->Any?)? = if (statementAnalyzer.word() == "default") {
+                statementAnalyzer.addIndex()
+                statementAnalyzer.readConstantValue()
+            } else null
+            val isNotNull = if (statementAnalyzer.word() == "not" && statementAnalyzer.word(1) == "null") {
+                statementAnalyzer.addIndex(2)
+                true
+            } else false
+            return Column(columnName,colType,defaultValue,isNotNull)
+        }
+    }
+
+
     val columnType:ColumnType = ColumnType.values().firstOrNull { it.name.toLowerCase() == columnTypeText }?:throw SQLException("Unknown column type $columnTypeText")
+
+
 
     override fun equals(other: Any?): Boolean {
         if (other !is Column) return false
