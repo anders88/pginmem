@@ -32,5 +32,9 @@ abstract class StatementWithSet:DbPreparedStatement() {
         setSomething(parameterIndex, x)
     }
 
+    override fun setBytes(parameterIndex: Int, x: ByteArray?) {
+        setSomething(parameterIndex,x)
+    }
+
 
 }

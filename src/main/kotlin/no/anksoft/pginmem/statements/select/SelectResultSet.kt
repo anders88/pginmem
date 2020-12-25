@@ -133,6 +133,20 @@ class SelectResultSet(private val colums:List<SelectColumnProvider>,private val 
         return getBigDecimal(readCell(columnLabel))
     }
 
+    private fun getByteArray(value:Any?):ByteArray? {
+        if (value == null) return null
+        if (value !is ByteArray) throw SQLException("Not bytearray  value")
+        return value
+    }
+
+    override fun getBytes(columnIndex: Int): ByteArray? {
+        return getByteArray(readCell(columnIndex))
+    }
+
+    override fun getBytes(columnLabel: String?): ByteArray? {
+        return getByteArray(readCell(columnLabel))
+
+    }
 
 
     override fun getLong(columnIndex: Int): Long {
@@ -168,13 +182,6 @@ class SelectResultSet(private val colums:List<SelectColumnProvider>,private val 
     }
 
 
-    override fun getBytes(columnIndex: Int): ByteArray {
-        TODO("Not yet implemented")
-    }
-
-    override fun getBytes(columnLabel: String?): ByteArray {
-        TODO("Not yet implemented")
-    }
 
     override fun getDate(columnIndex: Int): Date {
         TODO("Not yet implemented")

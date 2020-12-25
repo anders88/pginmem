@@ -146,4 +146,33 @@ class CreateTableTest {
             }
         }
     }
+
+    @Test
+    fun withByteA() {
+        val byteArray:ByteArray = "This is fun ".toByteArray(Charsets.UTF_8)
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        content bytea
+                        )
+                """.trimIndent()
+                )
+            }
+            conn.prepareStatement("insert into mytable(id,content) values (?,?)").use {
+                it.setString(1,"mykey")
+                it.setBytes(2,byteArray)
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable").use { statement ->
+                statement.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("mykey")
+                    assertThat(it.getBytes("content")).isEqualTo(byteArray)
+                }
+            }
+        }
+    }
 }
