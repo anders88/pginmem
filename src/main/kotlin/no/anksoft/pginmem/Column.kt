@@ -5,7 +5,7 @@ import java.sql.SQLException
 import java.sql.Timestamp
 
 enum class ColumnType() {
-    TEXT, TIMESTAMP,INTEGER,BOOLEAN,NUMERIC;
+    TEXT, TIMESTAMP,DATE,INTEGER,BOOLEAN,NUMERIC;
 
     fun validateValue(value:Any?):Any? {
         if (value == null) {
@@ -14,6 +14,7 @@ enum class ColumnType() {
         val returnValue:Any? = when (this) {
             TEXT -> if (value is String) value else null
             TIMESTAMP -> if (value is Timestamp) value else null
+            DATE -> if (value is Timestamp) value else null
             INTEGER -> if (value is Number) value.toLong() else null
             BOOLEAN -> if (value is Boolean) value else null
             NUMERIC -> if (value is Number) BigDecimal.valueOf(value.toDouble()) else null
