@@ -84,4 +84,37 @@ class AlterTableTest {
             }
         }
     }
+
+    @Test
+    fun renameColumn() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        description text
+                        )
+                """.trimIndent()
+                )
+            }
+            conn.prepareStatement("insert into mytable(id,description) values (?,?)").use {
+                it.setString(1, "mykey")
+                it.setString(2,"something")
+                it.executeUpdate()
+            }
+            conn.createStatement().use {
+                it.execute("""
+                    alter table mytable rename column description to altdesc
+                """.trimIndent())
+            }
+            conn.prepareStatement("select * from mytable where id = ?").use {
+                it.setString(1,"mykey")
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("altdesc")).isEqualTo("something")
+                }
+            }
+        }
+    }
 }

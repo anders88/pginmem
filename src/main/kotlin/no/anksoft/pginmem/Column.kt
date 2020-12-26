@@ -27,11 +27,15 @@ enum class ColumnType() {
     }
 }
 
-class Column private constructor(val name:String,columnTypeText:String,val defaultValue:(()->Any?)?,val isNotNull:Boolean) {
+class Column private constructor(val name:String,val columnType: ColumnType,val defaultValue:(()->Any?)?,val isNotNull:Boolean) {
+
+
     companion object {
         fun create(statementAnalyzer: StatementAnalyzer):Column {
             val columnName = statementAnalyzer.word()?:throw SQLException("Expecting column name")
-            val colType = statementAnalyzer.word(1)?:throw SQLException("Expecting column type")
+            val colTypeText = statementAnalyzer.word(1)?:throw SQLException("Expecting column type")
+            val columnType:ColumnType = ColumnType.values().firstOrNull { it.name.toLowerCase() == colTypeText }?:throw SQLException("Unknown column type $colTypeText")
+
             statementAnalyzer.addIndex(2)
 
             val defaultValue:(()->Any?)? = if (statementAnalyzer.word() == "default") {
@@ -42,12 +46,18 @@ class Column private constructor(val name:String,columnTypeText:String,val defau
                 statementAnalyzer.addIndex(2)
                 true
             } else false
-            return Column(columnName,colType,defaultValue,isNotNull)
+            return Column(columnName,columnType,defaultValue,isNotNull)
         }
     }
 
+    fun rename(newname:String):Column = Column(
+        name = newname,
+        columnType = columnType,
+        defaultValue = defaultValue,
+        isNotNull = isNotNull
+    )
 
-    val columnType:ColumnType = ColumnType.values().firstOrNull { it.name.toLowerCase() == columnTypeText }?:throw SQLException("Unknown column type $columnTypeText")
+
 
 
 

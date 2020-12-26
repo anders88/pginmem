@@ -46,7 +46,7 @@ class SelectResultSet(private val colums:List<SelectColumnProvider>,private val 
         if (columnLabel == null) {
             throw SQLException("Cannot get null")
         }
-        val columnProvider:SelectColumnProvider = colums.firstOrNull() { it.match(columnLabel) }
+        val columnProvider:SelectColumnProvider = colums.firstOrNull { it.match(columnLabel) }
             ?:throw SQLException("Unknown column $columnLabel")
         val value = columnProvider.readValue(selectRowProvider,rowindex)
         lastWasNull = (value == null)

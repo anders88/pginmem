@@ -19,10 +19,39 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         val newTable = when (command) {
             "add" -> addColumn(table)
             "drop" -> deleteColumn(table)
+            "rename" -> renameColumn(table)
             else -> throw SQLException("Unknown alter table command $command")
         }
         dbTransaction.registerTableUpdate(newTable)
         return 0
+    }
+
+    private fun renameColumn(table: Table): Table {
+        val colnameFrom = statementAnalyzer.word()?:throw SQLException("Expected colunname from")
+        val columnToRename:Column = table.findColumn(colnameFrom)?:throw SQLException("Unkown column $colnameFrom")
+        statementAnalyzer.addIndex()
+        if (statementAnalyzer.word() != "to") {
+            throw SQLException("Expected to")
+        }
+        statementAnalyzer.addIndex()
+        val newColName = stripSeachName(statementAnalyzer.word()?:throw SQLException("Unexpected end of sequence"))
+        if (table.colums.any { it.name == newColName }) {
+            throw SQLException("New columnname already exsists")
+        }
+        val newColumn = columnToRename.rename(newColName)
+        val adjustedColumns = table.colums.map { oldcol ->
+            if (oldcol == columnToRename) newColumn else oldcol
+        }
+        val newTable = Table(table.name,adjustedColumns)
+        for (row in table.rowsForReading()) {
+            val adjustedCells = row.cells.map {
+                if (it.column == columnToRename) {
+                    Cell(newColumn,it.value)
+                } else it
+            }
+            newTable.addRow(Row(adjustedCells))
+        }
+        return newTable
     }
 
     private fun deleteColumn(table: Table): Table {
