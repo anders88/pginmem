@@ -58,8 +58,9 @@ class StatementAnalyzer(val sql:String) {
         return words[readAt]
     }
 
-    fun addIndex(delta:Int=1) {
+    fun addIndex(delta:Int=1):StatementAnalyzer {
         currentIndex+=delta
+        return this
     }
 
     fun indexOf(word:String) = words.indexOf(word)

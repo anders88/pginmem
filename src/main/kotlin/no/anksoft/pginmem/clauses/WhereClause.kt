@@ -1,9 +1,6 @@
 package no.anksoft.pginmem.clauses
 
-import no.anksoft.pginmem.Cell
-import no.anksoft.pginmem.Column
-import no.anksoft.pginmem.Table
-import no.anksoft.pginmem.stripSeachName
+import no.anksoft.pginmem.*
 import java.sql.SQLException
 
 fun createWhereClause(words:List<String>,tables:List<Table>,nextIndexToUse:Int):WhereClause {
@@ -18,6 +15,26 @@ fun createWhereClause(words:List<String>,tables:List<Table>,nextIndexToUse:Int):
     }
 
 }
+
+fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:List<Table>,nextIndexToUse:Int):WhereClause {
+    if (statementAnalyzer.word() != "where") {
+        return MatchAllClause()
+    }
+    statementAnalyzer.addIndex()
+
+    val columns:List<Column> = tables.map { it.colums }.flatten()
+    val columnName = stripSeachName(statementAnalyzer.word()?:throw SQLException("Unexpected "))
+    val column:Column = columns.firstOrNull { it.name == columnName}?:throw SQLException("Unknown column $columnName")
+    statementAnalyzer.addIndex()
+    return when(statementAnalyzer.word()) {
+        "=" -> EqualCase(column,nextIndexToUse)
+        ">" -> GreaterThanCause(column,nextIndexToUse)
+        "<" -> LessThanCause(column,nextIndexToUse)
+        else -> throw SQLException("Syntax error in where clause")
+    }
+
+}
+
 
 
 private fun <T> getFromWords(words: List<T>,index:Int):T {
