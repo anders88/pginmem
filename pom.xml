@@ -66,6 +66,11 @@
             <version>1.2.1</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jsonbuddy</groupId>
+            <artifactId>jsonbuddy</artifactId>
+            <version>0.14.2</version>
+        </dependency>
         
     </dependencies>
     <build>
