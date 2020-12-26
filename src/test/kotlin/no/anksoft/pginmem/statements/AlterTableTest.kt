@@ -4,6 +4,7 @@ import no.anksoft.pginmem.PgInMemDatasource
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.sql.SQLException
 
 class AlterTableTest {
     private val datasource = PgInMemDatasource()
@@ -45,6 +46,40 @@ class AlterTableTest {
                 it.executeQuery().use {
                     assertThat(it.next()).isTrue()
                     assertThat(it.getString("description")).isEqualTo("A description")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun dropColumn() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        description text
+                        )
+                """.trimIndent()
+                )
+            }
+            conn.prepareStatement("insert into mytable(id,description) values (?,?)").use {
+                it.setString(1, "mykey")
+                it.setString(2,"something")
+                it.executeUpdate()
+            }
+            conn.createStatement().use {
+                it.execute("""
+                    alter table mytable drop column description
+                """.trimIndent())
+            }
+            conn.prepareStatement("select * from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    try {
+                        it.getString("description")
+                    } catch (s:SQLException) {}
                 }
             }
         }

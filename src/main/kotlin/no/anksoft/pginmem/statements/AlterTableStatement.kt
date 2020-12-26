@@ -10,25 +10,45 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         val table = dbTransaction.tableForUpdate(statementAnalyzer.word()?:throw SQLException("Unexpected end of statemnt"))
 
         statementAnalyzer.addIndex()
-        if (statementAnalyzer.word() != "add") {
-            throw SQLException("Expected add")
-        }
+        val command = statementAnalyzer.word()
         statementAnalyzer.addIndex()
         if (statementAnalyzer.word() == "column") {
             statementAnalyzer.addIndex()
         }
-        val newColumn = Column.create(statementAnalyzer)
-        val adjustedColumns = table.colums.toMutableList()
-        adjustedColumns.add(newColumn)
-        val newTable = Table(table.name,adjustedColumns)
-        for (row in table.rowsForReading()) {
-            val adjustedCells = row.cells.toMutableList()
-            val newCell = Cell(newColumn,newColumn.defaultValue?.invoke())
-            adjustedCells.add(newCell)
-            newTable.addRow(Row(adjustedCells))
+
+        val newTable = when (command) {
+            "add" -> addColumn(table)
+            "drop" -> deleteColumn(table)
+            else -> throw SQLException("Unknown alter table command $command")
         }
         dbTransaction.registerTableUpdate(newTable)
         return 0
+    }
+
+    private fun deleteColumn(table: Table): Table {
+        val colname = statementAnalyzer.word()?:throw SQLException("Expected column name")
+        val columnToDelete:Column = table.findColumn(colname)?:throw SQLException("Unknown column $colname")
+        val adjustedColumns = table.colums.filter { it != columnToDelete }
+        val newTable = Table(table.name, adjustedColumns)
+        for (row in table.rowsForReading()) {
+            val adjustedCells = row.cells.filter { it.column != columnToDelete }
+            newTable.addRow(Row(adjustedCells))
+        }
+        return newTable
+    }
+
+    private fun addColumn(table: Table): Table {
+        val newColumn = Column.create(statementAnalyzer)
+        val adjustedColumns = table.colums.toMutableList()
+        adjustedColumns.add(newColumn)
+        val newTable = Table(table.name, adjustedColumns)
+        for (row in table.rowsForReading()) {
+            val adjustedCells = row.cells.toMutableList()
+            val newCell = Cell(newColumn, newColumn.defaultValue?.invoke())
+            adjustedCells.add(newCell)
+            newTable.addRow(Row(adjustedCells))
+        }
+        return newTable
     }
 
 }
