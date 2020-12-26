@@ -63,6 +63,11 @@ class StatementAnalyzer(val sql:String) {
         return this
     }
 
+    fun setIndex(index:Int):StatementAnalyzer {
+        currentIndex = index
+        return this
+    }
+
     fun indexOf(word:String) = words.indexOf(word)
 
     fun wordAt(givenIndex:Int):String? = if (givenIndex >= 0 && givenIndex < words.size) words[givenIndex] else null

@@ -41,7 +41,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         addedSelected
     }
 
-    val whereClause:WhereClause = if (usedTable != null && fromInd+3 < statementAnalyzer.size) createWhereClause(statementAnalyzer.subList(fromInd+3,statementAnalyzer.size), listOf(usedTable),1) else MatchAllClause()
+    val whereClause:WhereClause = createWhereClause(statementAnalyzer.setIndex(fromInd+2), listOfNotNull(usedTable),1)
     val selectRowProvider = if (usedTable != null) TablesSelectRowProvider(usedTable,whereClause) else ImplicitOneRowSelectProvider()
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause)
 }
