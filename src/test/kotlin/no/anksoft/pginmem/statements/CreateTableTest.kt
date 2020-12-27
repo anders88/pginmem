@@ -48,19 +48,22 @@ class CreateTableTest {
                     """
                 create table mytable(
                     id  text,
-                    created timestamp default now()
+                    created timestamp default now(),
+                    installed integer
                     )
                 """.trimIndent()
                 )
             }
-            conn.prepareStatement("insert into mytable(id) values (?)").use {
+            conn.prepareStatement("insert into mytable(id,installed) values (?,?)").use {
                 it.setString(1,"myindex")
+                it.setInt(2,42)
                 it.executeUpdate()
             }
             conn.prepareStatement("select * from mytable").use { statement ->
                 statement.executeQuery().use {
                     assertThat(it.next()).isTrue()
                     assertThat(it.getTimestamp("created")).isNotNull()
+                    assertThat(it.getInt("installed")).isEqualTo(42)
                 }
             }
         }

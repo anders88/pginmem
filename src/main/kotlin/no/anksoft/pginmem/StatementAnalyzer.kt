@@ -33,7 +33,17 @@ private fun splitStringToWords(sql:String):List<String> {
             previndex = index
             continue
         }
-        if ("(),=<>:-".indexOf(charAtPos) != -1) {
+        if (charAtPos == ',') {
+            if (index > previndex) {
+                result.add(trimmed.substring(previndex,index))
+            }
+            result.add(",")
+            index++
+            previndex = index
+            inSpecialCaseSequence = false
+            continue
+        }
+        if ("()=<>:-".indexOf(charAtPos) != -1) {
             if (index > previndex && !inSpecialCaseSequence) {
                 result.add(trimmed.substring(previndex,index))
                 previndex = index
