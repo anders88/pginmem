@@ -31,7 +31,9 @@ class AdvancedStatementsTest {
             conn.prepareStatement("""
                 update mytable
                    set email = info::json->>'email'
-            """.trimIndent())
+            """.trimIndent()).use {
+                it.executeUpdate()
+            }
             conn.prepareStatement("select * from mytable").use {
                 it.executeQuery().use {
                     Assertions.assertThat(it.next()).isTrue()

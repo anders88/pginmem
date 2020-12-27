@@ -33,10 +33,10 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
     companion object {
         fun create(statementAnalyzer: StatementAnalyzer):Column {
             val columnName = statementAnalyzer.word()?:throw SQLException("Expecting column name")
-            val colTypeText = statementAnalyzer.word(1)?:throw SQLException("Expecting column type")
+            val colTypeText = statementAnalyzer.addIndex().word()?:throw SQLException("Expecting column type")
             val columnType:ColumnType = ColumnType.values().firstOrNull { it.name.toLowerCase() == colTypeText }?:throw SQLException("Unknown column type $colTypeText")
 
-            statementAnalyzer.addIndex(2)
+            statementAnalyzer.addIndex(1)
 
             val defaultValue:(()->Any?)? = if (statementAnalyzer.word() == "default") {
                 statementAnalyzer.addIndex()

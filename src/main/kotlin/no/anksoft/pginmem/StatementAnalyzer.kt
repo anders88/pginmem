@@ -1,5 +1,7 @@
 package no.anksoft.pginmem
 
+import org.jsonbuddy.JsonObject
+import org.jsonbuddy.parse.JsonParser
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.LocalDateTime
@@ -86,8 +88,8 @@ class StatementAnalyzer(val sql:String) {
     fun readConstantValue():(()->Any?)? {
         val aword:String = word()?:return null
         when {
-                (aword == "now" && word(1) == "(" && word(2) == ")") -> {
-                    addIndex(3)
+                (aword == "now" && word(1) == "()") -> {
+                    addIndex(2)
                     return { Timestamp.valueOf(LocalDateTime.now()) }
                 }
             ("true" == aword) -> return { true }
@@ -104,5 +106,53 @@ class StatementAnalyzer(val sql:String) {
             }
             else -> return null
         }
+    }
+
+    fun readValueOnRow(tables:List<Table>):(Row)->Any? {
+        val colname = word()?:throw SQLException("Unekpected end of statement")
+        val column:Column = tables.map { it.findColumn(colname)}
+            .filterNotNull()
+            .firstOrNull()?:throw SQLException("Unknown column $colname")
+        addIndex()
+        val resultTransformer:((Any?)->Any?)? = if (word() == "::") {
+            if (addIndex().word() != "json") {
+                throw SQLException("Unsupported konversion ${word()}")
+            }
+            if (addIndex().word() != "->>") {
+                throw SQLException("Expected ->>")
+            }
+            addIndex()
+            val jsonkey = word()
+            if (!(jsonkey?.startsWith("'") == true && word()?.endsWith("'") == true)) {
+                throw SQLException("Expected jsonkey got $jsonkey")
+            }
+            addIndex()
+            JsonTransformer(jsonkey.substring(1,jsonkey.length-1))
+        }  else null
+        return ReadFromRow(column,resultTransformer)
+    }
+}
+
+private class ReadFromRow(val column: Column,val resultTransformer:((Any?)->Any?)?):(Row)->Any? {
+    override fun invoke(row: Row): Any? {
+        val cell = row.cells.first { it.column == column }
+        var value = cell.value
+        if (resultTransformer != null) {
+            value = resultTransformer.invoke(value)
+        }
+        return value
+    }
+}
+
+private class JsonTransformer(val key:String):(Any?)->Any? {
+    override fun invoke(inputValue: Any?): Any? {
+        if (inputValue !is String) {
+            return null
+        }
+        val jsonNode = JsonParser.parse(inputValue)
+        if (jsonNode !is JsonObject) {
+            throw SQLException("Expected jsonobject got $inputValue")
+        }
+        return jsonNode.stringValue(key).orElse(null)
     }
 }
