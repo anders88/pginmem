@@ -29,7 +29,12 @@ fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:List<Table>,ne
     return when(statementAnalyzer.word()) {
         "=" -> EqualCase(column,nextIndexToUse)
         ">" -> GreaterThanCause(column,nextIndexToUse)
-        "<" -> LessThanCause(column,nextIndexToUse)
+        "<"  -> LessThanCause(column,nextIndexToUse)
+        "is" -> when {
+            statementAnalyzer.addIndex().word() == "null" -> IsNullClause(column)
+            statementAnalyzer.word() == "not" && statementAnalyzer.addIndex().word() == "null" -> IsNotNullClause(column)
+            else -> throw SQLException("Syntax error after is")
+        }
         else -> throw SQLException("Syntax error in where clause. Not recognicing word ${statementAnalyzer.word()}")
     }
 

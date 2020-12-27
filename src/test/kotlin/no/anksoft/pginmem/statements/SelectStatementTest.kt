@@ -68,4 +68,42 @@ class SelectStatementTest {
 
         }
     }
+
+    @Test
+    fun selectWithIsNull() {
+        connection.use { conn ->
+            conn.createStatement().execute(
+                """
+                create table mytable(
+                    id  text,
+                    description text)
+            """.trimIndent()
+            )
+            val insertSql = "insert into mytable(id,description) values (?,?)"
+            conn.prepareStatement(insertSql).use {
+                it.setString(1, "one")
+                it.setString(2, null)
+                it.executeUpdate()
+            }
+            conn.prepareStatement(insertSql).use {
+                it.setString(1, "two")
+                it.setString(2, "something")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select id from mytable where description is null").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("one")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+            conn.prepareStatement("select id from mytable where description is not null").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("two")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
 }

@@ -29,7 +29,7 @@ abstract class BinaryClause:WhereClause {
         if (!isRegistered) {
             throw SQLException("Binding not set")
         }
-        val cell: Cell = cells.firstOrNull { it.column.name == column.name }?:return false
+        val cell: Cell = cells.firstOrNull { it.column == column }?:return false
         if (cell.value !is Comparable<*>) return false
         if (valueToMatch == null) return false
         return checkMatch(cell.value,valueToMatch)
