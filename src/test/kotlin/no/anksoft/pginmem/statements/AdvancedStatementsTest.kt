@@ -42,4 +42,36 @@ class AdvancedStatementsTest {
             }
         }
     }
+
+    @Test
+    fun updateWithConstant() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        info text
+                        )
+                """.trimIndent()
+                )
+            }
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1, "mykey")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("""
+                update mytable
+                   set info = 'Here is info'
+            """.trimIndent()).use {
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable").use {
+                it.executeQuery().use {
+                    Assertions.assertThat(it.next()).isTrue()
+                    Assertions.assertThat(it.getString("info")).isEqualTo("Here is info")
+                }
+            }
+        }
+    }
 }

@@ -21,8 +21,27 @@ private fun splitStringToWords(sql:String):List<String> {
     var index = 0
     var previndex = 0
     var inSpecialCaseSequence:Boolean = false
+    inQuote = false
     while (index < trimmed.length) {
         val charAtPos:Char = trimmed[index]
+        if (inQuote) {
+            index++
+            if (charAtPos == '\'') {
+                result.add(trimmed.substring(previndex, index))
+                previndex = index
+                inQuote = false
+            }
+            continue
+        }
+        if (charAtPos == '\'') {
+            if (index > previndex) {
+                result.add(trimmed.substring(previndex, index))
+            }
+            previndex = index
+            index++
+            inQuote = true
+            continue
+        }
 
         if (charAtPos.isWhitespace()) {
             inSpecialCaseSequence = false
@@ -120,6 +139,10 @@ class StatementAnalyzer(val sql:String) {
 
     fun readValueOnRow(tables:List<Table>):(Row)->Any? {
         val colname = word()?:throw SQLException("Unekpected end of statement")
+        if (colname.startsWith("'") && colname.endsWith("'")) {
+            addIndex()
+            return ConstantValue(colname.substring(1,colname.length-1))
+        }
         val column:Column = tables.map { it.findColumn(colname)}
             .filterNotNull()
             .firstOrNull()?:throw SQLException("Unknown column $colname")
@@ -165,4 +188,11 @@ private class JsonTransformer(val key:String):(Any?)->Any? {
         }
         return jsonNode.stringValue(key).orElse(null)
     }
+}
+
+private class ConstantValue(val value:Any?):(Row)->Any? {
+    override fun invoke(row: Row): Any? {
+        return value
+    }
+
 }

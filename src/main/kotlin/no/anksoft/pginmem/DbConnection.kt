@@ -32,7 +32,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun prepareStatement(sql: String?): PreparedStatement {
-        return createPreparedStatement(sql!!.toLowerCase(),transaction)
+        return createPreparedStatement(sql!!,transaction)
     }
 
     override fun prepareStatement(sql: String?, resultSetType: Int, resultSetConcurrency: Int): PreparedStatement {
