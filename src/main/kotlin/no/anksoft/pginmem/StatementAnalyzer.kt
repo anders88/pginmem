@@ -6,6 +6,7 @@ import java.time.LocalDateTime
 
 private fun splitStringToWords(sql:String):List<String> {
     val result:MutableList<String> = mutableListOf()
+    // Set to lovercase if not quoted
     val toTrimmed = StringBuilder()
     var inQuote = false
     for (char in sql.trim()) {
@@ -17,10 +18,12 @@ private fun splitStringToWords(sql:String):List<String> {
     val trimmed = toTrimmed.toString()
     var index = 0
     var previndex = 0
+    var inSpecialCaseSequence:Boolean = false
     while (index < trimmed.length) {
         val charAtPos:Char = trimmed[index]
 
         if (charAtPos.isWhitespace()) {
+            inSpecialCaseSequence = false
             if (index > previndex) {
                 result.add(trimmed.substring(previndex,index))
             }
@@ -28,15 +31,20 @@ private fun splitStringToWords(sql:String):List<String> {
             previndex = index
             continue
         }
-        if ("(),=<>".indexOf(charAtPos) != -1) {
-            if (index > previndex) {
+        if ("(),=<>:-".indexOf(charAtPos) != -1) {
+            if (index > previndex && !inSpecialCaseSequence) {
                 result.add(trimmed.substring(previndex,index))
+                previndex = index
             }
-            result.add(trimmed.substring(index,index+1))
+            inSpecialCaseSequence = true;
             index++
-            previndex=index
             continue
         }
+        if (inSpecialCaseSequence && index > previndex) {
+            result.add(trimmed.substring(previndex,index))
+            previndex = index
+        }
+        inSpecialCaseSequence = false
         index++
     }
     if (index > previndex) {

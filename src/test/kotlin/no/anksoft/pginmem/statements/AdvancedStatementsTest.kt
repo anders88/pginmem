@@ -9,7 +9,7 @@ class AdvancedStatementsTest {
     private val datasource = PgInMemDatasource()
     private val connection = datasource.connection
 
-    
+    @Test
     fun texToJson() {
         connection.use { conn ->
             conn.createStatement().use {
