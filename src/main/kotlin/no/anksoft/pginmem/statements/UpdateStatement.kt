@@ -22,23 +22,31 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
     private val toUpdate:List<CellToUpdate>
 
     init {
-        table = dbTransaction.tableForUpdate(statementAnalyzer.wordAt(1)?:throw SQLException("Unexpected end of statement") )
-        var ind = 3
+
+        table = dbTransaction.tableForUpdate(statementAnalyzer.addIndex(1).word()?:throw SQLException("Unexpected end of statement") )
+        statementAnalyzer.addIndex(2)
         val updates:MutableList<CellToUpdate> = mutableListOf()
         while (true) {
-            val column:Column = table.findColumn(statementAnalyzer.wordAt(ind)?:throw SQLException("Unexpected end of statement"))?:throw SQLException("Unknown column ${statementAnalyzer.wordAt(ind)?:throw SQLException("Unexpected end of statement") }")
+            val colnameToUpdate = statementAnalyzer.word() ?: throw SQLException("Unexpected end of statement")
+            val column:Column = table.findColumn(colnameToUpdate)?:throw SQLException("Unknown column ${statementAnalyzer.word()}")
             updates.add(CellToUpdate(column))
-            ind+=3
-            if (ind == statementAnalyzer.size || (statementAnalyzer.wordAt(ind)?:throw SQLException("Unexpected end of statement")) == "where") {
+            if (statementAnalyzer.addIndex().word() != "=") {
+                throw SQLException("Expected =")
+            }
+            if (statementAnalyzer.addIndex().word() != "?") {
+                throw SQLException("Expected ?")
+            }
+            statementAnalyzer.addIndex()
+            if (statementAnalyzer.word()?:"where" == "where") {
                 break
             }
-            if ((statementAnalyzer.wordAt(ind)?:throw SQLException("Unexpected end of statement")) != ",") {
-                throw SQLException("Expected , or where")
+            if (statementAnalyzer.word() != ",") {
+                throw SQLException("Expected where or ,")
             }
-            ind++
+            statementAnalyzer.addIndex()
         }
         toUpdate = updates
-        whereClause = if (ind < statementAnalyzer.size) createWhereClause(statementAnalyzer.subList(ind+1,statementAnalyzer.size), listOf(table),toUpdate.size+1) else MatchAllClause()
+        whereClause = createWhereClause(statementAnalyzer, listOf(table),toUpdate.size+1)
     }
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
@@ -64,7 +72,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
             val newCells:MutableList<Cell> = mutableListOf()
             for (cell in row.cells) {
                 newCells.add(toUpdate
-                    .firstOrNull { it.column.name == cell.column.name}
+                    .firstOrNull { it.column == cell.column}
                     ?.let { Cell(it.column,it.value)}?:cell)
             }
             newTable.addRow(Row(newCells))
