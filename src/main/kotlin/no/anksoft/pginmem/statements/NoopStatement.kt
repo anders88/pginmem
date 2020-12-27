@@ -14,4 +14,8 @@ class NoopStatement:DbPreparedStatement() {
     override fun setString(parameterIndex: Int, x: String?) {
 
     }
+
+    override fun executeUpdate(): Int {
+        return 0
+    }
 }

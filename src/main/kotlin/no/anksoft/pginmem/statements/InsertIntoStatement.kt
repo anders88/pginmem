@@ -6,7 +6,7 @@ import java.sql.Timestamp
 
 private class LinkedValue(var value:Any?)
 
-class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction,private val sql:String) : StatementWithSet() {
+class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,private val sql:String) : StatementWithSet() {
     private val tableForUpdate:Table = dbTransaction.tableForUpdate(statementAnalyzer.word(2)?:throw SQLException("Expected table name"))
     private val columns:List<Column>
     private val linkedValues:List<LinkedValue>
@@ -51,6 +51,7 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, dbTr
             Cell(col,value)
         }
         tableForUpdate.addRow(Row(cells))
+        dbTransaction.registerTableUpdate(tableForUpdate)
         return 1
     }
 }

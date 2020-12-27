@@ -30,7 +30,7 @@ fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:List<Table>,ne
         "=" -> EqualCase(column,nextIndexToUse)
         ">" -> GreaterThanCause(column,nextIndexToUse)
         "<" -> LessThanCause(column,nextIndexToUse)
-        else -> throw SQLException("Syntax error in where clause")
+        else -> throw SQLException("Syntax error in where clause. Not recognicing word ${statementAnalyzer.word()}")
     }
 
 }

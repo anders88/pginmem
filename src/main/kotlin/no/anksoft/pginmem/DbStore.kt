@@ -34,7 +34,7 @@ class DbStore {
     fun tableForUpdate(name:String):Table {
         val table = findTable(name)
         if (lockedTables[table.name] != null) {
-            throw NotImplementedError("Wait for lock not implemented")
+            throw NotImplementedError("Wait for lock not implemented for table ${table.name}")
         }
         lockedTables[table.name] = table.name
         return table.clone()

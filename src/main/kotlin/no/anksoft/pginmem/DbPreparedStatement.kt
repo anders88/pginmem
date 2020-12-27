@@ -161,6 +161,7 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         statementAnalyzer.word(0) == "create" && statementAnalyzer.word(1) == "table" -> return CreateTableStatement(statementAnalyzer,dbTransaction)
         statementAnalyzer.word(0) == "alter" && statementAnalyzer.word(1) == "table" -> return AlterTableStatement(statementAnalyzer, dbTransaction)
         statementAnalyzer.word(0) == "create" && statementAnalyzer.word(1) == "sequence" -> return CreateSequenceStatement(statementAnalyzer,dbTransaction)
+        statementAnalyzer.word(0) == "create" && statementAnalyzer.word(1) == "index" -> return CreateIndexStatement(dbTransaction)
         statementAnalyzer.word(0) == "insert" && statementAnalyzer.word(1) == "into" -> return InsertIntoStatement(statementAnalyzer,dbTransaction,sql)
         statementAnalyzer.word(0) == "select" -> return SelectStatement(statementAnalyzer,dbTransaction,sql)
         statementAnalyzer.word(0) == "update" -> return UpdateStatement(statementAnalyzer,dbTransaction)
@@ -169,7 +170,7 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
     }
 }
 
-abstract class DbPreparedStatement:PreparedStatement {
+abstract class DbPreparedStatement():PreparedStatement {
     private val logger = LoggerFactory.getLogger(this::class.java)
     override fun <T : Any?> unwrap(iface: Class<T>?): T {
         TODO("Not yet implemented")
@@ -180,7 +181,6 @@ abstract class DbPreparedStatement:PreparedStatement {
     }
 
     override fun close() {
-
     }
 
     override fun executeQuery(): ResultSet {
