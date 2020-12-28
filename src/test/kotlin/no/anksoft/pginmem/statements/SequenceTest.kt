@@ -52,4 +52,32 @@ class SequenceTest {
             }
         }
     }
+
+    @Test
+    fun serialType() {
+        connection.use { conn ->
+            conn.createStatement().execute("""
+                create table mytable(
+                    id SERIAL PRIMARY KEY,
+                    description text)
+            """.trimIndent())
+            val insertSql = "insert into mytable(description) values (?)"
+            conn.prepareStatement(insertSql).use {
+                it.setString(1,"one")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable").use { statement ->
+                statement.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isGreaterThan(0)
+                }
+            }
+            conn.prepareStatement("select * from mytable").use { statement ->
+                statement.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isGreaterThan(0)
+                }
+            }
+        }
+    }
 }

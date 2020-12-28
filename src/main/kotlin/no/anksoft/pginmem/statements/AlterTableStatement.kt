@@ -67,7 +67,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
     }
 
     private fun addColumn(table: Table): Table {
-        val newColumn = Column.create(statementAnalyzer,dbTransaction)
+        val newColumn = Column.create(table.name,statementAnalyzer,dbTransaction)
         val adjustedColumns = table.colums.toMutableList()
         adjustedColumns.add(newColumn)
         val newTable = Table(table.name, adjustedColumns)

@@ -5,7 +5,7 @@ import java.sql.SQLException
 import java.sql.Timestamp
 
 enum class ColumnType() {
-    TEXT, TIMESTAMP,DATE,INTEGER,BOOLEAN,NUMERIC,BYTEA;
+    TEXT, TIMESTAMP,DATE,INTEGER,BOOLEAN,NUMERIC,BYTEA,SERIAL;
 
     fun validateValue(value:Any?):Any? {
         if (value == null) {
@@ -19,6 +19,7 @@ enum class ColumnType() {
             BOOLEAN -> if (value is Boolean) value else null
             NUMERIC -> if (value is Number) BigDecimal.valueOf(value.toDouble()) else null
             BYTEA -> if (value is ByteArray) value else null
+            SERIAL -> if (value is Number) value.toLong() else null
         }
         if (returnValue == null) {
             throw SQLException("Binding value not valid for $this")
@@ -31,17 +32,27 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
 
 
     companion object {
-        fun create(statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction):Column {
+        fun create(tablename:String,statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction):Column {
             val columnName = statementAnalyzer.word()?:throw SQLException("Expecting column name")
             val colTypeText = statementAnalyzer.addIndex().word()?:throw SQLException("Expecting column type")
             val columnType:ColumnType = ColumnType.values().firstOrNull { it.name.toLowerCase() == colTypeText }?:throw SQLException("Unknown column type $colTypeText")
 
             statementAnalyzer.addIndex(1)
 
-            val defaultValue:((DbTransaction)->Any?)? = if (statementAnalyzer.word() == "default") {
-                statementAnalyzer.addIndex()
-                statementAnalyzer.readConstantValue(dbTransaction)
-            } else null
+            val defaultValue:((DbTransaction)->Any?)? = when {
+                (columnType == ColumnType.SERIAL) -> {
+                    val sequenceName = "${tablename}_${columnName}_seq"
+                    dbTransaction.addSequence(sequenceName)
+                    val d: (DbTransaction) -> Any? = { it.sequence(sequenceName).nextVal() }
+                    d
+                }
+                (statementAnalyzer.word() == "default") -> {
+                    statementAnalyzer.addIndex()
+                    statementAnalyzer.readConstantValue(dbTransaction)
+                }
+                else -> null
+            }
+
             val isNotNull = if (statementAnalyzer.word() == "not" && statementAnalyzer.word(1) == "null") {
                 statementAnalyzer.addIndex(2)
                 true
