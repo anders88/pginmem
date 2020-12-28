@@ -74,4 +74,44 @@ class AdvancedStatementsTest {
             }
         }
     }
+
+    @Test
+    fun updateUsingIn() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        info text
+                        )
+                """.trimIndent()
+                )
+            }
+            val insertSql = "insert into mytable(id) values (?)"
+            conn.prepareStatement(insertSql).use {
+                it.setString(1, "one")
+                it.executeUpdate()
+            }
+            conn.prepareStatement(insertSql).use {
+                it.setString(1, "two")
+                it.executeUpdate()
+            }
+            conn.prepareStatement(insertSql).use {
+                it.setString(1, "three")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("update mytable set info = 'hit' where id in ('one','two')").use {
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable where info = ?").use {
+                it.setString(1,"hit")
+                it.executeQuery().use {
+                    Assertions.assertThat(it.next()).isTrue()
+                    Assertions.assertThat(it.next()).isTrue()
+                    Assertions.assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
 }

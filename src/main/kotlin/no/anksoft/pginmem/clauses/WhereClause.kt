@@ -35,6 +35,7 @@ fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:List<Table>,ne
             statementAnalyzer.word() == "not" && statementAnalyzer.addIndex().word() == "null" -> IsNotNullClause(column)
             else -> throw SQLException("Syntax error after is")
         }
+        "in" -> InClause(column,statementAnalyzer)
         else -> throw SQLException("Syntax error in where clause. Not recognicing word ${statementAnalyzer.word()}")
     }
 
