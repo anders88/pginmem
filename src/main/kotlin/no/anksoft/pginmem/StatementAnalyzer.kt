@@ -114,13 +114,24 @@ class StatementAnalyzer(val sql:String) {
     val size = words.size
     fun subList(fromIndex:Int,toIndex:Int) = words.subList(fromIndex,toIndex)
 
-    fun readConstantValue():(()->Any?)? {
+    fun readConstantValue(dbTransaction: DbTransaction):((DbTransaction)->Any?)? {
         val aword:String = word()?:return null
         when {
                 (aword == "now" && word(1) == "()") -> {
                     addIndex(2)
                     return { Timestamp.valueOf(LocalDateTime.now()) }
                 }
+            (aword == "nextval" && word(1) == "(" && word(3) == ")") -> {
+                val seqnamestr = word(2)
+                if (!(seqnamestr?.startsWith("'") == true && seqnamestr.endsWith("'") == true)) {
+                    throw SQLException("Expected sequence name in nextval")
+                }
+                addIndex(4)
+                val seqname = seqnamestr.substring(1,seqnamestr.length-1)
+                dbTransaction.sequence(seqname)
+                return { it.sequence(seqname).nextVal() }
+
+            }
             ("true" == aword) -> return { true }
             ("false" == aword) -> return { false }
             (aword.toLongOrNull() != null) -> return { aword.toLong()}

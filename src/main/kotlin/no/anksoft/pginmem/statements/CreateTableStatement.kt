@@ -15,7 +15,7 @@ class CreateTableStatement(val statementAnalyzer: StatementAnalyzer,private val 
 
         val columns:MutableList<Column> = mutableListOf()
         while (true) {
-            columns.add(Column.create(statementAnalyzer))
+            columns.add(Column.create(statementAnalyzer,dbTransaction))
 
             while (statementAnalyzer.word() != ",") {
                 if (statementAnalyzer.word() == ")") {

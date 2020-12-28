@@ -27,20 +27,20 @@ enum class ColumnType() {
     }
 }
 
-class Column private constructor(val name:String,val columnType: ColumnType,val defaultValue:(()->Any?)?,val isNotNull:Boolean) {
+class Column private constructor(val name:String,val columnType: ColumnType,val defaultValue:((DbTransaction)->Any?)?,val isNotNull:Boolean) {
 
 
     companion object {
-        fun create(statementAnalyzer: StatementAnalyzer):Column {
+        fun create(statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction):Column {
             val columnName = statementAnalyzer.word()?:throw SQLException("Expecting column name")
             val colTypeText = statementAnalyzer.addIndex().word()?:throw SQLException("Expecting column type")
             val columnType:ColumnType = ColumnType.values().firstOrNull { it.name.toLowerCase() == colTypeText }?:throw SQLException("Unknown column type $colTypeText")
 
             statementAnalyzer.addIndex(1)
 
-            val defaultValue:(()->Any?)? = if (statementAnalyzer.word() == "default") {
+            val defaultValue:((DbTransaction)->Any?)? = if (statementAnalyzer.word() == "default") {
                 statementAnalyzer.addIndex()
-                statementAnalyzer.readConstantValue()
+                statementAnalyzer.readConstantValue(dbTransaction)
             } else null
             val isNotNull = if (statementAnalyzer.word() == "not" && statementAnalyzer.word(1) == "null") {
                 statementAnalyzer.addIndex(2)

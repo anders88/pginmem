@@ -42,7 +42,7 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             val index = columns.indexOfFirst { it.name == col.name }
             val value:Any? = if (index == -1) {
                 if (col.defaultValue != null) {
-                    col.defaultValue.invoke()
+                    col.defaultValue.invoke(dbTransaction)
                 } else null
             } else linkedValues[index].value
             if (col.isNotNull && value == null) {

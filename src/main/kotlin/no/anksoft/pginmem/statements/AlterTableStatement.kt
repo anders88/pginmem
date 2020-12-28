@@ -67,13 +67,13 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
     }
 
     private fun addColumn(table: Table): Table {
-        val newColumn = Column.create(statementAnalyzer)
+        val newColumn = Column.create(statementAnalyzer,dbTransaction)
         val adjustedColumns = table.colums.toMutableList()
         adjustedColumns.add(newColumn)
         val newTable = Table(table.name, adjustedColumns)
         for (row in table.rowsForReading()) {
             val adjustedCells = row.cells.toMutableList()
-            val newCell = Cell(newColumn, newColumn.defaultValue?.invoke())
+            val newCell = Cell(newColumn, newColumn.defaultValue?.invoke(dbTransaction))
             adjustedCells.add(newCell)
             newTable.addRow(Row(adjustedCells))
         }
