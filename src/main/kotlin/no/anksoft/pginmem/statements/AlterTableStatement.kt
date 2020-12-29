@@ -16,14 +16,27 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
             statementAnalyzer.addIndex()
         }
 
-        val newTable = when (command) {
-            "add" -> addColumn(table)
-            "drop" -> deleteColumn(table)
-            "rename" -> renameColumn(table)
+        val newTable:Table? = when  {
+            command == "add" -> addColumn(table)
+            command == "drop" -> deleteColumn(table)
+            command == "rename" && statementAnalyzer.word() == "to" -> renameTable(table,statementAnalyzer.addIndex().word())
+            command == "rename" -> renameColumn(table)
             else -> throw SQLException("Unknown alter table command $command")
         }
-        dbTransaction.registerTableUpdate(newTable)
+        newTable?.let {  dbTransaction.registerTableUpdate(it)}
         return 0
+    }
+
+    private fun renameTable(table: Table,toName:String?):Table? {
+        if (toName == null) {
+            throw SQLException("Missing name to rename to")
+        }
+        val newTable = Table(toName,table.colums)
+        table.rowsForReading().forEach({newTable.addRow(it)})
+        dbTransaction.removeTable(table)
+        dbTransaction.createAlterTableSetup(newTable)
+        return null
+
     }
 
     private fun renameColumn(table: Table): Table {

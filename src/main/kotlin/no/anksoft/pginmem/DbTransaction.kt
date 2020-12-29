@@ -32,6 +32,10 @@ class DbTransaction(private val dbStore: DbStore) {
         updatingTables[table.name] = table
     }
 
+    fun removeTable(table: Table) {
+        dbStore.removeTable(table)
+    }
+
     fun setAutoCommit(value: Boolean) {
         this.autoCommit = value
     }

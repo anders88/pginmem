@@ -19,12 +19,17 @@ fun stripSeachName(searchName:String):String {
 class DbStore {
     private val tables:MutableMap<String,Table> = mutableMapOf()
     private val sequences:MutableMap<String,Sequence> = mutableMapOf()
+    private val lockedTables:ConcurrentHashMap<String,String> = ConcurrentHashMap()
 
     fun createAlterTableSetup(table: Table) {
         tables[table.name] = table
     }
 
-    private val lockedTables:ConcurrentHashMap<String,String> = ConcurrentHashMap()
+    fun removeTable(table: Table) {
+        lockedTables.remove(table.name)
+        tables.remove(table.name)
+    }
+
 
     private fun findTable(tablename:String):Table {
         val table = tables[stripSeachName(tablename)]?:throw SQLException("Unknown table $tablename")
