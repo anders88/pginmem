@@ -4,6 +4,8 @@ import no.anksoft.pginmem.PgInMemDatasource
 import org.assertj.core.api.Assertions
 import org.jsonbuddy.JsonObject
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
+import java.sql.SQLException
 
 class AdvancedStatementsTest {
     private val datasource = PgInMemDatasource()
@@ -114,4 +116,26 @@ class AdvancedStatementsTest {
             }
         }
     }
+
+    @Test
+    fun failedInsertsTest() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        info text
+                        )
+                """.trimIndent()
+                )
+            }
+            try {
+                conn.prepareStatement("insert into mytable(id) valx (?)")
+                fail("Expected sql exception")
+            } catch (e: SQLException) {
+            }
+        }
+    }
+
 }

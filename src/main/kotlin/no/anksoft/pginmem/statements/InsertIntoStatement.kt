@@ -27,6 +27,22 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
         }
         columns = cols
         linkedValues = (1..columns.size).map { LinkedValue(null) }
+        if (statementAnalyzer.addIndex().word() != "values") {
+            throw SQLException("Expected values")
+        }
+        if (statementAnalyzer.addIndex().word() != "(") {
+            throw SQLException("Expected (")
+        }
+        for (i in 1..columns.size) {
+            if (statementAnalyzer.addIndex().word() != "?") {
+                throw SQLException("Expected ?")
+            }
+
+            val nextexp = if (i == columns.size) ")" else ","
+            if (statementAnalyzer.addIndex().word() != nextexp) {
+                throw SQLException("Expected $nextexp")
+            }
+        }
     }
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
