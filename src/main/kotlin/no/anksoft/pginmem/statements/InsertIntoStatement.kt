@@ -4,7 +4,7 @@ import no.anksoft.pginmem.*
 import java.sql.SQLException
 import java.sql.Timestamp
 
-private class LinkedValue(var value:Any?)
+private class LinkedValue(val column: Column,val index:Int?,var value:(Pair<DbTransaction,Row?>)->Any?={null})
 
 class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,private val sql:String) : StatementWithSet() {
     private val tableForUpdate:Table = dbTransaction.tableForUpdate(statementAnalyzer.word(2)?:throw SQLException("Expected table name"))
@@ -26,28 +26,37 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             statementAnalyzer.addIndex()
         }
         columns = cols
-        linkedValues = (1..columns.size).map { LinkedValue(null) }
         if (statementAnalyzer.addIndex().word() != "values") {
             throw SQLException("Expected values")
         }
         if (statementAnalyzer.addIndex().word() != "(") {
             throw SQLException("Expected (")
         }
-        for (i in 1..columns.size) {
-            if (statementAnalyzer.addIndex().word() != "?") {
-                throw SQLException("Expected ?")
+        val linkedValues:MutableList<LinkedValue> = mutableListOf()
+        var linkedIndex = 0
+        for (i in columns.indices) {
+            val insertcolval = statementAnalyzer.addIndex().word()
+            val linkedValue:LinkedValue = if (insertcolval == "?") {
+                linkedIndex++
+                LinkedValue(columns[i],linkedIndex)
+            } else {
+                val value = statementAnalyzer.readValueFromExpression(dbTransaction, listOf(tableForUpdate))?:throw SQLException("Could not read value in statement")
+                LinkedValue(columns[i],null, value)
             }
-
-            val nextexp = if (i == columns.size) ")" else ","
+            linkedValues.add(linkedValue)
+            val nextexp = if (i == columns.size-1) ")" else ","
             if (statementAnalyzer.addIndex().word() != nextexp) {
                 throw SQLException("Expected $nextexp")
             }
         }
+        this.linkedValues = linkedValues
     }
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
-        val setVal = columns[parameterIndex-1].columnType.validateValue(x)
-        linkedValues[parameterIndex-1].value=setVal
+        val linkedValue:LinkedValue = linkedValues.firstOrNull { it.index == parameterIndex }?:throw SQLException("Unknown binding index $parameterIndex")
+        val setVal = linkedValue.column.columnType.validateValue(x)
+        val genvalue:(Pair<DbTransaction,Row?>)->Any? = {setVal}
+        linkedValue.value= genvalue
     }
 
 
@@ -58,9 +67,9 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             val index = columns.indexOfFirst { it.name == col.name }
             val value:Any? = if (index == -1) {
                 if (col.defaultValue != null) {
-                    col.defaultValue.invoke(dbTransaction)
+                    col.defaultValue.invoke(Pair(dbTransaction,null))
                 } else null
-            } else linkedValues[index].value
+            } else linkedValues[index].value.invoke(Pair(dbTransaction,null))
             if (col.isNotNull && value == null) {
                 throw SQLException("Cannot insert null into column ${col.name}")
             }

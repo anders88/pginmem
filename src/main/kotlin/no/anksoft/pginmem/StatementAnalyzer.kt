@@ -114,7 +114,7 @@ class StatementAnalyzer(val sql:String) {
     val size = words.size
     fun subList(fromIndex:Int,toIndex:Int) = words.subList(fromIndex,toIndex)
 
-    fun readConstantValue(dbTransaction: DbTransaction):((DbTransaction)->Any?)? {
+    fun readValueFromExpression(dbTransaction: DbTransaction,tables: List<Table>):((Pair<DbTransaction,Row?>)->Any?)? {
         val aword:String = word()?:return null
         when {
                 (aword == "now" && word(1) == "()") -> {
@@ -129,7 +129,7 @@ class StatementAnalyzer(val sql:String) {
                 addIndex(4)
                 val seqname = seqnamestr.substring(1,seqnamestr.length-1)
                 dbTransaction.sequence(seqname)
-                return { it.sequence(seqname).nextVal() }
+                return { it.first.sequence(seqname).nextVal() }
 
             }
             ("true" == aword) -> return { true }

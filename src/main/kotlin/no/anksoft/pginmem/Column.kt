@@ -28,7 +28,7 @@ enum class ColumnType() {
     }
 }
 
-class Column private constructor(val name:String,val columnType: ColumnType,val defaultValue:((DbTransaction)->Any?)?,val isNotNull:Boolean) {
+class Column private constructor(val name:String,val columnType: ColumnType,val defaultValue:((Pair<DbTransaction,Row?>)->Any?)?,val isNotNull:Boolean) {
 
 
     companion object {
@@ -39,16 +39,16 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
 
             statementAnalyzer.addIndex(1)
 
-            val defaultValue:((DbTransaction)->Any?)? = when {
+            val defaultValue:((Pair<DbTransaction,Row?>)->Any?)? = when {
                 (columnType == ColumnType.SERIAL) -> {
                     val sequenceName = "${tablename}_${columnName}_seq"
                     dbTransaction.addSequence(sequenceName)
-                    val d: (DbTransaction) -> Any? = { it.sequence(sequenceName).nextVal() }
+                    val d: (Pair<DbTransaction,Row?>) -> Any? = { it.first.sequence(sequenceName).nextVal() }
                     d
                 }
                 (statementAnalyzer.word() == "default") -> {
                     statementAnalyzer.addIndex()
-                    statementAnalyzer.readConstantValue(dbTransaction)
+                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyList())
                 }
                 else -> null
             }
