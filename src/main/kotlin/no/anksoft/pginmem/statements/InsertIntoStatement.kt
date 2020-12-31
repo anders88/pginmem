@@ -1,8 +1,8 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.statements.select.SelectResultSet
 import java.sql.SQLException
-import java.sql.Timestamp
 
 private class LinkedValue(val column: Column,val index:Int?,var value:(Pair<DbTransaction,Row?>)->Any?={null})
 
@@ -10,6 +10,7 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
     private val tableForUpdate:Table = dbTransaction.tableForUpdate(statementAnalyzer.word(2)?:throw SQLException("Expected table name"))
     private val columns:List<Column>
     private val linkedValues:List<LinkedValue>
+    private val selectStatement:SelectStatement?
 
     init {
         val cols:MutableList<Column> = mutableListOf()
@@ -26,33 +27,47 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             statementAnalyzer.addIndex()
         }
         columns = cols
-        if (statementAnalyzer.addIndex().word() != "values") {
-            throw SQLException("Expected values")
+        if (statementAnalyzer.addIndex().word() == "values") {
+            this.linkedValues = readLinkedValues(statementAnalyzer)
+            this.selectStatement = null
+        } else {
+            this.linkedValues = emptyList()
+            statementAnalyzer.addIndex()
+            this.selectStatement = SelectStatement(statementAnalyzer,dbTransaction)
         }
+
+    }
+
+    private fun readLinkedValues(statementAnalyzer: StatementAnalyzer): List<LinkedValue> {
         if (statementAnalyzer.addIndex().word() != "(") {
             throw SQLException("Expected (")
         }
-        val linkedValues:MutableList<LinkedValue> = mutableListOf()
+        val linkedValues: MutableList<LinkedValue> = mutableListOf()
         var linkedIndex = 0
         for (i in columns.indices) {
             val insertcolval = statementAnalyzer.addIndex().word()
-            val linkedValue:LinkedValue = if (insertcolval == "?") {
+            val linkedValue: LinkedValue = if (insertcolval == "?") {
                 linkedIndex++
-                LinkedValue(columns[i],linkedIndex)
+                LinkedValue(columns[i], linkedIndex)
             } else {
-                val value = statementAnalyzer.readValueFromExpression(dbTransaction, listOf(tableForUpdate))?:throw SQLException("Could not read value in statement")
-                LinkedValue(columns[i],null, value)
+                val value = statementAnalyzer.readValueFromExpression(dbTransaction, listOf(tableForUpdate))
+                    ?: throw SQLException("Could not read value in statement")
+                LinkedValue(columns[i], null, value)
             }
             linkedValues.add(linkedValue)
-            val nextexp = if (i == columns.size-1) ")" else ","
+            val nextexp = if (i == columns.size - 1) ")" else ","
             if (statementAnalyzer.addIndex().word() != nextexp) {
                 throw SQLException("Expected $nextexp")
             }
         }
-        this.linkedValues = linkedValues
+        return linkedValues
     }
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
+        if (selectStatement != null) {
+            selectStatement.setSomething(parameterIndex,x)
+            return
+        }
         val linkedValue:LinkedValue = linkedValues.firstOrNull { it.index == parameterIndex }?:throw SQLException("Unknown binding index $parameterIndex")
         val setVal = linkedValue.column.columnType.validateValue(x)
         val genvalue:(Pair<DbTransaction,Row?>)->Any? = {setVal}
@@ -63,20 +78,41 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
 
 
     override fun executeUpdate(): Int {
-        val cells:List<Cell> = tableForUpdate.colums.map{ col ->
-            val index = columns.indexOfFirst { it.name == col.name }
-            val value:Any? = if (index == -1) {
-                if (col.defaultValue != null) {
-                    col.defaultValue.invoke(Pair(dbTransaction,null))
-                } else null
-            } else linkedValues[index].value.invoke(Pair(dbTransaction,null))
-            if (col.isNotNull && value == null) {
-                throw SQLException("Cannot insert null into column ${col.name}")
+        if (selectStatement == null) {
+            val cells: List<Cell> = tableForUpdate.colums.map { col ->
+                val index = columns.indexOfFirst { it.name == col.name }
+                val value: Any? = if (index == -1) {
+                    if (col.defaultValue != null) {
+                        col.defaultValue.invoke(Pair(dbTransaction, null))
+                    } else null
+                } else linkedValues[index].value.invoke(Pair(dbTransaction, null))
+                if (col.isNotNull && value == null) {
+                    throw SQLException("Cannot insert null into column ${col.name}")
+                }
+                Cell(col, value)
             }
-            Cell(col,value)
+            tableForUpdate.addRow(Row(cells))
+            dbTransaction.registerTableUpdate(tableForUpdate)
+            return 1
         }
-        tableForUpdate.addRow(Row(cells))
+        val selectResultSet:SelectResultSet = selectStatement.internalExecuteQuery()
+        val numRows = selectResultSet.numberOfRows
+        for (rowno in 0 until numRows) {
+            val cells: List<Cell> = tableForUpdate.colums.map { col ->
+                val index = columns.indexOfFirst { it.name == col.name }
+                val value: Any? = if (index == -1) {
+                    if (col.defaultValue != null) {
+                        col.defaultValue.invoke(Pair(dbTransaction, null))
+                    } else null
+                } else selectResultSet.valueAt(index+1,rowno)
+                if (col.isNotNull && value == null) {
+                    throw SQLException("Cannot insert null into column ${col.name}")
+                }
+                Cell(col, value)
+            }
+            tableForUpdate.addRow(Row(cells))
+        }
         dbTransaction.registerTableUpdate(tableForUpdate)
-        return 1
+        return numRows
     }
 }

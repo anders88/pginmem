@@ -1,7 +1,6 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.*
-import no.anksoft.pginmem.clauses.MatchAllClause
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.statements.select.*
@@ -10,7 +9,7 @@ import java.sql.SQLException
 
 private class SelectAnalyze(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause)
 
-private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,sql:String):SelectAnalyze {
+private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction):SelectAnalyze {
     val fromInd = statementAnalyzer.indexOf("from")
     val usedTable:Table?  = if (fromInd != -1) dbTransaction.tableForRead(statementAnalyzer.wordAt(fromInd+1)!!) else null
 
@@ -46,21 +45,25 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause)
 }
 
-class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction,private val sqlOrig:String):DbPreparedStatement() {
-    private val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,sqlOrig)
+class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction):DbPreparedStatement() {
+    private val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction)
 
 
 
 
-    override fun executeQuery(): ResultSet {
-        return SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider)
-    }
+    override fun executeQuery(): ResultSet = internalExecuteQuery()
+
+    fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider)
 
     override fun setString(parameterIndex: Int, x: String?) {
         selectAnalyze.whereClause.registerBinding(parameterIndex,x)
     }
 
     override fun setInt(parameterIndex: Int, x: Int) {
+        selectAnalyze.whereClause.registerBinding(parameterIndex,x)
+    }
+
+    fun setSomething(parameterIndex: Int, x: Any?) {
         selectAnalyze.whereClause.registerBinding(parameterIndex,x)
     }
 

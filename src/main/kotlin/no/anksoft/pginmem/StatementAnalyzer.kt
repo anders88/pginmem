@@ -107,9 +107,18 @@ class StatementAnalyzer(val sql:String) {
         return this
     }
 
-    fun indexOf(word:String) = words.indexOf(word)
+    fun indexOf(word:String):Int {
+        var resind = 0
+        while (currentIndex+resind < words.size) {
+            if (words[currentIndex+resind] == word) {
+                return resind
+            }
+            resind++
+        }
+        return -1
+    }
 
-    fun wordAt(givenIndex:Int):String? = if (givenIndex >= 0 && givenIndex < words.size) words[givenIndex] else null
+    fun wordAt(givenIndex:Int):String? = if (givenIndex+currentIndex >= 0 && givenIndex+currentIndex < words.size) words[givenIndex+currentIndex] else null
 
     val size = words.size
     fun subList(fromIndex:Int,toIndex:Int) = words.subList(fromIndex,toIndex)

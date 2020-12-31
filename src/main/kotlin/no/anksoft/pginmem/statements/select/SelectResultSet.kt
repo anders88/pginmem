@@ -11,6 +11,10 @@ import java.sql.Date
 import java.util.*
 
 class SelectResultSet(private val colums:List<SelectColumnProvider>,private val selectRowProvider: SelectRowProvider):ResultSet {
+
+    val numberOfRows = selectRowProvider.size()
+    fun valueAt(columnIndex:Int,rowIndex:Int):Any? = colums.first { it.isMatch(columnIndex) }.readValue(selectRowProvider,rowIndex)
+
     private var rowindex = -1
     private var lastWasNull:Boolean = false
 
