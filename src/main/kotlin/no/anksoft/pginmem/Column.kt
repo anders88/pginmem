@@ -3,6 +3,7 @@ package no.anksoft.pginmem
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
+import java.util.*
 
 enum class ColumnType() {
     TEXT, TIMESTAMP,DATE,INTEGER,BOOLEAN,NUMERIC,BYTEA,SERIAL;
@@ -28,7 +29,7 @@ enum class ColumnType() {
     }
 }
 
-class Column private constructor(val name:String,val columnType: ColumnType,val defaultValue:((Pair<DbTransaction,Row?>)->Any?)?,val isNotNull:Boolean) {
+class Column private constructor(private val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->Any?)?,val isNotNull:Boolean) {
 
 
     companion object {
@@ -57,27 +58,43 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
                 statementAnalyzer.addIndex(2)
                 true
             } else false
-            return Column(columnName,columnType,defaultValue,isNotNull)
+            return Column(columnName,columnType,tablename,defaultValue,isNotNull)
         }
     }
 
     fun rename(newname:String):Column = Column(
         name = newname,
         columnType = columnType,
+        tablename = tablename,
+        defaultValue = defaultValue,
+        isNotNull = isNotNull
+    )
+
+    fun renameTable(newTableName:String):Column = Column(
+        name = name,
+        columnType = columnType,
+        tablename = newTableName,
         defaultValue = defaultValue,
         isNotNull = isNotNull
     )
 
 
+    fun matches(tablename: String,name:String):Boolean = ((this.name == name) && (this.tablename == tablename))
 
 
 
     override fun equals(other: Any?): Boolean {
         if (other !is Column) return false
-        return other.name == name
+        return (other.name == name && other.tablename == tablename)
     }
 
     override fun hashCode(): Int {
-        return name.hashCode()
+        return Objects.hash(name,tablename)
     }
+
+    override fun toString(): String {
+        return "Column(name='$name', columnType=$columnType)"
+    }
+
+
 }

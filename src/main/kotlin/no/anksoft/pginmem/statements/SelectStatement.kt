@@ -32,7 +32,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                 ind+=4
                 continue
             }
-            val column:Column = allColumns.firstOrNull { it.name == colname }?:throw SQLException("Unknown column ${statementAnalyzer.wordAt(ind)}")
+            val column:Column = allColumns.firstOrNull { it.matches(it.tablename,colname) }?:throw SQLException("Unknown column ${statementAnalyzer.wordAt(ind)}")
             addedSelected.add(SelectDbColumn(column,colindex))
             colindex++
             ind+=2

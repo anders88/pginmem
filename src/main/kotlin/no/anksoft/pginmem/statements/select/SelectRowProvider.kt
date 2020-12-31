@@ -11,7 +11,7 @@ interface SelectRowProvider {
     fun readValue(column: Column,rowno: Int):Any?
 }
 
-class TablesSelectRowProvider(val table: Table,val whereClause: WhereClause):SelectRowProvider {
+class TablesSelectRowProvider(private val table: Table,private val whereClause: WhereClause):SelectRowProvider {
 
     private val values:List<List<Cell>> by lazy {
         table.rowsForReading().filter { whereClause.isMatch(it.cells) }.map { it.cells }

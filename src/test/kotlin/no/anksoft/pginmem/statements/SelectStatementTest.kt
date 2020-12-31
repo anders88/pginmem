@@ -106,4 +106,38 @@ class SelectStatementTest {
             }
         }
     }
+
+    @Test
+    fun selectWithTwoTables() {
+        connection.use { conn ->
+            conn.createStatement().execute(
+                """
+                create table customer(
+                    id  text,
+                    name text)
+            """.trimIndent()
+            )
+            conn.createStatement().execute(
+                """
+                create table purchase(
+                    id  text,
+                    customerid text,
+                    price integer
+                    )
+            """.trimIndent()
+            )
+            conn.prepareStatement("insert into customer(id,name) values ('one','darth')").use { it.executeUpdate() }
+            conn.prepareStatement("insert into customer(id,name) values ('two','luke')").use { it.executeUpdate() }
+            conn.prepareStatement("insert into purchase(id,customerid,price) values ('p1','one',42)").use { it.executeUpdate() }
+
+            conn.prepareStatement("select c.name, p.price from customer c, purchase p where c.id = p.customerid").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("name")).isEqualTo("darth")
+                    assertThat(it.getInt("price")).isEqualTo(42)
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
 }

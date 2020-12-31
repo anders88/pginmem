@@ -80,14 +80,14 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
     override fun executeUpdate(): Int {
         if (selectStatement == null) {
             val cells: List<Cell> = tableForUpdate.colums.map { col ->
-                val index = columns.indexOfFirst { it.name == col.name }
+                val index = columns.indexOfFirst { it == col }
                 val value: Any? = if (index == -1) {
                     if (col.defaultValue != null) {
                         col.defaultValue.invoke(Pair(dbTransaction, null))
                     } else null
                 } else linkedValues[index].value.invoke(Pair(dbTransaction, null))
                 if (col.isNotNull && value == null) {
-                    throw SQLException("Cannot insert null into column ${col.name}")
+                    throw SQLException("Cannot insert null into column $col")
                 }
                 Cell(col, value)
             }
@@ -99,14 +99,14 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
         val numRows = selectResultSet.numberOfRows
         for (rowno in 0 until numRows) {
             val cells: List<Cell> = tableForUpdate.colums.map { col ->
-                val index = columns.indexOfFirst { it.name == col.name }
+                val index = columns.indexOfFirst { it == col }
                 val value: Any? = if (index == -1) {
                     if (col.defaultValue != null) {
                         col.defaultValue.invoke(Pair(dbTransaction, null))
                     } else null
                 } else selectResultSet.valueAt(index+1,rowno)
                 if (col.isNotNull && value == null) {
-                    throw SQLException("Cannot insert null into column ${col.name}")
+                    throw SQLException("Cannot insert null into column $col")
                 }
                 Cell(col, value)
             }

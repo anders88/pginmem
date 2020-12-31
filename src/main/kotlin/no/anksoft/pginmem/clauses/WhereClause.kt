@@ -3,18 +3,6 @@ package no.anksoft.pginmem.clauses
 import no.anksoft.pginmem.*
 import java.sql.SQLException
 
-fun createWhereClause(words:List<String>,tables:List<Table>,nextIndexToUse:Int):WhereClause {
-    val columns:List<Column> = tables.map { it.colums }.flatten()
-    val columnName = stripSeachName(getFromWords(words,0))
-    val column:Column = columns.firstOrNull { it.name == columnName}?:throw SQLException("Unknown column $columnName")
-    return when(getFromWords(words,1)) {
-        "=" -> EqualCase(column,nextIndexToUse)
-        ">" -> GreaterThanCause(column,nextIndexToUse)
-        "<" -> LessThanCause(column,nextIndexToUse)
-        else -> throw SQLException("Syntax error in where clause")
-    }
-
-}
 
 fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:List<Table>,nextIndexToUse:Int):WhereClause {
     if (statementAnalyzer.word() != "where") {
@@ -22,9 +10,8 @@ fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:List<Table>,ne
     }
     statementAnalyzer.addIndex()
 
-    val columns:List<Column> = tables.map { it.colums }.flatten()
     val columnName = stripSeachName(statementAnalyzer.word()?:throw SQLException("Unexpected "))
-    val column:Column = columns.firstOrNull { it.name == columnName}?:throw SQLException("Unknown column $columnName")
+    val column:Column = tables.map { table -> table.findColumn(columnName) }.filterNotNull().firstOrNull()?:throw SQLException("Unknown column $columnName")
     statementAnalyzer.addIndex()
     return when(statementAnalyzer.word()) {
         "=" -> EqualCase(column,nextIndexToUse)

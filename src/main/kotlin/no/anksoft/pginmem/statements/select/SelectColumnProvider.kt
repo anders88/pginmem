@@ -10,7 +10,7 @@ abstract class SelectColumnProvider(val colindex:Int) {
 }
 
 class SelectDbColumn(private val column: Column,colindex: Int):SelectColumnProvider(colindex) {
-    override fun match(identificator: String): Boolean = (column.name == identificator)
+    override fun match(identificator: String): Boolean = column.matches(column.tablename,identificator)
     override fun readValue(selectRowProvider: SelectRowProvider, rowindex: Int): Any? = selectRowProvider.readValue(column,rowindex)
 }
 

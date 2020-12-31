@@ -5,9 +5,9 @@ class Table(val name:String,defColumns:List<Column>) {
 
     private val rows:MutableList<Row> = mutableListOf()
 
-    fun findColumn(name:String):Column? {
-        val actualName = stripSeachName(name)
-        return colums.firstOrNull { it.name == actualName }
+    fun findColumn(colname:String):Column? {
+        val actualName = stripSeachName(colname)
+        return colums.firstOrNull { it.matches(this.name,actualName)}
     }
 
     fun addRow(row:Row) {

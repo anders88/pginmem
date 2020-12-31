@@ -31,8 +31,12 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         if (toName == null) {
             throw SQLException("Missing name to rename to")
         }
-        val newTable = Table(toName,table.colums)
-        table.rowsForReading().forEach({newTable.addRow(it)})
+        val newCols = table.colums.map { it.renameTable(toName) }
+        val newTable = Table(toName,newCols)
+        table.rowsForReading().forEach { exrow ->
+            val newRow = Row(exrow.cells.map { Cell(it.column.renameTable(toName),it.value) })
+            newTable.addRow(newRow)
+        }
         dbTransaction.removeTable(table)
         dbTransaction.createAlterTableSetup(newTable)
         return null
@@ -48,7 +52,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         }
         statementAnalyzer.addIndex()
         val newColName = stripSeachName(statementAnalyzer.word()?:throw SQLException("Unexpected end of sequence"))
-        if (table.colums.any { it.name == newColName }) {
+        if (table.colums.any { it.matches(table.name,newColName) }) {
             throw SQLException("New columnname already exsists")
         }
         val newColumn = columnToRename.rename(newColName)
