@@ -4,19 +4,19 @@ import no.anksoft.pginmem.*
 import java.sql.SQLException
 
 
-fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:List<Table>,nextIndexToUse:Int):WhereClause {
+fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,Table>,nextIndexToUse:Int,dbTransaction: DbTransaction):WhereClause {
     if (statementAnalyzer.word() != "where") {
         return MatchAllClause()
     }
     statementAnalyzer.addIndex()
 
     val columnName = stripSeachName(statementAnalyzer.word()?:throw SQLException("Unexpected "))
-    val column:Column = tables.map { table -> table.findColumn(columnName) }.filterNotNull().firstOrNull()?:throw SQLException("Unknown column $columnName")
+    val column:Column = tables.values.map { table -> table.findColumn(columnName) }.filterNotNull().firstOrNull()?:throw SQLException("Unknown column $columnName")
     statementAnalyzer.addIndex()
     return when(statementAnalyzer.word()) {
-        "=" -> EqualCase(column,nextIndexToUse)
-        ">" -> GreaterThanCause(column,nextIndexToUse)
-        "<"  -> LessThanCause(column,nextIndexToUse)
+        "=" -> EqualCase(column,nextIndexToUse,statementAnalyzer,dbTransaction,tables)
+        ">" -> GreaterThanCause(column,nextIndexToUse,statementAnalyzer,dbTransaction,tables)
+        "<"  -> LessThanCause(column,nextIndexToUse,statementAnalyzer,dbTransaction,tables)
         "is" -> when {
             statementAnalyzer.addIndex().word() == "null" -> IsNullClause(column)
             statementAnalyzer.word() == "not" && statementAnalyzer.addIndex().word() == "null" -> IsNotNullClause(column)

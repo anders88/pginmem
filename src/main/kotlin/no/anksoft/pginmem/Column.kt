@@ -49,7 +49,7 @@ class Column private constructor(private val name:String,val columnType: ColumnT
                 }
                 (statementAnalyzer.word() == "default") -> {
                     statementAnalyzer.addIndex()
-                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyList())
+                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap())?.valuegen
                 }
                 else -> null
             }

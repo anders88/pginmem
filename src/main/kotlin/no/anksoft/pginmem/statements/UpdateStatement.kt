@@ -49,7 +49,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
         }
         toUpdateByBinding = updateByBindings
         toUpdateByFunction = toUpdateByFunctions
-        whereClause = createWhereClause(statementAnalyzer, listOf(table),toUpdateByBinding.size+1)
+        whereClause = createWhereClause(statementAnalyzer, mapOf(Pair(table.name,table)),toUpdateByBinding.size+1,dbTransaction)
     }
 
     override fun setSomething(parameterIndex: Int, x: Any?) {

@@ -22,5 +22,7 @@ class Table(val name:String,defColumns:List<Column>) {
         return cloned
     }
 
+    fun size():Int = rows.size
+
 
 }

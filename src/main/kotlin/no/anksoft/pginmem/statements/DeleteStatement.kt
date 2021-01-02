@@ -13,7 +13,7 @@ class DeleteStatement constructor(statementAnalyzer:StatementAnalyzer, private v
     private val tableForUpdate: Table = dbTransaction.tableForUpdate(statementAnalyzer.addIndex(2).word()?:throw SQLException("Expected tablename"))
     //private val whereClause:WhereClause = if (statementAnalyzer.size > 4  && statementAnalyzer.wordAt(3) == "where") createWhereClause(statementAnalyzer.subList(4,statementAnalyzer.size), listOf(tableForUpdate),1) else MatchAllClause()
     private val whereClause:WhereClause =
-        createWhereClause(statementAnalyzer.addIndex(), listOf(tableForUpdate),1)
+        createWhereClause(statementAnalyzer.addIndex(), mapOf(Pair(tableForUpdate.name,tableForUpdate)),1,dbTransaction)
 
     override fun setSomething(parameterIndex: Int, x: Any?) {
         whereClause.registerBinding(parameterIndex,x)

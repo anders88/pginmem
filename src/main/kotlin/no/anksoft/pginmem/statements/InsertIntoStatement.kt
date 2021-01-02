@@ -50,9 +50,12 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
                 linkedIndex++
                 LinkedValue(columns[i], linkedIndex)
             } else {
-                val value = statementAnalyzer.readValueFromExpression(dbTransaction, listOf(tableForUpdate))
+                val value = statementAnalyzer.readValueFromExpression(
+                    dbTransaction,
+                    mapOf(Pair(tableForUpdate.name, tableForUpdate))
+                )
                     ?: throw SQLException("Could not read value in statement")
-                LinkedValue(columns[i], null, value)
+                LinkedValue(columns[i], null, value.valuegen)
             }
             linkedValues.add(linkedValue)
             val nextexp = if (i == columns.size - 1) ")" else ","

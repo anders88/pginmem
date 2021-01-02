@@ -84,6 +84,8 @@ private fun splitStringToWords(sql:String):List<String> {
     return result
 }
 
+class ValueFromExpression(val valuegen:((Pair<DbTransaction,Row?>)->Any?),val column: Column?)
+
 
 class StatementAnalyzer(val sql:String) {
     private val words:List<String> = splitStringToWords(sql)
@@ -123,12 +125,12 @@ class StatementAnalyzer(val sql:String) {
     val size = words.size
     fun subList(fromIndex:Int,toIndex:Int) = words.subList(fromIndex,toIndex)
 
-    fun readValueFromExpression(dbTransaction: DbTransaction,tables: List<Table>):((Pair<DbTransaction,Row?>)->Any?)? {
-        val aword:String = word()?:return null
+    fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,Table>):ValueFromExpression {
+        val aword:String = word()?:throw SQLException("Unexpected end of statement")
         when {
                 (aword == "now" && word(1) == "()") -> {
                     addIndex(2)
-                    return { Timestamp.valueOf(LocalDateTime.now()) }
+                    return ValueFromExpression({ Timestamp.valueOf(LocalDateTime.now()) },null)
                 }
             (aword == "nextval" && word(1) == "(" && word(3) == ")") -> {
                 val seqnamestr = word(2)
@@ -138,23 +140,40 @@ class StatementAnalyzer(val sql:String) {
                 addIndex(4)
                 val seqname = seqnamestr.substring(1,seqnamestr.length-1)
                 dbTransaction.sequence(seqname)
-                return { it.first.sequence(seqname).nextVal() }
+                return ValueFromExpression({ it.first.sequence(seqname).nextVal() },null)
 
             }
-            ("true" == aword) -> return { true }
-            ("false" == aword) -> return { false }
-            (aword.toLongOrNull() != null) -> return { aword.toLong()}
-            (aword.toBigDecimalOrNull() != null) -> return { aword.toBigDecimal() }
+            ("true" == aword) -> return ValueFromExpression({ true },null)
+            ("false" == aword) -> return ValueFromExpression({ false },null)
+            (aword.toLongOrNull() != null) -> return ValueFromExpression({ aword.toLong()},null)
+            (aword.toBigDecimalOrNull() != null) -> return ValueFromExpression({ aword.toBigDecimal() },null)
             aword.startsWith("'") -> {
                 val end = aword.indexOf("'",1)
                 if (end == -1) {
                     throw SQLException("Illegal text $aword")
                 }
                 val text = aword.substring(1,end)
-                return { text }
+                return ValueFromExpression({ text },null)
             }
-            else -> return null
+            else -> return readColumnValue(tables,aword)
         }
+    }
+
+    private fun readColumnValue(tables: Map<String, Table>, aword: String):ValueFromExpression {
+        val ind = aword.indexOf(".")
+        val column:Column = if (ind == -1) {
+            tables.values.map { it.findColumn(aword) }.filterNotNull().firstOrNull()?:throw SQLException("Unknown column $aword")
+        } else {
+            var tablename = aword.substring(0,ind)
+            if (tablename.startsWith("\"") && tablename.endsWith("\"")) {
+                tablename = tablename.substring(1,tablename.length-1)
+            }
+            val table:Table = tables[tablename]?:throw SQLException("Unknown table $tablename")
+            val colname = aword.substring(ind + 1)
+            table.findColumn(colname)?:throw SQLException("Unknown column $colname")
+        }
+        val valuegen:((Pair<DbTransaction,Row?>)->Any?) = { it.second?.cells?.firstOrNull { it.column == column }?.value }
+        return ValueFromExpression(valuegen,column)
     }
 
     fun readValueOnRow(tables:List<Table>):(Row)->Any? {

@@ -1,33 +1,39 @@
 package no.anksoft.pginmem.clauses
 
-import no.anksoft.pginmem.Cell
-import no.anksoft.pginmem.Column
+import no.anksoft.pginmem.*
 import java.sql.SQLException
 
 abstract class BinaryClause:WhereClause {
 
     private val column: Column
     private val expectedIndex:Int?
-    private var valueToMatch:Any?
+    private var valueToMatch:Any? = null
     private var isRegistered:Boolean
+    private val valueFromExpression:ValueFromExpression?
+    private val dbTransaction:DbTransaction
 
-    constructor(column: Column, expectedIndex:Int) {
+    constructor(column: Column, expectedIndex:Int,statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction,tables:Map<String,Table>) {
         this.column = column
-        this.valueToMatch = null
-        this.expectedIndex = expectedIndex
-        this.isRegistered = false
+        this.dbTransaction = dbTransaction
+        statementAnalyzer.addIndex()
+        if (statementAnalyzer.word() == "?") {
+            this.isRegistered = false
+            this.valueFromExpression = null
+            this.expectedIndex = expectedIndex
+        } else {
+            this.valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
+            this.isRegistered = true
+            this.expectedIndex = null
+        }
     }
 
-    constructor(column: Column, valueToMatch:Any?) {
-        this.column = column
-        this.valueToMatch = valueToMatch
-        this.expectedIndex = null
-        this.isRegistered = true
-    }
 
     override fun isMatch(cells: List<Cell>): Boolean {
         if (!isRegistered) {
             throw SQLException("Binding not set")
+        }
+        if (valueFromExpression != null) {
+            valueToMatch = valueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
         }
         val cell: Cell = cells.firstOrNull { it.column == column }?:return false
         if (cell.value !is Comparable<*>) return false
