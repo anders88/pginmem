@@ -5,8 +5,8 @@ import java.sql.SQLException
 import java.sql.Timestamp
 import java.util.*
 
-enum class ColumnType() {
-    TEXT, TIMESTAMP,DATE,INTEGER,BOOLEAN,NUMERIC,BYTEA,SERIAL;
+enum class ColumnType(private val altNames:Set<String> = emptySet()) {
+    TEXT, TIMESTAMP,DATE,INTEGER,BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL;
 
     fun validateValue(value:Any?):Any? {
         if (value == null) {
@@ -27,6 +27,11 @@ enum class ColumnType() {
         }
         return returnValue
     }
+
+    fun matchesColumnType(colTypeText:String):Boolean {
+        if (this.name.toLowerCase() == colTypeText) return true
+        return this.altNames.contains(colTypeText)
+    }
 }
 
 class Column private constructor(private val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->Any?)?,val isNotNull:Boolean) {
@@ -36,7 +41,7 @@ class Column private constructor(private val name:String,val columnType: ColumnT
         fun create(tablename:String,statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction):Column {
             val columnName = statementAnalyzer.word()?:throw SQLException("Expecting column name")
             val colTypeText = statementAnalyzer.addIndex().word()?:throw SQLException("Expecting column type")
-            val columnType:ColumnType = ColumnType.values().firstOrNull { it.name.toLowerCase() == colTypeText }?:throw SQLException("Unknown column type $colTypeText")
+            val columnType:ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(colTypeText) }?:throw SQLException("Unknown column type $colTypeText")
 
             statementAnalyzer.addIndex(1)
 
