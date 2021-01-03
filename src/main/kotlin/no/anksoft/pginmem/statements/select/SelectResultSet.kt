@@ -1,6 +1,6 @@
 package no.anksoft.pginmem.statements.select
 
-import no.anksoft.pginmem.Cell
+import no.anksoft.pginmem.statements.OrderPart
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -10,7 +10,10 @@ import java.sql.Array
 import java.sql.Date
 import java.util.*
 
-class SelectResultSet(private val colums:List<SelectColumnProvider>,private val selectRowProvider: SelectRowProvider):ResultSet {
+class SelectResultSet(
+    private val colums: List<SelectColumnProvider>,
+    private val selectRowProvider: SelectRowProvider,
+):ResultSet {
 
     val numberOfRows = selectRowProvider.size()
     fun valueAt(columnIndex:Int,rowIndex:Int):Any? = colums.first { it.isMatch(columnIndex) }.readValue(selectRowProvider,rowIndex)

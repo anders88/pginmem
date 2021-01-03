@@ -4,6 +4,9 @@ import no.anksoft.pginmem.PgInMemDatasource
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.sql.Connection
+import java.sql.Timestamp
+import java.time.LocalDateTime
 
 class SelectStatementTest {
     private val datasource = PgInMemDatasource()
@@ -138,6 +141,43 @@ class SelectStatementTest {
                     assertThat(it.next()).isFalse()
                 }
             }
+        }
+    }
+
+    @Test
+    fun selectWithOrder() {
+        connection.use { conn ->
+            conn.createStatement().execute(
+                """
+                create table mytable(
+                    id integer,
+                    description  text,
+                    created timestamp)
+            """.trimIndent()
+            )
+            insertIntoTripleTable(conn, Triple(1,"a", LocalDateTime.of(2020,3,20,10,0,0)))
+            insertIntoTripleTable(conn, Triple(2,"a", LocalDateTime.of(2020,2,20,10,0,0)))
+            insertIntoTripleTable(conn, Triple(3,"b", LocalDateTime.of(2020,4,20,10,0,0)))
+            conn.prepareStatement("select id from mytable order by description, created").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isEqualTo(2)
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isEqualTo(1)
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isEqualTo(3)
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
+    private fun insertIntoTripleTable(conn:Connection,values:Triple<Int,String?,LocalDateTime?>) {
+        conn.prepareStatement("insert into mytable(id,description,created) values (?,?,?)").use {
+            it.setInt(1,values.first)
+            it.setString(2,values.second)
+            it.setTimestamp(3,values.third?.let { Timestamp.valueOf(it) })
+            it.executeUpdate()
         }
     }
 }

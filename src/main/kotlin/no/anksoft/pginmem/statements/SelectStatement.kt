@@ -7,18 +7,55 @@ import no.anksoft.pginmem.statements.select.*
 import java.sql.ResultSet
 import java.sql.SQLException
 
-private class SelectAnalyze(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause)
+class OrderPart(val column: Column,val ascending:Boolean,val nullsFirst:Boolean)
+
+private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Map<String,Table>):List<OrderPart> {
+    if (statementAnalyzer.word() != "order") {
+        return emptyList()
+    }
+    if (statementAnalyzer.addIndex().word() != "by") {
+        throw SQLException("Expected by after order")
+    }
+    val orderPats:MutableList<OrderPart> = mutableListOf()
+    while (true) {
+        statementAnalyzer.addIndex()
+        val colnameText = statementAnalyzer.word()?:break
+        val column:Column = statementAnalyzer.findColumnFromIdentifier(colnameText,tablesUsed)
+        var nextWord = statementAnalyzer.addIndex().word()
+
+        var ascending:Boolean = true
+        if (nextWord == "asc") {
+            statementAnalyzer.addIndex()
+        } else if (nextWord == "desc") {
+            ascending = false
+            statementAnalyzer.addIndex()
+        }
+        val nullsFirst:Boolean = if (statementAnalyzer.word() == "nulls") {
+            statementAnalyzer.addIndex()
+            if (!setOf("first","last").contains(statementAnalyzer.addIndex().word())) {
+                throw SQLException("Expected first or last")
+            }
+            val res = (statementAnalyzer.word() == "first")
+            statementAnalyzer.addIndex()
+            res
+        } else true
+        orderPats.add(OrderPart(column,ascending,nullsFirst))
+    }
+    return orderPats
+}
+
+private class SelectAnalyze(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>)
 
 private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction):SelectAnalyze {
     val fromInd = statementAnalyzer.indexOf("from")
     val tablesUsed:Map<String,Table> = if (fromInd != -1) {
         val mappingTablesUsed:MutableMap<String,Table> = mutableMapOf()
         var tabind = fromInd+1
-        while ((statementAnalyzer.wordAt(tabind)?:"where") != "where") {
+        while (!setOf("where","order").contains(statementAnalyzer.wordAt(tabind)?:"where")) {
             val table = dbTransaction.tableForRead(stripSeachName(statementAnalyzer.wordAt(tabind)?:""))
             tabind++
             val nextWord = statementAnalyzer.wordAt(tabind)
-            val alias = if (nextWord != null && nextWord != "where" && nextWord != ",") {
+            val alias = if (nextWord != null && nextWord != "where" && nextWord != "," && nextWord != "order") {
                 tabind++
                 nextWord
             } else table.name
@@ -75,13 +112,16 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         addedSelected
     }*/
 
-    while ((statementAnalyzer.word()?:"where") != "where") {
+    while (!setOf("where","order").contains(statementAnalyzer.word()?:"where")) {
         statementAnalyzer.addIndex()
     }
     val whereClause:WhereClause = createWhereClause(statementAnalyzer,tablesUsed,1,dbTransaction)
-    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(tablesUsed.values.toList(),whereClause) else ImplicitOneRowSelectProvider()
+    val orderParts = computeOrderParts(statementAnalyzer,tablesUsed)
 
-    return SelectAnalyze(selectedColumns,selectRowProvider,whereClause)
+    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(tablesUsed.values.toList(),whereClause,orderParts) else ImplicitOneRowSelectProvider()
+
+
+    return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts)
 
     /*val whereClause:WhereClause = createWhereClause(statementAnalyzer.setIndex(fromInd+2), listOfNotNull(usedTable),1)
     val selectRowProvider = if (usedTable != null) TablesSelectRowProvider(usedTable,whereClause) else ImplicitOneRowSelectProvider()

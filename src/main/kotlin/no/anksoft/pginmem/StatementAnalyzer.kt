@@ -160,20 +160,29 @@ class StatementAnalyzer(val sql:String) {
     }
 
     private fun readColumnValue(tables: Map<String, Table>, aword: String):ValueFromExpression {
-        val ind = aword.indexOf(".")
-        val column:Column = if (ind == -1) {
-            tables.values.map { it.findColumn(aword) }.filterNotNull().firstOrNull()?:throw SQLException("Unknown column $aword")
-        } else {
-            var tablename = aword.substring(0,ind)
-            if (tablename.startsWith("\"") && tablename.endsWith("\"")) {
-                tablename = tablename.substring(1,tablename.length-1)
-            }
-            val table:Table = tables[tablename]?:throw SQLException("Unknown table $tablename")
-            val colname = aword.substring(ind + 1)
-            table.findColumn(colname)?:throw SQLException("Unknown column $colname")
-        }
+        val column: Column = findColumnFromIdentifier(aword, tables)
         val valuegen:((Pair<DbTransaction,Row?>)->Any?) = { it.second?.cells?.firstOrNull { it.column == column }?.value }
         return ValueFromExpression(valuegen,column)
+    }
+
+    fun findColumnFromIdentifier(
+        aword: String,
+        tables: Map<String, Table>
+    ): Column {
+        val ind = aword.indexOf(".")
+        val column: Column = if (ind == -1) {
+            tables.values.map { it.findColumn(aword) }.filterNotNull().firstOrNull()
+                ?: throw SQLException("Unknown column $aword")
+        } else {
+            var tablename = aword.substring(0, ind)
+            if (tablename.startsWith("\"") && tablename.endsWith("\"")) {
+                tablename = tablename.substring(1, tablename.length - 1)
+            }
+            val table: Table = tables[tablename] ?: throw SQLException("Unknown table $tablename")
+            val colname = aword.substring(ind + 1)
+            table.findColumn(colname) ?: throw SQLException("Unknown column $colname")
+        }
+        return column
     }
 
     fun readValueOnRow(tables:List<Table>):(Row)->Any? {

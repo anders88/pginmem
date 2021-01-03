@@ -4,6 +4,7 @@ import no.anksoft.pginmem.Cell
 import no.anksoft.pginmem.Column
 import no.anksoft.pginmem.Table
 import no.anksoft.pginmem.clauses.WhereClause
+import no.anksoft.pginmem.statements.OrderPart
 import java.sql.SQLException
 
 interface SelectRowProvider {
@@ -24,7 +25,7 @@ private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
     return false
 }
 
-class TablesSelectRowProvider(private val tables: List<Table>,private val whereClause: WhereClause):SelectRowProvider {
+class TablesSelectRowProvider(private val tables: List<Table>,private val whereClause: WhereClause,private val orderParts: List<OrderPart>):SelectRowProvider {
 
     private val values:List<List<Cell>> by lazy {
         if (tables.isEmpty() || tables.any { it.size() <= 0 }) {
@@ -49,9 +50,38 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
                 val isMore = incIndex(indexes, tables)
             } while (isMore)
 
+            if (orderParts.isNotEmpty()) {
+                genrows.sortWith { a, b -> compareRows(a,b) }
+            }
             genrows
             //table.rowsForReading().filter { whereClause.isMatch(it.cells) }.map { it.cells }
         }
+    }
+
+    private fun compareRows(a:List<Cell>,b:List<Cell>):Int {
+        for (orderPart in orderParts) {
+            val aVal = a.first { it.column == orderPart.column }.value
+            val bVal = b.first { it.column == orderPart.column}.value
+            if (aVal == bVal) {
+                continue
+            }
+            if (aVal == null) {
+                return if (orderPart.nullsFirst) -1 else 1
+            }
+            if (bVal == null) {
+                return if (orderPart.nullsFirst) 1 else -1
+            }
+            if (!((aVal is Comparable<*>) && (bVal is Comparable<*>))) {
+                throw SQLException("Not comparable values")
+            }
+            return if (orderPart.ascending) if (isLessThan(aVal,bVal)) -1 else 1
+            else if (isLessThan(bVal,aVal)) -1 else 1
+        }
+        return 0
+    }
+
+    private fun <T> isLessThan(first:Comparable<T>,second:Any?):Boolean {
+        return first < second as T
     }
 
     override fun size(): Int = values.size
