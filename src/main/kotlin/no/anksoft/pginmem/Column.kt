@@ -6,7 +6,7 @@ import java.sql.Timestamp
 import java.util.*
 
 enum class ColumnType(private val altNames:Set<String> = emptySet()) {
-    TEXT, TIMESTAMP,DATE,INTEGER,BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL;
+    TEXT, TIMESTAMP,DATE,INTEGER(setOf("int")),BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL;
 
     fun validateValue(value:Any?):Any? {
         if (value == null) {
