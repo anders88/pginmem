@@ -45,18 +45,23 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
             val newCol = column.setDefault(null)
             return replaceCol(table,column,newCol,null)
         }
-        if (statementAnalyzer.word() == "type" && statementAnalyzer.word(2) == "using") {
+        if (statementAnalyzer.word() == "type") {
             statementAnalyzer.addIndex()
             val coltypetext = statementAnalyzer.word()?:throw SQLException("Expected columnt type")
             val newColumnType:ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(coltypetext) }?:throw SQLException("Unkown columnt type $coltypetext")
 
-            val sourceColText = statementAnalyzer.addIndex(2).word()?:throw SQLException("Expected column name after using")
-            val sourceCol = table.findColumn(sourceColText)?:throw SQLException("Unknown column $colname")
+            val (convertToType,sourceCol) = if ( statementAnalyzer.word(1) == "using") {
+                val sourceColText =
+                    statementAnalyzer.addIndex(2).word() ?: throw SQLException("Expected column name after using")
+                val sourceCol = table.findColumn(sourceColText) ?: throw SQLException("Unknown column $colname")
 
-            val convertToType:ColumnType? = if (statementAnalyzer.word(1) == "::") {
-                val colToTypeText = statementAnalyzer.addIndex(2).word()?:throw SQLException("Expected type after ::")
-                ColumnType.values().firstOrNull { it.matchesColumnType(colToTypeText) }
-            } else null
+                val convertToType: ColumnType? = if (statementAnalyzer.word(1) == "::") {
+                    val colToTypeText =
+                        statementAnalyzer.addIndex(2).word() ?: throw SQLException("Expected type after ::")
+                    ColumnType.values().firstOrNull { it.matchesColumnType(colToTypeText) }
+                } else null
+                Pair(convertToType,sourceCol)
+            } else Pair(null,null)
             val newColumn = column.changeColumnType(newColumnType)
             val valueTransformation:((Row)->Any?)? = if (convertToType != null) { row ->
                 val currentValue = row.cells.firstOrNull { it.column == sourceCol }?.value

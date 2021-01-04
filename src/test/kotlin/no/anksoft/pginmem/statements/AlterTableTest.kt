@@ -193,6 +193,22 @@ class AlterTableTest {
                     assertThat(it.next()).isFalse()
                 }
             }
+            conn.createStatement().use {
+                it.execute("""
+                    alter table mytable alter column abool type bigint                     
+                """.trimIndent())
+            }
+            conn.prepareStatement("select * from mytable order by id").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("one")
+                    assertThat(it.getInt("abool")).isEqualTo(0)
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("two")
+                    assertThat(it.getInt("abool")).isEqualTo(1)
+                    assertThat(it.next()).isFalse()
+                }
+            }
         }
     }
 }
