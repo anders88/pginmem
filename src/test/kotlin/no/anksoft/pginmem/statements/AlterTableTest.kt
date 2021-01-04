@@ -150,4 +150,49 @@ class AlterTableTest {
             }
         }
     }
+
+    @Test
+    public fun changeColumnTypeAdvanced() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute(
+                    """
+                    create table mytable(
+                        id  text,
+                        abool boolean default false
+                        )
+                """.trimIndent()
+                )
+            }
+            conn.prepareStatement("insert into mytable(id,abool) values (?,?)").use {
+                it.setString(1,"one")
+                it.setBoolean(2,false)
+                it.executeUpdate()
+            }
+            conn.prepareStatement("insert into mytable(id,abool) values (?,?)").use {
+                it.setString(1,"two")
+                it.setBoolean(2,true)
+                it.executeUpdate()
+            }
+            conn.createStatement().use {
+                it.execute("""
+                    alter table mytable
+                      alter column abool drop default,
+                      alter column abool type int using abool::integer,
+                      alter column abool set default 0
+                """.trimIndent())
+            }
+            conn.prepareStatement("select * from mytable order by id").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("one")
+                    assertThat(it.getInt("abool")).isEqualTo(0)
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("two")
+                    assertThat(it.getInt("abool")).isEqualTo(1)
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
 }

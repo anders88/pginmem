@@ -3,6 +3,8 @@ package no.anksoft.pginmem
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.*
 
 enum class ColumnType(private val altNames:Set<String> = emptySet()) {
@@ -31,6 +33,41 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
     fun matchesColumnType(colTypeText:String):Boolean {
         if (this.name.toLowerCase() == colTypeText) return true
         return this.altNames.contains(colTypeText)
+    }
+
+    fun convertValue(to:ColumnType,value:Any?):Any? {
+        if (value == null) {
+            return null
+        }
+        return when (this) {
+            TEXT -> when(to) {
+                TEXT -> value
+                TIMESTAMP -> LocalDateTime.parse(value.toString())
+                DATE -> LocalDate.parse(value.toString()).atStartOfDay()
+                INTEGER -> value.toString().toLong()
+                BOOLEAN -> if (value == true) true else false
+                NUMERIC -> BigDecimal.valueOf(value.toString().toDouble())
+                BYTEA -> throw SQLException("Bytea conversion not supported")
+                SERIAL -> throw SQLException("Serial conversion not supported")
+            }
+            TIMESTAMP -> TODO()
+            DATE -> TODO()
+            INTEGER -> TODO()
+            BOOLEAN -> return when(to) {
+                TEXT -> return value.toString()
+                TIMESTAMP -> TODO()
+                DATE -> TODO()
+                INTEGER -> if (value == true) 1 else 0
+                BOOLEAN -> value
+                NUMERIC -> if (value == true) BigDecimal.ONE else BigDecimal.ZERO
+                BYTEA -> TODO()
+                SERIAL -> TODO()
+            }
+            NUMERIC -> TODO()
+            BYTEA -> throw SQLException("Bytea conversion not supported")
+            SERIAL -> throw SQLException("Serial conversion not supported")
+            NUMERIC -> TODO()
+        }
     }
 }
 
@@ -80,6 +117,22 @@ class Column private constructor(private val name:String,val columnType: ColumnT
         columnType = columnType,
         tablename = newTableName,
         defaultValue = defaultValue,
+        isNotNull = isNotNull
+    )
+
+    fun setDefault(defvalue:((Pair<DbTransaction,Row?>)->Any?)?):Column = Column(
+        name = name,
+        columnType = columnType,
+        tablename = tablename,
+        defaultValue = defvalue,
+        isNotNull = isNotNull
+    )
+
+    fun changeColumnType(newColumnType: ColumnType):Column = Column(
+        name = name,
+        columnType = newColumnType,
+        tablename = tablename,
+        defaultValue = null,
         isNotNull = isNotNull
     )
 

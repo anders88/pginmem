@@ -7,24 +7,88 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
 
     override fun executeUpdate(): Int {
         statementAnalyzer.addIndex(2)
-        val table = dbTransaction.tableForUpdate(statementAnalyzer.word()?:throw SQLException("Unexpected end of statemnt"))
+        var table = dbTransaction.tableForUpdate(statementAnalyzer.word()?:throw SQLException("Unexpected end of statemnt"))
 
-        statementAnalyzer.addIndex()
-        val command = statementAnalyzer.word()
-        statementAnalyzer.addIndex()
-        if (statementAnalyzer.word() == "column") {
+        do {
             statementAnalyzer.addIndex()
-        }
+            val command = statementAnalyzer.word()
+            statementAnalyzer.addIndex()
+            if (statementAnalyzer.word() == "column") {
+                statementAnalyzer.addIndex()
+            }
 
-        val newTable:Table? = when  {
-            command == "add" -> addColumn(table)
-            command == "drop" -> deleteColumn(table)
-            command == "rename" && statementAnalyzer.word() == "to" -> renameTable(table,statementAnalyzer.addIndex().word())
-            command == "rename" -> renameColumn(table)
-            else -> throw SQLException("Unknown alter table command $command")
-        }
-        newTable?.let {  dbTransaction.registerTableUpdate(it)}
+            val newTable: Table? = when {
+                command == "alter" -> alterColumn(table)
+                command == "add" -> addColumn(table)
+                command == "drop" -> deleteColumn(table)
+                command == "rename" && statementAnalyzer.word() == "to" -> renameTable(
+                    table,
+                    statementAnalyzer.addIndex().word()
+                )
+                command == "rename" -> renameColumn(table)
+                else -> throw SQLException("Unknown alter table command $command")
+            }
+            if (newTable != null) {
+                dbTransaction.registerTableUpdate(newTable)
+                table = newTable
+            }
+        } while (statementAnalyzer.addIndex().word() == ",")
         return 0
+    }
+
+    private fun alterColumn(table: Table): Table {
+        val colname = statementAnalyzer.word()?:throw SQLException("Expected column name")
+        val column:Column = table.findColumn(colname)?:throw SQLException("Unknown column $colname")
+        statementAnalyzer.addIndex()
+        if (statementAnalyzer.word() == "drop" && statementAnalyzer.word(1) == "default") {
+            statementAnalyzer.addIndex()
+            val newCol = column.setDefault(null)
+            return replaceCol(table,column,newCol,null)
+        }
+        if (statementAnalyzer.word() == "type" && statementAnalyzer.word(2) == "using") {
+            statementAnalyzer.addIndex()
+            val coltypetext = statementAnalyzer.word()?:throw SQLException("Expected columnt type")
+            val newColumnType:ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(coltypetext) }?:throw SQLException("Unkown columnt type $coltypetext")
+
+            val sourceColText = statementAnalyzer.addIndex(2).word()?:throw SQLException("Expected column name after using")
+            val sourceCol = table.findColumn(sourceColText)?:throw SQLException("Unknown column $colname")
+
+            val convertToType:ColumnType? = if (statementAnalyzer.word(1) == "::") {
+                val colToTypeText = statementAnalyzer.addIndex(2).word()?:throw SQLException("Expected type after ::")
+                ColumnType.values().firstOrNull { it.matchesColumnType(colToTypeText) }
+            } else null
+            val newColumn = column.changeColumnType(newColumnType)
+            val valueTransformation:((Row)->Any?)? = if (convertToType != null) { row ->
+                val currentValue = row.cells.firstOrNull { it.column == sourceCol }?.value
+                column.columnType.convertValue(convertToType,currentValue)
+            } else null
+
+            return replaceCol(table,column,newColumn,valueTransformation)
+        }
+        if (statementAnalyzer.word() == "set" && statementAnalyzer.word(1) == "default") {
+            statementAnalyzer.addIndex(2)
+            val readValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap())
+            val newCol = column.setDefault(readValueFromExpression.valuegen)
+            return replaceCol(table,column,newCol,null)
+
+        }
+        throw SQLException("Unknown alter column command ${statementAnalyzer.word()}")
+    }
+
+    private fun replaceCol(table: Table,oldcol:Column, newColumn: Column,valueTransformation:((Row)->Any?)?):Table {
+        val newCols = table.colums.map {
+            if (it == oldcol) newColumn else it
+        }
+        val newTable = Table(table.name,newCols)
+        for (row in table.rowsForReading()) {
+            val newCells = row.cells.map {
+                if (it.column == oldcol)
+                    Cell(newColumn,if (valueTransformation !=null) valueTransformation.invoke(row) else it.value)
+                else it
+            }
+            newTable.addRow(Row(newCells))
+        }
+        return newTable
     }
 
     private fun renameTable(table: Table,toName:String?):Table? {
