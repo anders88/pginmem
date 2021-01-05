@@ -71,7 +71,7 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
     }
 }
 
-class Column private constructor(private val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->Any?)?,val isNotNull:Boolean) {
+class Column private constructor(val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->Any?)?,val isNotNull:Boolean) {
 
 
     companion object {

@@ -46,7 +46,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
 
 private class SelectAnalyze(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>)
 
-private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction):SelectAnalyze {
+private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,startOnWhereClauseBindingNo:Int):SelectAnalyze {
     val fromInd = statementAnalyzer.indexOf("from")
     val tablesUsed:Map<String,Table> = if (fromInd != -1) {
         val mappingTablesUsed:MutableMap<String,Table> = mutableMapOf()
@@ -87,35 +87,10 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     }
 
 
-    /*
-    val selectedColumnsx:List<SelectColumnProvider> = if (statementAnalyzer.word() == "*") allColumns.mapIndexed { index, column -> SelectDbColumn(column,index+1) } else {
-        var ind = 1
-        var colindex = 1
-
-        val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
-        val loopUntil = if (fromInd != -1) fromInd else statementAnalyzer.size
-        while (ind < loopUntil) {
-            val readColName = statementAnalyzer.wordAt(ind)!!
-            val colname = stripSeachName(readColName)
-            if (colname == "nextval" && ind+3 < loopUntil && statementAnalyzer.wordAt(ind+1) == "(" && statementAnalyzer.wordAt(ind+3) == ")" && statementAnalyzer.wordAt(ind+2)!!.length >= 3 && statementAnalyzer.wordAt(ind+2)!!.startsWith("'") and (statementAnalyzer.wordAt(ind+2)?:"").endsWith("'")) {
-                val sequence:Sequence = dbTransaction.sequence(statementAnalyzer.wordAt(ind+2)!!.substring(1,statementAnalyzer.wordAt(ind+2)!!.length-1))
-                addedSelected.add(SelectFromSequence(sequence,colindex))
-                colindex++
-                ind+=4
-                continue
-            }
-            val column:Column = allColumns.firstOrNull { it.matches(it.tablename,colname) }?:throw SQLException("Unknown column ${statementAnalyzer.wordAt(ind)}")
-            addedSelected.add(SelectDbColumn(column,colindex))
-            colindex++
-            ind+=2
-        }
-        addedSelected
-    }*/
-
     while (!setOf("where","order").contains(statementAnalyzer.word()?:"where")) {
         statementAnalyzer.addIndex()
     }
-    val whereClause:WhereClause = createWhereClause(statementAnalyzer,tablesUsed,1,dbTransaction)
+    val whereClause:WhereClause = createWhereClause(statementAnalyzer,tablesUsed,startOnWhereClauseBindingNo,dbTransaction)
     val orderParts = computeOrderParts(statementAnalyzer,tablesUsed)
 
     val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(tablesUsed.values.toList(),whereClause,orderParts) else ImplicitOneRowSelectProvider()
@@ -123,13 +98,10 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
 
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts)
 
-    /*val whereClause:WhereClause = createWhereClause(statementAnalyzer.setIndex(fromInd+2), listOfNotNull(usedTable),1)
-    val selectRowProvider = if (usedTable != null) TablesSelectRowProvider(usedTable,whereClause) else ImplicitOneRowSelectProvider()
-    return SelectAnalyze(selectedColumns,selectRowProvider,whereClause)*/
 }
 
-class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction):DbPreparedStatement() {
-    private val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction)
+class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction,startOnWhereClauseBindingNo: Int = 1):DbPreparedStatement() {
+    private val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,startOnWhereClauseBindingNo)
 
 
 

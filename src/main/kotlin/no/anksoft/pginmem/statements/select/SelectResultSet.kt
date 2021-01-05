@@ -49,7 +49,7 @@ class SelectResultSet(
     }
 
 
-    private fun readCell(columnLabel: String?): Any? {
+    fun readCell(columnLabel: String?): Any? {
         if (columnLabel == null) {
             throw SQLException("Cannot get null")
         }

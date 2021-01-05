@@ -1,5 +1,6 @@
 package no.anksoft.pginmem
 
+import no.anksoft.pginmem.statements.select.SelectResultSet
 import org.jsonbuddy.JsonObject
 import org.jsonbuddy.parse.JsonParser
 import java.sql.SQLException
@@ -87,9 +88,33 @@ private fun splitStringToWords(sql:String):List<String> {
 class ValueFromExpression(val valuegen:((Pair<DbTransaction,Row?>)->Any?),val column: Column?)
 
 
-class StatementAnalyzer(val sql:String) {
-    private val words:List<String> = splitStringToWords(sql)
+class StatementAnalyzer {
+    private val words:List<String>
     private var currentIndex:Int = 0
+
+    constructor(sql:String) {
+        this.words = splitStringToWords(sql)
+    }
+
+    private constructor(words:List<String>) {
+        this.words = words
+    }
+
+
+    fun extractSelect(preappend:List<String>):StatementAnalyzer {
+        val fromIndex = words.indexOf("from")
+        val whereIndex = words.indexOf("where")
+
+        if (fromIndex == -1 && whereIndex == -1) {
+            return StatementAnalyzer(preappend)
+        }
+        if (fromIndex == -1 && whereIndex != -1) {
+            val newWords:List<String> = preappend + words.subList(whereIndex,words.size)
+            return StatementAnalyzer(newWords)
+        }
+        val newWords:List<String> = preappend + listOf(",") + words.subList(fromIndex,words.size)
+        return StatementAnalyzer(newWords)
+    }
 
     fun word(indexOffset:Int=0):String? {
         val readAt = currentIndex+indexOffset
@@ -122,8 +147,8 @@ class StatementAnalyzer(val sql:String) {
 
     fun wordAt(givenIndex:Int):String? = if (givenIndex+currentIndex >= 0 && givenIndex+currentIndex < words.size) words[givenIndex+currentIndex] else null
 
-    val size = words.size
-    fun subList(fromIndex:Int,toIndex:Int) = words.subList(fromIndex,toIndex)
+    val size: Int
+        get() = words.size
 
     fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,Table>):ValueFromExpression {
         val aword:String = word()?:throw SQLException("Unexpected end of statement")
@@ -185,16 +210,12 @@ class StatementAnalyzer(val sql:String) {
         return column
     }
 
-    fun readValueOnRow(tables:List<Table>):(Row)->Any? {
+    fun readValueOnRow():(SelectResultSet)->Any? {
         val colname = word()?:throw SQLException("Unekpected end of statement")
+        addIndex()
         if (colname.startsWith("'") && colname.endsWith("'")) {
-            addIndex()
             return ConstantValue(colname.substring(1,colname.length-1))
         }
-        val column:Column = tables.map { it.findColumn(colname)}
-            .filterNotNull()
-            .firstOrNull()?:throw SQLException("Unknown column $colname")
-        addIndex()
         val resultTransformer:((Any?)->Any?)? = if (word() == "::") {
             if (addIndex().word() != "json") {
                 throw SQLException("Unsupported konversion ${word()}")
@@ -210,14 +231,13 @@ class StatementAnalyzer(val sql:String) {
             addIndex()
             JsonTransformer(jsonkey.substring(1,jsonkey.length-1))
         }  else null
-        return ReadFromRow(column,resultTransformer)
+        return ReadFromRow(colname,resultTransformer)
     }
 }
 
-private class ReadFromRow(val column: Column,val resultTransformer:((Any?)->Any?)?):(Row)->Any? {
-    override fun invoke(row: Row): Any? {
-        val cell = row.cells.first { it.column == column }
-        var value = cell.value
+private class ReadFromRow(val collabel:String,val resultTransformer:((Any?)->Any?)?):(SelectResultSet)->Any? {
+    override fun invoke(row: SelectResultSet): Any? {
+        var value:Any? = row.readCell(collabel)
         if (resultTransformer != null) {
             value = resultTransformer.invoke(value)
         }
@@ -238,8 +258,8 @@ private class JsonTransformer(val key:String):(Any?)->Any? {
     }
 }
 
-private class ConstantValue(val value:Any?):(Row)->Any? {
-    override fun invoke(row: Row): Any? {
+private class ConstantValue(val value:Any?):(SelectResultSet)->Any? {
+    override fun invoke(selectResultSet:SelectResultSet): Any? {
         return value
     }
 
