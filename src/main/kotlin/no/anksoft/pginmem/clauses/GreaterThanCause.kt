@@ -7,7 +7,7 @@ import no.anksoft.pginmem.Table
 
 @Suppress("UNCHECKED_CAST")
 class GreaterThanCause: BinaryClause {
-    constructor(column: Column, expectedIndex:Int, statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction, tables:Map<String, Table>):super(column,expectedIndex,statementAnalyzer,dbTransaction,tables)
+    constructor(column: Column, expectedIndex:IndexToUse, statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction, tables:Map<String, Table>):super(column,expectedIndex,statementAnalyzer,dbTransaction,tables)
 
 
     override fun <T> checkMatch(first: Comparable<T>, second: Any?): Boolean {

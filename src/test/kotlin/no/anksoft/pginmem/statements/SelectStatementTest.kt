@@ -180,4 +180,51 @@ class SelectStatementTest {
             it.executeUpdate()
         }
     }
+
+    @Test
+    fun selectWithAnd() {
+        connection.use { conn ->
+            conn.createStatement().execute(
+                """
+                create table mytable(
+                    id text,
+                    firstname text,
+                    lastname text)
+            """.trimIndent()
+            )
+
+            val insertAction:(Triple<String,String,String>)->Unit = {
+                val (id,firstname,lastname) = it
+                conn.prepareStatement("insert into mytable(id,firstname,lastname) values (?,?,?)").use {
+                    it.setString(1,id)
+                    it.setString(2,firstname)
+                    it.setString(3,lastname)
+                    it.executeUpdate()
+                }
+            }
+            insertAction.invoke(Triple("luke","Luke","Skywalker"))
+            insertAction.invoke(Triple("leia","Leia","Skywalker"))
+            insertAction.invoke(Triple("han","Han","Solo"))
+
+            conn.prepareStatement("select id from mytable where firstname = ? and lastname = ?").use {
+                it.setString(1,"Luke")
+                it.setString(2,"Skywalker")
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("luke")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+            conn.prepareStatement("select id from mytable where firstname = ? and firstname = ? and lastname = ?").use {
+                it.setString(1,"Leia")
+                it.setString(2,"Leia")
+                it.setString(3,"Skywalker")
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("leia")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
 }

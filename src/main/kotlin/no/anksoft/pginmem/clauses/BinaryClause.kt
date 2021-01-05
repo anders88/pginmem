@@ -12,14 +12,14 @@ abstract class BinaryClause:WhereClause {
     private val valueFromExpression:ValueFromExpression?
     private val dbTransaction:DbTransaction
 
-    constructor(column: Column, expectedIndex:Int,statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction,tables:Map<String,Table>) {
+    constructor(column: Column, expectedIndex:IndexToUse,statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction,tables:Map<String,Table>) {
         this.column = column
         this.dbTransaction = dbTransaction
         statementAnalyzer.addIndex()
         if (statementAnalyzer.word() == "?") {
             this.isRegistered = false
             this.valueFromExpression = null
-            this.expectedIndex = expectedIndex
+            this.expectedIndex = expectedIndex.takeInd()
         } else {
             this.valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
             this.isRegistered = true
