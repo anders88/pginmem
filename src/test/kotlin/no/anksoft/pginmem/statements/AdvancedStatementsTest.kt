@@ -183,7 +183,9 @@ class AdvancedStatementsTest {
             conn.prepareStatement("""
                 update twotable set info = a.info from onetable a
                 where twotable.id = a.id
-            """.trimIndent())
+            """.trimIndent()).use {
+                it.executeUpdate()
+            }
             conn.prepareStatement("select * from twotable order by id").use {
                 it.executeQuery().use {
                     assertThat(it.next()).isTrue()

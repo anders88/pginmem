@@ -112,7 +112,7 @@ class StatementAnalyzer {
             val newWords:List<String> = preappend + words.subList(whereIndex,words.size)
             return StatementAnalyzer(newWords)
         }
-        val newWords:List<String> = preappend + listOf(",") + words.subList(fromIndex,words.size)
+        val newWords:List<String> = preappend + listOf(",") + words.subList(fromIndex+1,words.size)
         return StatementAnalyzer(newWords)
     }
 

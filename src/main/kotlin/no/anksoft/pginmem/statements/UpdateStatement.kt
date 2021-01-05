@@ -39,6 +39,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
         }
         this.numBindingsBeforeWhere = numBindingsBeforeWhere
 
+        /*
         val toPrepend:MutableList<String> = mutableListOf("select")
         for (colind in table.colums.indices) {
             toPrepend.add(table.name + "." + table.colums[colind].name)
@@ -48,6 +49,10 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
         }
         toPrepend.add("from")
         toPrepend.add(table.name)
+        toPrepend.add(table.name)Æ/
+
+         */
+        val toPrepend:List<String> = listOf("select","*","from",table.name,table.name)
 
         val selectStatementAnalyzer = statementAnalyzer.extractSelect(toPrepend)
         selectStatement = SelectStatement(selectStatementAnalyzer,dbTransaction,numBindingsBeforeWhere+1)
@@ -68,7 +73,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
                 val function = statementAnalyzer.readValueOnRow()
                 toUpdateByFunctions.add(CellToUpdateByFunction(column,function))
             }
-            if (statementAnalyzer.word()?:"where" == "where") {
+            if (setOf("where","from").contains(statementAnalyzer.word()?:"where")) {
                 break
             }
             if (statementAnalyzer.word() != ",") {

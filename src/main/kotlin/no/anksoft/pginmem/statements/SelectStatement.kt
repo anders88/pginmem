@@ -68,11 +68,12 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         mappingTablesUsed
     } else emptyMap()
 
+    val aliasMapping:Map<String,String> = tablesUsed.mapValues { it.value.name }
 
     val allColumns:List<Column> = tablesUsed.map { it.value.colums }.flatten()
     statementAnalyzer.addIndex()
 
-    val selectedColumns:List<SelectColumnProvider> = if (statementAnalyzer.word() == "*") allColumns.mapIndexed { index, column -> SelectDbColumn(column,index+1) } else {
+    val selectedColumns:List<SelectColumnProvider> = if (statementAnalyzer.word() == "*") allColumns.mapIndexed { index, column -> SelectDbColumn(column,index+1,aliasMapping) } else {
         val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
         var selectcolindex = 0
         while ((statementAnalyzer.word()?:"from") != "from") {
