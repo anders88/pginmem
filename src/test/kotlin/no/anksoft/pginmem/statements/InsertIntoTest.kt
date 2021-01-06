@@ -41,20 +41,24 @@ class InsertIntoTest {
     fun insertWithSelect() {
         connection.use { conn ->
             conn.createStatement().use {
-                it.execute("create table mytable(id text)")
+                it.execute("create table mytable(id text,include text)")
             }
             conn.createStatement().use {
                 it.execute("create table yourtable(id text)")
             }
-            conn.prepareStatement("insert into mytable(id) values ('one')").use {
+            conn.prepareStatement("insert into mytable(id,include) values ('one','yes')").use {
                 it.executeUpdate()
             }
-            conn.prepareStatement("insert into mytable(id) values ('two')").use {
+            conn.prepareStatement("insert into mytable(id,include) values ('two','yes')").use {
+                it.executeUpdate()
+            }
+            conn.prepareStatement("insert into mytable(id,include) values ('three','no')").use {
                 it.executeUpdate()
             }
             conn.prepareStatement("""
-                insert into yourtable(id) (select id from mytable)
+                insert into yourtable(id) (select id from mytable where include = ?)
             """.trimIndent()).use {
+                it.setString(1,"yes")
                 it.executeUpdate()
             }
             conn.prepareStatement("select * from yourtable").use {

@@ -23,10 +23,8 @@ fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,Tab
                 AndClause(leftAndPart,nextPart,indAtStart)
             } else nextPart
 
-            val next:String = statementAnalyzer.addIndex().word()?:return leftAndPart
-
-            if (next != "and") {
-                throw SQLException("Unknown end of where clause")
+            if (statementAnalyzer.addIndex().word() != "and") {
+                return leftAndPart
             }
             statementAnalyzer.addIndex()
 

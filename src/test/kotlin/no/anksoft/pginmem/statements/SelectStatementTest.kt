@@ -225,6 +225,15 @@ class SelectStatementTest {
                     assertThat(it.next()).isFalse()
                 }
             }
+            conn.prepareStatement("select firstname from mytable where lastname = 'Skywalker' order by firstname").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("firstname")).isEqualTo("Leia")
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("firstname")).isEqualTo("Luke")
+                    assertThat(it.next()).isFalse()
+                }
+            }
         }
     }
 }
