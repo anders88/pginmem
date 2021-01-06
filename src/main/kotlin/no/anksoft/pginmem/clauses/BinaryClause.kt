@@ -3,16 +3,16 @@ package no.anksoft.pginmem.clauses
 import no.anksoft.pginmem.*
 import java.sql.SQLException
 
-abstract class BinaryClause:WhereClause {
+abstract class BinaryClause :WhereClause {
 
     private val column: Column
     private val expectedIndex:Int?
     private var valueToMatch:Any? = null
     private var isRegistered:Boolean
-    private val valueFromExpression:ValueFromExpression?
-    private val dbTransaction:DbTransaction
+    private val valueFromExpression: ValueFromExpression?
+    private val dbTransaction: DbTransaction
 
-    constructor(column: Column, expectedIndex:IndexToUse,statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction,tables:Map<String,Table>) {
+    constructor(column: Column, expectedIndex:IndexToUse, statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction, tables:Map<String, Table>) {
         this.column = column
         this.dbTransaction = dbTransaction
         statementAnalyzer.addIndex()
@@ -33,13 +33,13 @@ abstract class BinaryClause:WhereClause {
             throw SQLException("Binding not set")
         }
         if (valueFromExpression != null) {
-            valueToMatch = valueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
+            valueToMatch = valueFromExpression.valuegen.invoke(Pair(dbTransaction, Row(cells)))
         }
         val cell: Cell = cells.firstOrNull { it.column == column }?:return false
-        if (cell.value !is Comparable<*>) return false
-        if (valueToMatch == null) return false
-        return checkMatch(cell.value,valueToMatch)
+        return matchValues(cell.value,valueToMatch)
     }
+
+    abstract fun matchValues(left:Any?,right:Any?):Boolean
 
     override fun registerBinding(index: Int, value: Any?):Boolean {
         if (expectedIndex == index) {
@@ -51,5 +51,4 @@ abstract class BinaryClause:WhereClause {
         return false
     }
 
-    abstract fun <T> checkMatch(first: Comparable<T>, second: Any?): Boolean
 }

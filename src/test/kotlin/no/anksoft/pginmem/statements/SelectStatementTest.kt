@@ -107,6 +107,13 @@ class SelectStatementTest {
                     assertThat(it.next()).isFalse()
                 }
             }
+            conn.prepareStatement("select id from mytable where description is distinct from 'something'").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("one")
+                    assertThat(it.next()).isFalse()
+                }
+            }
         }
     }
 

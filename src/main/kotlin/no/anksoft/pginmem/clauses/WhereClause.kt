@@ -64,6 +64,10 @@ private fun readWhereClausePart(
         ">" -> GreaterThanCause(column, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "<" -> LessThanCause(column, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "is" -> when {
+            statementAnalyzer.word(1) == "distinct" && statementAnalyzer.word(2) == "from" -> {
+                statementAnalyzer.addIndex(2)
+                NotEqualCause(column, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+            }
             statementAnalyzer.addIndex().word() == "null" -> IsNullClause(column)
             statementAnalyzer.word() == "not" && statementAnalyzer.addIndex()
                 .word() == "null" -> IsNotNullClause(column)

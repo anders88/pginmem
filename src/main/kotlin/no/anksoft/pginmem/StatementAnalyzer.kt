@@ -7,7 +7,11 @@ import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.LocalDateTime
 
-private fun splitStringToWords(sql:String):List<String> {
+private fun splitStringToWords(sqlinp:String):List<String> {
+    val lines = sqlinp.lines()
+    val sql = lines.filter { !it.startsWith("--") }.fold("", { a,b ->
+        a+" "+b
+    })
     val result:MutableList<String> = mutableListOf()
     // Set to lovercase if not quoted
     val toTrimmed = StringBuilder()

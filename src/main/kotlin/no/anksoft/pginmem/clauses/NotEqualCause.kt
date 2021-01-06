@@ -5,13 +5,11 @@ import no.anksoft.pginmem.DbTransaction
 import no.anksoft.pginmem.StatementAnalyzer
 import no.anksoft.pginmem.Table
 
-class EqualCase:BinaryClauseNotNull {
-
+class NotEqualCause:BinaryClause {
     constructor(column: Column, expectedIndex:IndexToUse, statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction, tables:Map<String, Table>):super(column,expectedIndex,statementAnalyzer,dbTransaction,tables)
 
-
-    override fun <T> checkMatch(first: Comparable<T>, second: Any?): Boolean {
-        return first == second
+    override fun matchValues(left: Any?, right: Any?): Boolean {
+        return (left != right)
     }
 
 }

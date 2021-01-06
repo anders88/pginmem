@@ -166,7 +166,7 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         statementAnalyzer.word(0) == "select" -> return SelectStatement(statementAnalyzer, dbTransaction)
         statementAnalyzer.word(0) == "update" -> return UpdateStatement(statementAnalyzer,dbTransaction)
         statementAnalyzer.word(0) == "delete" -> return DeleteStatement(statementAnalyzer,dbTransaction,sql)
-        else -> throw SQLException("Unknown statement $sql")
+        else -> throw SQLException("Unknown statement ***$sql***")
     }
 }
 

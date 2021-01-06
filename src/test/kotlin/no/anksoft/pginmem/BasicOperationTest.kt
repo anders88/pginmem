@@ -40,6 +40,7 @@ class BasicOperationTest {
     fun selectWithWhere() {
         connection.use { conn ->
             conn.prepareStatement("""
+                -- This is a comment
                 create table mytable (
                     id text
                 )
@@ -47,7 +48,9 @@ class BasicOperationTest {
                 it.executeUpdate()
             }
 
-            conn.prepareStatement("""insert into mytable (id) values (?)""").use {
+            conn.prepareStatement("""
+                insert into mytable (id) values (?)
+                """.trimIndent()).use {
                 it.setString(1,"secretkey")
                 it.executeUpdate()
             }

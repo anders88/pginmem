@@ -6,7 +6,7 @@ import no.anksoft.pginmem.StatementAnalyzer
 import no.anksoft.pginmem.Table
 
 @Suppress("UNCHECKED_CAST")
-class LessThanCause: BinaryClause {
+class LessThanCause: BinaryClauseNotNull {
     constructor(column: Column, expectedIndex:IndexToUse, statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction, tables:Map<String, Table>):super(column,expectedIndex,statementAnalyzer,dbTransaction,tables)
 
 
