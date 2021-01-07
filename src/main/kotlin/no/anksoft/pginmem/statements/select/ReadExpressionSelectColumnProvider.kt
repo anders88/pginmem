@@ -6,16 +6,15 @@ import no.anksoft.pginmem.stripSeachName
 
 class ReadExpressionSelectColumnProvider(private val valueFromExpression: ValueFromExpression,colindex:Int, val dbTransaction: DbTransaction):SelectColumnProvider(colindex) {
     override fun match(identificator: String): Boolean {
-        if (valueFromExpression.column == null) {
-            return false
-        }
-        return valueFromExpression.column.matches(valueFromExpression.column.tablename, stripSeachName(identificator))
+        val column = valueFromExpression.column ?: return false
+        return column.matches(column.tablename, stripSeachName(identificator))
     }
 
     override fun readValue(selectRowProvider: SelectRowProvider, rowindex: Int): Any? {
-        if (valueFromExpression.column == null) {
+        val column = valueFromExpression.column
+        if (column == null) {
             return valueFromExpression.valuegen.invoke(Pair(dbTransaction,null))
         }
-        return selectRowProvider.readValue(valueFromExpression.column,rowindex)
+        return selectRowProvider.readValue(column,rowindex)
     }
 }

@@ -90,8 +90,18 @@ private fun splitStringToWords(sqlinp:String):List<String> {
     return result
 }
 
-class ValueFromExpression(val valuegen:((Pair<DbTransaction,Row?>)->Any?),val column: Column?)
+interface ValueFromExpression {
+    val valuegen: ((Pair<DbTransaction, Row?>) -> Any?)
+    val column: Column?
+}
 
+
+private class BasicValueFromExpression(
+    override val valuegen: (Pair<DbTransaction, Row?>) -> Any?,
+    override val column: Column?
+) :ValueFromExpression
+
+//private class ConvertValue
 
 class StatementAnalyzer {
     private val words:List<String>
@@ -176,7 +186,7 @@ class StatementAnalyzer {
         when {
             (aword == "now" && word(1) == "(" && word(2) == ")") -> {
                     addIndex(3)
-                    return ValueFromExpression({ Timestamp.valueOf(LocalDateTime.now()) },null)
+                    return BasicValueFromExpression({ Timestamp.valueOf(LocalDateTime.now()) },null)
                 }
             (aword == "uuid_in" && word(1) == "(") -> {
                 var parind = 0
@@ -190,7 +200,7 @@ class StatementAnalyzer {
                     }
                 } while (parind > 0)
                 addIndex()
-                return ValueFromExpression({ UUID.randomUUID().toString() },null)
+                return BasicValueFromExpression({ UUID.randomUUID().toString() },null)
             }
             (aword == "nextval" && word(1) == "(" && word(3) == ")") -> {
                 val seqnamestr = word(2)
@@ -200,20 +210,20 @@ class StatementAnalyzer {
                 addIndex(4)
                 val seqname = seqnamestr.substring(1,seqnamestr.length-1)
                 dbTransaction.sequence(seqname)
-                return ValueFromExpression({ it.first.sequence(seqname).nextVal() },null)
+                return BasicValueFromExpression({ it.first.sequence(seqname).nextVal() },null)
 
             }
-            ("true" == aword) -> return ValueFromExpression({ true },null)
-            ("false" == aword) -> return ValueFromExpression({ false },null)
-            (aword.toLongOrNull() != null) -> return ValueFromExpression({ aword.toLong()},null)
-            (aword.toBigDecimalOrNull() != null) -> return ValueFromExpression({ aword.toBigDecimal() },null)
+            ("true" == aword) -> return BasicValueFromExpression({ true },null)
+            ("false" == aword) -> return BasicValueFromExpression({ false },null)
+            (aword.toLongOrNull() != null) -> return BasicValueFromExpression({ aword.toLong()},null)
+            (aword.toBigDecimalOrNull() != null) -> return BasicValueFromExpression({ aword.toBigDecimal() },null)
             aword.startsWith("'") -> {
                 val end = aword.indexOf("'",1)
                 if (end == -1) {
                     throw SQLException("Illegal text $aword")
                 }
                 val text = aword.substring(1,end)
-                return ValueFromExpression({ text },null)
+                return BasicValueFromExpression({ text },null)
             }
             else -> return readColumnValue(tables,aword)
         }
@@ -222,7 +232,7 @@ class StatementAnalyzer {
     private fun readColumnValue(tables: Map<String, Table>, aword: String):ValueFromExpression {
         val column: Column = findColumnFromIdentifier(aword, tables)
         val valuegen:((Pair<DbTransaction,Row?>)->Any?) = { it.second?.cells?.firstOrNull { it.column == column }?.value }
-        return ValueFromExpression(valuegen,column)
+        return BasicValueFromExpression(valuegen,column)
     }
 
     fun findColumnFromIdentifier(
