@@ -116,7 +116,7 @@ class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTra
     }
 
     override fun setInt(parameterIndex: Int, x: Int) {
-        selectAnalyze.whereClause.registerBinding(parameterIndex,x)
+        selectAnalyze.whereClause.registerBinding(parameterIndex,x.toLong())
     }
 
     fun setSomething(parameterIndex: Int, x: Any?) {

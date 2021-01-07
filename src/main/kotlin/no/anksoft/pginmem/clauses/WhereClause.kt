@@ -53,27 +53,24 @@ private fun readWhereClausePart(
     nextIndexToUse: IndexToUse,
     dbTransaction: DbTransaction
 ): WhereClause {
-    val columnName = stripSeachName(statementAnalyzer.word() ?: throw SQLException("Unexpected "))
-    val column: Column =
-        tables.values.map { table -> table.findColumn(columnName) }.filterNotNull().firstOrNull() ?: throw SQLException(
-            "Unknown column $columnName"
-        )
+    val leftValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
+
     statementAnalyzer.addIndex()
     return when (statementAnalyzer.word()) {
-        "=" -> EqualCase(column, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
-        ">" -> GreaterThanCause(column, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
-        "<" -> LessThanCause(column, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+        "=" -> EqualCase(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+        ">" -> GreaterThanCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+        "<" -> LessThanCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "is" -> when {
             statementAnalyzer.word(1) == "distinct" && statementAnalyzer.word(2) == "from" -> {
                 statementAnalyzer.addIndex(2)
-                NotEqualCause(column, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+                NotEqualCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
             }
-            statementAnalyzer.addIndex().word() == "null" -> IsNullClause(column)
+            statementAnalyzer.addIndex().word() == "null" -> IsNullClause(dbTransaction,leftValueFromExpression)
             statementAnalyzer.word() == "not" && statementAnalyzer.addIndex()
-                .word() == "null" -> IsNotNullClause(column)
+                .word() == "null" -> IsNotNullClause(dbTransaction,leftValueFromExpression)
             else -> throw SQLException("Syntax error after is")
         }
-        "in" -> InClause(column, statementAnalyzer)
+        "in" -> InClause(dbTransaction,leftValueFromExpression, statementAnalyzer)
         else -> throw SQLException("Syntax error in where clause. Not recognicing word ${statementAnalyzer.word()}")
     }
 }

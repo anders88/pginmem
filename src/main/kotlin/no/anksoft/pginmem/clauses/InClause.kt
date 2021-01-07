@@ -1,11 +1,9 @@
 package no.anksoft.pginmem.clauses
 
-import no.anksoft.pginmem.Cell
-import no.anksoft.pginmem.Column
-import no.anksoft.pginmem.StatementAnalyzer
+import no.anksoft.pginmem.*
 import java.sql.SQLException
 
-class InClause(val column: Column,statementAnalyzer: StatementAnalyzer):WhereClause {
+class InClause(val dbTransaction: DbTransaction, val leftValueFromExpression: ValueFromExpression, statementAnalyzer: StatementAnalyzer):WhereClause {
     private val inValues:List<Any?>
 
     init {
@@ -31,8 +29,8 @@ class InClause(val column: Column,statementAnalyzer: StatementAnalyzer):WhereCla
     }
 
     override fun isMatch(cells: List<Cell>): Boolean {
-        val cell:Cell = cells.firstOrNull { it.column == column }?:return false
-        return inValues.contains(cell.value)
+        val value = leftValueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
+        return inValues.contains(value)
     }
 
     override fun registerBinding(index: Int, value: Any?): Boolean {

@@ -3,25 +3,27 @@ package no.anksoft.pginmem.clauses
 import no.anksoft.pginmem.*
 import java.sql.SQLException
 
-abstract class BinaryClause :WhereClause {
+abstract class BinaryClause(
+    private val leftValueFromExpression: ValueFromExpression,
+    expectedIndex: IndexToUse,
+    statementAnalyzer: StatementAnalyzer,
+    private val dbTransaction: DbTransaction,
+    tables: Map<String, Table>
+) :WhereClause {
 
-    private val column: Column
     private val expectedIndex:Int?
     private var valueToMatch:Any? = null
     private var isRegistered:Boolean
-    private val valueFromExpression: ValueFromExpression?
-    private val dbTransaction: DbTransaction
+    private val rightValue: ValueFromExpression?
 
-    constructor(column: Column, expectedIndex:IndexToUse, statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction, tables:Map<String, Table>) {
-        this.column = column
-        this.dbTransaction = dbTransaction
+    init {
         statementAnalyzer.addIndex()
         if (statementAnalyzer.word() == "?") {
             this.isRegistered = false
-            this.valueFromExpression = null
+            this.rightValue = null
             this.expectedIndex = expectedIndex.takeInd()
         } else {
-            this.valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
+            this.rightValue = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
             this.isRegistered = true
             this.expectedIndex = null
         }
@@ -32,19 +34,18 @@ abstract class BinaryClause :WhereClause {
         if (!isRegistered) {
             throw SQLException("Binding not set")
         }
-        if (valueFromExpression != null) {
-            valueToMatch = valueFromExpression.valuegen.invoke(Pair(dbTransaction, Row(cells)))
+        if (rightValue != null) {
+            valueToMatch = rightValue.valuegen.invoke(Pair(dbTransaction, Row(cells)))
         }
-        val cell: Cell = cells.firstOrNull { it.column == column }?:return false
-        return matchValues(cell.value,valueToMatch)
+        val leftValue = leftValueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
+        return matchValues(leftValue,valueToMatch)
     }
 
     abstract fun matchValues(left:Any?,right:Any?):Boolean
 
     override fun registerBinding(index: Int, value: Any?):Boolean {
         if (expectedIndex == index) {
-            val givenValue = column.columnType.validateValue(value)
-            valueToMatch = givenValue
+            valueToMatch = value
             isRegistered = true
             return true
         }

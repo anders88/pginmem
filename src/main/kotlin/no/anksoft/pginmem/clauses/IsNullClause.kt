@@ -1,12 +1,11 @@
 package no.anksoft.pginmem.clauses
 
-import no.anksoft.pginmem.Cell
-import no.anksoft.pginmem.Column
+import no.anksoft.pginmem.*
 
-class IsNullClause(val column: Column):WhereClause {
+class IsNullClause(val dbTransaction: DbTransaction,val leftValueFromExpression: ValueFromExpression):WhereClause {
     override fun isMatch(cells: List<Cell>): Boolean {
-        val cell: Cell = cells.firstOrNull { it.column == column }?:return false
-        return (cell.value == null)
+        val value = leftValueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
+        return (value == null)
     }
 
     override fun registerBinding(index: Int, value: Any?): Boolean = false
