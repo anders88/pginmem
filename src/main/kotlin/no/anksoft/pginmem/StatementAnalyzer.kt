@@ -6,6 +6,7 @@ import org.jsonbuddy.parse.JsonParser
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.*
 
 private fun splitStringToWords(sqlinp:String):List<String> {
     val lines = sqlinp.lines()
@@ -57,17 +58,17 @@ private fun splitStringToWords(sqlinp:String):List<String> {
             previndex = index
             continue
         }
-        if (charAtPos == ',') {
+        if ("(),".indexOf(charAtPos) != -1) {
             if (index > previndex) {
                 result.add(trimmed.substring(previndex,index))
             }
-            result.add(",")
+            result.add(""+charAtPos)
             index++
             previndex = index
             inSpecialCaseSequence = false
             continue
         }
-        if ("()=<>:-".indexOf(charAtPos) != -1) {
+        if ("=<>:-".indexOf(charAtPos) != -1) {
             if (index > previndex && !inSpecialCaseSequence) {
                 result.add(trimmed.substring(previndex,index))
                 previndex = index
@@ -139,12 +140,28 @@ class StatementAnalyzer {
     }
 
     fun indexOf(word:String):Int {
-        var resind = 0
-        while (currentIndex+resind < words.size) {
-            if (words[currentIndex+resind] == word) {
+        var resind = -1
+        var parind = 0
+        while (currentIndex+resind < words.size-1) {
+            resind++
+            val checking = words[currentIndex + resind]
+            if (setOf("(",")").contains(word) && word == checking) {
+                return 0
+            }
+            if (checking == "(") {
+                parind++
+                continue
+            }
+            if (checking == ")") {
+                parind = Math.max(0,parind-1)
+                continue
+            }
+            if (parind > 0) {
+                continue
+            }
+            if (checking == word) {
                 return resind
             }
-            resind++
         }
         return -1
     }
@@ -157,10 +174,24 @@ class StatementAnalyzer {
     fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,Table>):ValueFromExpression {
         val aword:String = word()?:throw SQLException("Unexpected end of statement")
         when {
-                (aword == "now" && word(1) == "()") -> {
-                    addIndex(2)
+            (aword == "now" && word(1) == "(" && word(2) == ")") -> {
+                    addIndex(3)
                     return ValueFromExpression({ Timestamp.valueOf(LocalDateTime.now()) },null)
                 }
+            (aword == "uuid_in" && word(1) == "(") -> {
+                var parind = 0
+                do {
+                    val currWord = addIndex().word()?:throw SQLException("Unexpected end of statement expected )")
+                    if (currWord == "(") {
+                        parind++
+                    }
+                    if (currWord == ")") {
+                        parind--
+                    }
+                } while (parind > 0)
+                addIndex()
+                return ValueFromExpression({ UUID.randomUUID().toString() },null)
+            }
             (aword == "nextval" && word(1) == "(" && word(3) == ")") -> {
                 val seqnamestr = word(2)
                 if (!(seqnamestr?.startsWith("'") == true && seqnamestr.endsWith("'") == true)) {

@@ -32,7 +32,9 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             this.selectStatement = null
         } else {
             this.linkedValues = emptyList()
-            statementAnalyzer.addIndex()
+            if (statementAnalyzer.word() == "(") {
+                statementAnalyzer.addIndex()
+            }
             this.selectStatement = SelectStatement(statementAnalyzer,dbTransaction)
         }
 
