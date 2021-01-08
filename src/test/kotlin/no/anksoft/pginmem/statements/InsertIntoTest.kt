@@ -85,11 +85,11 @@ class InsertIntoTest {
                 it.execute("create table yourtable(id text,readboolval boolean)")
             }
             conn.prepareStatement("insert into mytable(info) values (?)").use {
-                it.setString(1,JsonObject().put("boolflag",true).toJson())
+                it.setString(1,JsonObject().put("boolflag",false).toJson())
                 it.executeUpdate()
             }
             conn.prepareStatement("insert into mytable(info,deleted) values (?,?)").use {
-                it.setString(1,JsonObject().put("boolflag",true).toJson())
+                it.setString(1,JsonObject().put("boolflag",false).toJson())
                 it.setBoolean(2,true)
                 it.executeUpdate()
             }

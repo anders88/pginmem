@@ -131,6 +131,23 @@ private class ConvertToColtype(val inputValue: ValueFromExpression,val columnTyp
     }
 
     override val column: Column? = null
+}
+
+private class CoalesceValue(val coalvalues:List<ValueFromExpression>):ValueFromExpression {
+    override val valuegen: (Pair<DbTransaction, Row?>) -> Any? = {
+        var genvalue:Any? = null
+        for (valueFromExp in coalvalues) {
+            val valFromEx = valueFromExp.valuegen.invoke(it)
+            if (valFromEx != null) {
+                genvalue = valFromEx
+                break
+            }
+        }
+        genvalue
+    }
+
+    override val column: Column? = null
+
 
 }
 
@@ -269,6 +286,24 @@ class StatementAnalyzer {
                 val parentsWords = words.subList(currentIndex+1,currentIndex+toAdd)
                 currentIndex = currentIndex+toAdd
                 StatementAnalyzer(parentsWords).readValueFromExpression(dbTransaction,tables)
+            }
+            aword == "coalesce" -> {
+                if (addIndex().word() != "(") {
+                    throw SQLException("Expected ( in coalesce")
+                }
+                val coalvalues:MutableList<ValueFromExpression> = mutableListOf()
+                while (true) {
+                    addIndex()
+                    val nextVal = readValueFromExpression(dbTransaction,tables)
+                    coalvalues.add(nextVal)
+                    val nextWord = addIndex().word()
+                    when (nextWord) {
+                        ")" -> break
+                        "," -> continue
+                        else -> throw SQLException("Unexpedted end of coalesce")
+                    }
+                }
+                CoalesceValue(coalvalues)
             }
             else -> readColumnValue(tables,aword)
         }

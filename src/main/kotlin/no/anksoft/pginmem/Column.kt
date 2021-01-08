@@ -78,7 +78,7 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
                 (value is Number) -> value.toLong()
                 else -> "Value cannot be converted to int $value"
             }
-            BOOLEAN -> when(value) {
+            BOOLEAN -> when {
                 (value is String) && value.toLowerCase() == "true" -> true
                 (value is String) && value.toLowerCase() == "false" -> false
                 else -> throw SQLException("Unknown boolean $value")
