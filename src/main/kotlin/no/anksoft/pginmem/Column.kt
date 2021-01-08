@@ -69,6 +69,23 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             NUMERIC -> TODO()
         }
     }
+
+    fun convertToMe(value:Any?):Any? {
+        return when(this) {
+            TEXT -> value?.toString()
+            INTEGER -> when {
+                value == null -> null
+                (value is Number) -> value.toLong()
+                else -> "Value cannot be converted to int $value"
+            }
+            BOOLEAN -> when(value) {
+                (value is String) && value.toLowerCase() == "true" -> true
+                (value is String) && value.toLowerCase() == "false" -> false
+                else -> throw SQLException("Unknown boolean $value")
+            }
+            else -> throw SQLException("Conversion not supported for ${this.name}")
+        }
+    }
 }
 
 class Column private constructor(val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->Any?)?,val isNotNull:Boolean) {

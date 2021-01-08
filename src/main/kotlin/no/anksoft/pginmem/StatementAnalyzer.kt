@@ -101,7 +101,38 @@ private class BasicValueFromExpression(
     override val column: Column?
 ) :ValueFromExpression
 
-//private class ConvertValue
+private fun readJsonProperty(input:String?):String {
+    if (!(input?.startsWith("'") == true && input.endsWith("'") && input.length >= 3)) {
+        throw SQLException("Illegal json property $input")
+    }
+    return input.substring(1,input.length-1)
+}
+
+private class ReadJsonProperty(val inputValue:ValueFromExpression,jsonPropertyText:String?):ValueFromExpression {
+    private val jsonProperty:String = readJsonProperty(jsonPropertyText)
+
+    override val valuegen: (Pair<DbTransaction, Row?>) -> Any? = {
+        val startVal = inputValue.valuegen.invoke(it)
+        if (startVal !is String) {
+            throw SQLException("Expected string as json")
+        }
+        val jsonObject = JsonParser.parseToObject(startVal)
+        jsonObject.requiredString(jsonProperty)
+    }
+
+    override val column: Column? = null
+}
+
+private class ConvertToColtype(val inputValue: ValueFromExpression,val columnType: ColumnType):ValueFromExpression {
+    override val valuegen: (Pair<DbTransaction, Row?>) -> Any? = {
+        val startvalue:Any? = inputValue.valuegen.invoke(it)
+        val res = columnType.convertToMe(startvalue)
+        res
+    }
+
+    override val column: Column? = null
+
+}
 
 class StatementAnalyzer {
     private val words:List<String>
@@ -183,10 +214,10 @@ class StatementAnalyzer {
 
     fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,Table>):ValueFromExpression {
         val aword:String = word()?:throw SQLException("Unexpected end of statement")
-        when {
+        val toReturn:ValueFromExpression = when {
             (aword == "now" && word(1) == "(" && word(2) == ")") -> {
                     addIndex(3)
-                    return BasicValueFromExpression({ Timestamp.valueOf(LocalDateTime.now()) },null)
+                    BasicValueFromExpression({ Timestamp.valueOf(LocalDateTime.now()) },null)
                 }
             (aword == "uuid_in" && word(1) == "(") -> {
                 var parind = 0
@@ -200,7 +231,7 @@ class StatementAnalyzer {
                     }
                 } while (parind > 0)
                 addIndex()
-                return BasicValueFromExpression({ UUID.randomUUID().toString() },null)
+                BasicValueFromExpression({ UUID.randomUUID().toString() },null)
             }
             (aword == "nextval" && word(1) == "(" && word(3) == ")") -> {
                 val seqnamestr = word(2)
@@ -210,23 +241,49 @@ class StatementAnalyzer {
                 addIndex(4)
                 val seqname = seqnamestr.substring(1,seqnamestr.length-1)
                 dbTransaction.sequence(seqname)
-                return BasicValueFromExpression({ it.first.sequence(seqname).nextVal() },null)
-
+                BasicValueFromExpression({ it.first.sequence(seqname).nextVal() },null)
             }
-            ("true" == aword) -> return BasicValueFromExpression({ true },null)
-            ("false" == aword) -> return BasicValueFromExpression({ false },null)
-            (aword.toLongOrNull() != null) -> return BasicValueFromExpression({ aword.toLong()},null)
-            (aword.toBigDecimalOrNull() != null) -> return BasicValueFromExpression({ aword.toBigDecimal() },null)
+            ("true" == aword) -> BasicValueFromExpression({ true },null)
+            ("false" == aword) -> BasicValueFromExpression({ false },null)
+            (aword.toLongOrNull() != null) -> BasicValueFromExpression({ aword.toLong()},null)
+            (aword.toBigDecimalOrNull() != null) -> BasicValueFromExpression({ aword.toBigDecimal() },null)
             aword.startsWith("'") -> {
                 val end = aword.indexOf("'",1)
                 if (end == -1) {
                     throw SQLException("Illegal text $aword")
                 }
                 val text = aword.substring(1,end)
-                return BasicValueFromExpression({ text },null)
+                BasicValueFromExpression({ text },null)
             }
-            else -> return readColumnValue(tables,aword)
+            (aword == "(") -> {
+                var toAdd:Int = -1
+                var parcount  = 0
+                do {
+                    toAdd++
+                    when (word(toAdd)) {
+                        null -> throw SQLException("Unexpeced end of statement expected )")
+                        "(" -> parcount++
+                        ")" -> parcount--
+                    }
+                } while (parcount > 0)
+                val parentsWords = words.subList(currentIndex+1,currentIndex+toAdd)
+                currentIndex = currentIndex+toAdd
+                StatementAnalyzer(parentsWords).readValueFromExpression(dbTransaction,tables)
+            }
+            else -> readColumnValue(tables,aword)
         }
+        if (word(1) == "::") {
+            if (word(2) == "json" && word(3) == "->>") {
+                addIndex(4)
+                return ReadJsonProperty(toReturn,word())
+            }
+            val coltypeToConvToText = word(2)?:throw SQLException("Unexpected end of statement")
+            val columnType:ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(coltypeToConvToText) }?:throw SQLException("Unknown convert to $$coltypeToConvToText")
+            addIndex(2)
+            return ConvertToColtype(toReturn,columnType)
+        }
+
+        return toReturn
     }
 
     private fun readColumnValue(tables: Map<String, Table>, aword: String):ValueFromExpression {
