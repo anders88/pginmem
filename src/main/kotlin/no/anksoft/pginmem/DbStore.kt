@@ -31,20 +31,19 @@ class DbStore {
     }
 
 
-    private fun findTable(tablename:String):Table {
-        val table = tables[stripSeachName(tablename)]?:throw SQLException("Unknown table $tablename")
-        return table
+    private fun findTable(tablename:String):Table? {
+        return tables[stripSeachName(tablename)]
     }
 
-    fun tableForUpdate(name:String):Table {
-        val table = findTable(name)
+    fun tableForUpdate(name:String):Table? {
+        val table = findTable(name)?:return null
         if (lockedTables[table.name] != null) {
             throw NotImplementedError("Wait for lock not implemented for table ${table.name}")
         }
         lockedTables[table.name] = table.name
         return table.clone()
     }
-    fun tableForRead(name:String):Table = findTable(name)
+    fun tableForRead(name:String):Table = findTable(name)?:throw SQLException("Unknown table $name")
 
     fun createConnection():DbConnection {
         return DbConnection(DbTransaction(this))

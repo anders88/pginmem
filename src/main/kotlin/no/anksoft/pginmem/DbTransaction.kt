@@ -12,9 +12,11 @@ class DbTransaction(private val dbStore: DbStore) {
 
     private val updatingTables:MutableMap<String,Table> = mutableMapOf()
 
-    fun tableForUpdate(tablename: String): Table {
+    fun tableForUpdate(tablename: String): Table = tableForUpdateIdOrNull(tablename)?:throw SQLException("Unknown table $tablename")
+
+    fun tableForUpdateIdOrNull(tablename: String) :Table? {
         updatingTables[tablename]?.let { return it }
-        val table = dbStore.tableForUpdate(tablename)
+        val table = dbStore.tableForUpdate(tablename)?:return null
         updatingTables[table.name] = table
         return table
     }
