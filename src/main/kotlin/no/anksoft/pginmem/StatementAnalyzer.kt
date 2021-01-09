@@ -415,6 +415,19 @@ class StatementAnalyzer {
         }  else null
         return ReadFromRow(colname,resultTransformer)
     }
+
+    fun addIndexUntilNextCommaOrEnd() {
+        var parentsIndex = 0
+        while (word(1) != null && (parentsIndex > 0 || word(1) != ",")) {
+            addIndex()
+            if (word() == "(") {
+                parentsIndex++
+            }
+            if (word() == ")") {
+                parentsIndex--
+            }
+        }
+    }
 }
 
 private class ReadFromRow(val collabel:String,val resultTransformer:((Any?)->Any?)?):(SelectResultSet)->Any? {

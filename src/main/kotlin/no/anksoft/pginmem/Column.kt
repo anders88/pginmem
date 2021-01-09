@@ -95,7 +95,7 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
 
     companion object {
         fun create(tablename:String,statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction):Column {
-            val columnName = statementAnalyzer.word()?:throw SQLException("Expecting column name")
+            val columnName:String = statementAnalyzer.word()?:throw SQLException("Expecting column name")
             val colTypeText = statementAnalyzer.addIndex().word()?:throw SQLException("Expecting column type")
             val columnType:ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(colTypeText) }?:throw SQLException("Unknown column type $colTypeText")
 
@@ -110,7 +110,7 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
                 }
                 (statementAnalyzer.word() == "default") -> {
                     statementAnalyzer.addIndex()
-                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap())?.valuegen
+                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap()).valuegen
                 }
                 else -> null
             }

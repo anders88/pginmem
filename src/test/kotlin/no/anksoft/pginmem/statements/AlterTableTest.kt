@@ -237,4 +237,33 @@ class AlterTableTest {
             }
         }
     }
+
+    @Test
+    fun alterTableWitIfExsists() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute("create table mytable(id text)")
+            }
+            conn.createStatement().use {
+                it.execute("alter table if exists yourtable add if not exists greeting text default 'hello'")
+            }
+            conn.createStatement().use {
+                it.execute("alter table if exists mytable add if not exists greeting text default 'hello'")
+            }
+            conn.createStatement().use {
+                it.execute("alter table if exists mytable add if not exists greeting text default 'hola'")
+            }
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"myid")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("greeting")).isEqualTo("hello")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
 }

@@ -7,25 +7,46 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
 
     override fun executeUpdate(): Int {
         statementAnalyzer.addIndex(2)
-        var table = dbTransaction.tableForUpdate(statementAnalyzer.word()?:throw SQLException("Unexpected end of statemnt"))
+        val cancelIfTableNotExsist = if (statementAnalyzer.word() == "if" && statementAnalyzer.word(1) == "exists") {
+            statementAnalyzer.addIndex(2)
+            true
+        } else false
+        val tableToUpdateName = statementAnalyzer.word()
+        val tableToUpate: Table = dbTransaction.tableForUpdateIdOrNull(tableToUpdateName ?:throw SQLException("Unexpected end of statemnt"))
+            ?: if (cancelIfTableNotExsist) {
+                return 0
+            } else {
+                throw SQLException("Unknown table $tableToUpdateName")
+            }
 
+        var table:Table = tableToUpate
         do {
             statementAnalyzer.addIndex()
             val command = statementAnalyzer.word()
             statementAnalyzer.addIndex()
+
+            val onlyIfExists:Boolean = if (statementAnalyzer.word() == "if" && statementAnalyzer.word(1) == "exists") {
+                statementAnalyzer.addIndex(2)
+                true
+            } else false
+            val onlyIfNotExsists:Boolean = if (statementAnalyzer.word() == "if" && statementAnalyzer.word(1) == "not" && statementAnalyzer.word(2) == "exists") {
+                statementAnalyzer.addIndex(3)
+                true
+            } else false
+
             if (statementAnalyzer.word() == "column") {
                 statementAnalyzer.addIndex()
             }
 
             val newTable: Table? = when {
-                command == "alter" -> alterColumn(table)
-                command == "add" -> addColumn(table)
-                command == "drop" -> deleteColumn(table)
+                command == "alter" -> alterColumn(table,onlyIfExists,onlyIfNotExsists)
+                command == "add" -> addColumn(table,onlyIfExists,onlyIfNotExsists)
+                command == "drop" -> deleteColumn(table,onlyIfExists,onlyIfNotExsists)
                 command == "rename" && statementAnalyzer.word() == "to" -> renameTable(
                     table,
                     statementAnalyzer.addIndex().word()
                 )
-                command == "rename" -> renameColumn(table)
+                command == "rename" -> renameColumn(table,onlyIfExists,onlyIfNotExsists)
                 else -> throw SQLException("Unknown alter table command $command")
             }
             if (newTable != null) {
@@ -36,9 +57,15 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         return 0
     }
 
-    private fun alterColumn(table: Table): Table {
+    private fun alterColumn(table: Table, onlyIfExists: Boolean, onlyIfNotExsists: Boolean): Table {
+        if (onlyIfNotExsists) {
+            throw SQLException("Cannot use not exsists with alter column")
+        }
         val colname = statementAnalyzer.word()?:throw SQLException("Expected column name")
-        val column:Column = table.findColumn(colname)?:throw SQLException("Unknown column $colname")
+        val column:Column = table.findColumn(colname)?:if (onlyIfExists) {
+            statementAnalyzer.addIndexUntilNextCommaOrEnd()
+            return table
+        } else throw SQLException("Unknown column $colname")
         statementAnalyzer.addIndex()
         if (statementAnalyzer.word() == "drop" && statementAnalyzer.word(1) == "default") {
             statementAnalyzer.addIndex()
@@ -100,9 +127,17 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
 
     }
 
-    private fun renameColumn(table: Table): Table {
+    private fun renameColumn(table: Table, onlyIfExists: Boolean, onlyIfNotExsists: Boolean): Table {
+        if (onlyIfNotExsists) {
+            throw SQLException("Cannot rename non exsisting column")
+        }
         val colnameFrom = statementAnalyzer.word()?:throw SQLException("Expected colunname from")
-        val columnToRename:Column = table.findColumn(colnameFrom)?:throw SQLException("Unkown column $colnameFrom")
+        val columnToRename:Column = table.findColumn(colnameFrom)?:if (onlyIfExists) {
+            statementAnalyzer.addIndexUntilNextCommaOrEnd()
+            return table
+        } else {
+            throw SQLException("Unkown column $colnameFrom")
+        }
         statementAnalyzer.addIndex()
         if (statementAnalyzer.word() != "to") {
             throw SQLException("Expected to")
@@ -128,9 +163,16 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         return newTable
     }
 
-    private fun deleteColumn(table: Table): Table {
+    private fun deleteColumn(table: Table, onlyIfExists: Boolean, onlyIfNotExsists: Boolean): Table {
+        if (onlyIfNotExsists) {
+            throw SQLException("Cannot delete column that not exsist")
+        }
         val colname = statementAnalyzer.word()?:throw SQLException("Expected column name")
-        val columnToDelete:Column = table.findColumn(colname)?:throw SQLException("Unknown column $colname")
+        val columnToDelete:Column = table.findColumn(colname)?:if (onlyIfExists) {
+            return table
+        } else {
+            throw SQLException("Unknown column $colname")
+        }
         val adjustedColumns = table.colums.filter { it != columnToDelete }
         val newTable = Table(table.name, adjustedColumns)
         for (row in table.rowsForReading()) {
@@ -140,7 +182,15 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         return newTable
     }
 
-    private fun addColumn(table: Table): Table {
+    private fun addColumn(table: Table, onlyIfExists: Boolean, onlyIfNotExsists: Boolean): Table {
+        if (onlyIfExists) {
+            throw SQLException("Cannot add column with if exsists")
+        }
+        val columnName:String = statementAnalyzer.word()?:throw SQLException("Expecting column name")
+        if (onlyIfNotExsists && table.findColumn(columnName) != null) {
+            statementAnalyzer.addIndexUntilNextCommaOrEnd()
+            return table
+        }
         val newColumn = Column.create(table.name,statementAnalyzer,dbTransaction)
         val adjustedColumns = table.colums.toMutableList()
         adjustedColumns.add(newColumn)
