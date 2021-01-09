@@ -50,25 +50,13 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
             val coltypetext = statementAnalyzer.word()?:throw SQLException("Expected columnt type")
             val newColumnType:ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(coltypetext) }?:throw SQLException("Unkown columnt type $coltypetext")
 
-            val (convertToType,sourceCol) = if ( statementAnalyzer.word(1) == "using") {
-                val sourceColText =
-                    statementAnalyzer.addIndex(2).word() ?: throw SQLException("Expected column name after using")
-                val sourceCol = table.findColumn(sourceColText) ?: throw SQLException("Unknown column $sourceColText")
-
-                val convertToType: ColumnType? = if (statementAnalyzer.word(1) == "::") {
-                    val colToTypeText =
-                        statementAnalyzer.addIndex(2).word() ?: throw SQLException("Expected type after ::")
-                    ColumnType.values().firstOrNull { it.matchesColumnType(colToTypeText) }
-                } else null
-                Pair(convertToType,sourceCol)
-            } else Pair(null,null)
-            val newColumn = column.changeColumnType(newColumnType)
-            val valueTransformation:((Row)->Any?)? = if (convertToType != null) { row ->
-                val currentValue = row.cells.firstOrNull { it.column == sourceCol }?.value
-                column.columnType.convertValue(convertToType,currentValue)
+            val sourceValue:ValueFromExpression? = if ( statementAnalyzer.word(1) == "using") {
+                statementAnalyzer.addIndex(2)
+                statementAnalyzer.readValueFromExpression(dbTransaction,mapOf(Pair(table.name,table)))
             } else null
+            val newColumn = column.changeColumnType(newColumnType)
 
-            return replaceCol(table,column,newColumn,valueTransformation)
+            return replaceCol(table,column,newColumn,sourceValue)
         }
         if (statementAnalyzer.word() == "set" && statementAnalyzer.word(1) == "default") {
             statementAnalyzer.addIndex(2)
@@ -80,7 +68,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         throw SQLException("Unknown alter column command ${statementAnalyzer.word()}")
     }
 
-    private fun replaceCol(table: Table,oldcol:Column, newColumn: Column,valueTransformation:((Row)->Any?)?):Table {
+    private fun replaceCol(table: Table,oldcol:Column, newColumn: Column,valueTransformation:ValueFromExpression?):Table {
         val newCols = table.colums.map {
             if (it == oldcol) newColumn else it
         }
@@ -88,7 +76,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         for (row in table.rowsForReading()) {
             val newCells = row.cells.map {
                 if (it.column == oldcol)
-                    Cell(newColumn,if (valueTransformation !=null) valueTransformation.invoke(row) else it.value)
+                    Cell(newColumn,if (valueTransformation !=null) valueTransformation.valuegen.invoke(Pair(dbTransaction,row)) else it.value)
                 else it
             }
             newTable.addRow(Row(newCells))

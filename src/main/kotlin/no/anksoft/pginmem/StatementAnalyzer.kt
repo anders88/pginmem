@@ -5,7 +5,9 @@ import org.jsonbuddy.JsonObject
 import org.jsonbuddy.parse.JsonParser
 import java.sql.SQLException
 import java.sql.Timestamp
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 private fun splitStringToWords(sqlinp:String):List<String> {
@@ -144,6 +146,34 @@ private class CoalesceValue(val coalvalues:List<ValueFromExpression>):ValueFromE
             }
         }
         genvalue
+    }
+
+    override val column: Column? = null
+}
+
+private fun convertToJavaDateFormat(sqlFormat:String):DateTimeFormatter {
+    val resFormat = StringBuilder()
+    for (c in sqlFormat) {
+        resFormat.append(when (c) {
+            'Y' -> 'y'
+            'D' -> 'd'
+            else -> c
+        })
+    }
+    return DateTimeFormatter.ofPattern(resFormat.toString())
+}
+
+private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):ValueFromExpression {
+
+    private val dateTimeFormatter:DateTimeFormatter = convertToJavaDateFormat(dateformat)
+
+    override val valuegen: (Pair<DbTransaction, Row?>) -> Any? = {
+        val toConvert:Any? = startValue.valuegen.invoke(it)
+        if (toConvert == null) {
+            null
+        } else {
+            Timestamp.valueOf(LocalDate.parse(toConvert.toString(), dateTimeFormatter).atStartOfDay())
+        }
     }
 
     override val column: Column? = null
@@ -304,6 +334,21 @@ class StatementAnalyzer {
                     }
                 }
                 CoalesceValue(coalvalues)
+            }
+            aword == "to_date" -> {
+                if (addIndex().word() != "(") {
+                    throw SQLException("Expected ( after to_date")
+                }
+                addIndex()
+                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables)
+                if (addIndex().word() != ",") {
+                    throw SQLException("Expected , after to_date")
+                }
+                val dateformat = addIndex().word()
+                if (!(dateformat?.startsWith("'") == true && dateformat.endsWith("'") && dateformat.length >= 3)) {
+                    throw SQLException("Expected dateformat after to_date")
+                }
+                ToDateValue(fromExpression,dateformat.substring(1,dateformat.length-1))
             }
             else -> readColumnValue(tables,aword)
         }

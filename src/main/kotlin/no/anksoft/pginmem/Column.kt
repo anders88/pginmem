@@ -76,6 +76,8 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             INTEGER -> when {
                 value == null -> null
                 (value is Number) -> value.toLong()
+                (value == false) -> 0L
+                (value == true) -> 1L
                 else -> "Value cannot be converted to int $value"
             }
             BOOLEAN -> when {

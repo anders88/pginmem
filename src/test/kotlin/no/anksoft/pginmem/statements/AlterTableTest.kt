@@ -5,6 +5,7 @@ import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.sql.SQLException
+import java.time.LocalDate
 
 class AlterTableTest {
     private val datasource = PgInMemDatasource()
@@ -207,6 +208,31 @@ class AlterTableTest {
                     assertThat(it.getString("id")).isEqualTo("two")
                     assertThat(it.getInt("abool")).isEqualTo(1)
                     assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun alterTableWithToDate() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute("create table mytable( mydate text)")
+            }
+            conn.prepareStatement("insert into mytable(mydate) values (?)").use {
+                it.setString(1,"2020-12-18")
+                it.executeUpdate()
+            }
+            conn.createStatement().use {
+                it.execute("""
+                    ALTER TABLE mytable ALTER COLUMN mydate TYPE DATE
+                    using to_date(mydate, 'YYYY-MM-DD');
+                """.trimIndent())
+            }
+            conn.prepareStatement("select mydate from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getTimestamp("mydate").toLocalDateTime().toLocalDate()).isEqualTo(LocalDate.of(2020,12,18))
                 }
             }
         }
