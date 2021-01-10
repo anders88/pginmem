@@ -1,5 +1,6 @@
 package no.anksoft.pginmem
 
+import no.anksoft.pginmem.values.*
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
@@ -10,19 +11,19 @@ import java.util.*
 enum class ColumnType(private val altNames:Set<String> = emptySet()) {
     TEXT, TIMESTAMP,DATE,INTEGER(setOf("int","bigint")),BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL;
 
-    fun validateValue(value:Any?):Any? {
-        if (value == null) {
-            return null
+    fun validateValue(value:CellValue):CellValue {
+        if (value == NullCellValue) {
+            return NullCellValue
         }
-        val returnValue:Any? = when (this) {
-            TEXT -> if (value is String) value else null
-            TIMESTAMP -> if (value is Timestamp) value else null
-            DATE -> if (value is Timestamp) value else null
-            INTEGER -> if (value is Number) value.toLong() else null
-            BOOLEAN -> if (value is Boolean) value else null
-            NUMERIC -> if (value is Number) BigDecimal.valueOf(value.toDouble()) else null
-            BYTEA -> if (value is ByteArray) value else null
-            SERIAL -> if (value is Number) value.toLong() else null
+        val returnValue:CellValue? = when (this) {
+            TEXT -> if (value is StringCellValue) value else null
+            TIMESTAMP -> if (value is DateTimeCellValue) value else null
+            DATE -> if (value is DateCellValue) value else null
+            INTEGER -> if (value is IntegerCellValue) value else null
+            BOOLEAN -> if (value is BooleanCellValue) value else null
+            NUMERIC -> if (value is NumericCellValue) value else null
+            BYTEA -> if (value is ByteArrayCellValue) value else null
+            SERIAL -> if (value is IntegerCellValue) value else null
         }
         if (returnValue == null) {
             throw SQLException("Binding value not valid for $this")
@@ -70,27 +71,20 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
         }
     }
 
-    fun convertToMe(value:Any?):Any? {
+    fun convertToMe(cellValue: CellValue):CellValue {
+        if (cellValue == NullCellValue) {
+            return NullCellValue
+        }
         return when(this) {
-            TEXT -> value?.toString()
-            INTEGER -> when {
-                value == null -> null
-                (value is Number) -> value.toLong()
-                (value == false) -> 0L
-                (value == true) -> 1L
-                else -> "Value cannot be converted to int $value"
-            }
-            BOOLEAN -> when {
-                (value is String) && value.toLowerCase() == "true" -> true
-                (value is String) && value.toLowerCase() == "false" -> false
-                else -> throw SQLException("Unknown boolean $value")
-            }
+            TEXT -> cellValue.valueAsText()
+            INTEGER -> cellValue.valueAsInteger()
+            BOOLEAN -> cellValue.valueAsBoolean()
             else -> throw SQLException("Conversion not supported for ${this.name}")
         }
     }
 }
 
-class Column private constructor(val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->Any?)?,val isNotNull:Boolean) {
+class Column private constructor(val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)?,val isNotNull:Boolean) {
 
 
     companion object {
@@ -101,11 +95,11 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
 
             statementAnalyzer.addIndex(1)
 
-            val defaultValue:((Pair<DbTransaction,Row?>)->Any?)? = when {
+            val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)? = when {
                 (columnType == ColumnType.SERIAL) -> {
                     val sequenceName = "${tablename}_${columnName}_seq"
                     dbTransaction.addSequence(sequenceName)
-                    val d: (Pair<DbTransaction,Row?>) -> Any? = { it.first.sequence(sequenceName).nextVal() }
+                    val d: (Pair<DbTransaction,Row?>) -> CellValue = { it.first.sequence(sequenceName).nextVal() }
                     d
                 }
                 (statementAnalyzer.word() == "default") -> {
@@ -139,7 +133,7 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
         isNotNull = isNotNull
     )
 
-    fun setDefault(defvalue:((Pair<DbTransaction,Row?>)->Any?)?):Column = Column(
+    fun setDefault(defvalue:((Pair<DbTransaction,Row?>)->CellValue)?):Column = Column(
         name = name,
         columnType = columnType,
         tablename = tablename,

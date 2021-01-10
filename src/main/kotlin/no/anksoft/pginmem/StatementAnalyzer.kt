@@ -1,11 +1,10 @@
 package no.anksoft.pginmem
 
 import no.anksoft.pginmem.statements.select.SelectResultSet
+import no.anksoft.pginmem.values.*
 import org.jsonbuddy.JsonObject
 import org.jsonbuddy.parse.JsonParser
 import java.sql.SQLException
-import java.sql.Timestamp
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -93,13 +92,13 @@ private fun splitStringToWords(sqlinp:String):List<String> {
 }
 
 interface ValueFromExpression {
-    val valuegen: ((Pair<DbTransaction, Row?>) -> Any?)
+    val valuegen: ((Pair<DbTransaction, Row?>) -> CellValue)
     val column: Column?
 }
 
 
 private class BasicValueFromExpression(
-    override val valuegen: (Pair<DbTransaction, Row?>) -> Any?,
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue,
     override val column: Column?
 ) :ValueFromExpression
 
@@ -113,21 +112,21 @@ private fun readJsonProperty(input:String?):String {
 private class ReadJsonProperty(val inputValue:ValueFromExpression,jsonPropertyText:String?):ValueFromExpression {
     private val jsonProperty:String = readJsonProperty(jsonPropertyText)
 
-    override val valuegen: (Pair<DbTransaction, Row?>) -> Any? = {
-        val startVal = inputValue.valuegen.invoke(it)
-        if (startVal !is String) {
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        val startVal:CellValue = inputValue.valuegen.invoke(it)
+        if (startVal !is StringCellValue) {
             throw SQLException("Expected string as json")
         }
-        val jsonObject = JsonParser.parseToObject(startVal)
-        jsonObject.requiredString(jsonProperty)
+        val jsonObject = JsonParser.parseToObject(startVal.myValue)
+        StringCellValue(jsonObject.requiredString(jsonProperty))
     }
 
     override val column: Column? = null
 }
 
 private class ConvertToColtype(val inputValue: ValueFromExpression,val columnType: ColumnType):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> Any? = {
-        val startvalue:Any? = inputValue.valuegen.invoke(it)
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        val startvalue:CellValue = inputValue.valuegen.invoke(it)
         val res = columnType.convertToMe(startvalue)
         res
     }
@@ -136,11 +135,11 @@ private class ConvertToColtype(val inputValue: ValueFromExpression,val columnTyp
 }
 
 private class CoalesceValue(val coalvalues:List<ValueFromExpression>):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> Any? = {
-        var genvalue:Any? = null
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        var genvalue:CellValue = NullCellValue
         for (valueFromExp in coalvalues) {
             val valFromEx = valueFromExp.valuegen.invoke(it)
-            if (valFromEx != null) {
+            if (valFromEx != NullCellValue) {
                 genvalue = valFromEx
                 break
             }
@@ -167,12 +166,12 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
 
     private val dateTimeFormatter:DateTimeFormatter = convertToJavaDateFormat(dateformat)
 
-    override val valuegen: (Pair<DbTransaction, Row?>) -> Any? = {
-        val toConvert:Any? = startValue.valuegen.invoke(it)
-        if (toConvert == null) {
-            null
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        val toConvert:CellValue = startValue.valuegen.invoke(it)
+        if (toConvert == NullCellValue) {
+            NullCellValue
         } else {
-            Timestamp.valueOf(LocalDate.parse(toConvert.toString(), dateTimeFormatter).atStartOfDay())
+            toConvert.valueAsDate()
         }
     }
 
@@ -264,7 +263,7 @@ class StatementAnalyzer {
         val toReturn:ValueFromExpression = when {
             (aword == "now" && word(1) == "(" && word(2) == ")") -> {
                     addIndex(3)
-                    BasicValueFromExpression({ Timestamp.valueOf(LocalDateTime.now()) },null)
+                    BasicValueFromExpression({ DateTimeCellValue(LocalDateTime.now()) },null)
                 }
             (aword == "uuid_in" && word(1) == "(") -> {
                 var parind = 0
@@ -278,7 +277,7 @@ class StatementAnalyzer {
                     }
                 } while (parind > 0)
                 addIndex()
-                BasicValueFromExpression({ UUID.randomUUID().toString() },null)
+                BasicValueFromExpression({ StringCellValue(UUID.randomUUID().toString()) },null)
             }
             (aword == "nextval" && word(1) == "(" && word(3) == ")") -> {
                 val seqnamestr = word(2)
@@ -290,17 +289,17 @@ class StatementAnalyzer {
                 dbTransaction.sequence(seqname)
                 BasicValueFromExpression({ it.first.sequence(seqname).nextVal() },null)
             }
-            ("true" == aword) -> BasicValueFromExpression({ true },null)
-            ("false" == aword) -> BasicValueFromExpression({ false },null)
-            (aword.toLongOrNull() != null) -> BasicValueFromExpression({ aword.toLong()},null)
-            (aword.toBigDecimalOrNull() != null) -> BasicValueFromExpression({ aword.toBigDecimal() },null)
+            ("true" == aword) -> BasicValueFromExpression({ BooleanCellValue(true) },null)
+            ("false" == aword) -> BasicValueFromExpression({ BooleanCellValue(false) },null)
+            (aword.toLongOrNull() != null) -> BasicValueFromExpression({ IntegerCellValue(aword.toLong())},null)
+            (aword.toBigDecimalOrNull() != null) -> BasicValueFromExpression({ NumericCellValue(aword.toBigDecimal()) },null)
             aword.startsWith("'") -> {
                 val end = aword.indexOf("'",1)
                 if (end == -1) {
                     throw SQLException("Illegal text $aword")
                 }
                 val text = aword.substring(1,end)
-                BasicValueFromExpression({ text },null)
+                BasicValueFromExpression({ StringCellValue(text) },null)
             }
             (aword == "(") -> {
                 var toAdd:Int = -1
@@ -368,7 +367,7 @@ class StatementAnalyzer {
 
     private fun readColumnValue(tables: Map<String, Table>, aword: String):ValueFromExpression {
         val column: Column = findColumnFromIdentifier(aword, tables)
-        val valuegen:((Pair<DbTransaction,Row?>)->Any?) = { it.second?.cells?.firstOrNull { it.column == column }?.value }
+        val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column == column }?.value?:NullCellValue }
         return BasicValueFromExpression(valuegen,column)
     }
 
@@ -392,13 +391,13 @@ class StatementAnalyzer {
         return column
     }
 
-    fun readValueOnRow():(SelectResultSet)->Any? {
+    fun readValueOnRow():(SelectResultSet)->CellValue {
         val colname = word()?:throw SQLException("Unekpected end of statement")
         addIndex()
         if (colname.startsWith("'") && colname.endsWith("'")) {
-            return ConstantValue(colname.substring(1,colname.length-1))
+            return ConstantValue(StringCellValue(colname.substring(1,colname.length-1)))
         }
-        val resultTransformer:((Any?)->Any?)? = if (word() == "::") {
+        val resultTransformer:((CellValue)->CellValue)? = if (word() == "::") {
             if (addIndex().word() != "json") {
                 throw SQLException("Unsupported konversion ${word()}")
             }
@@ -430,9 +429,9 @@ class StatementAnalyzer {
     }
 }
 
-private class ReadFromRow(val collabel:String,val resultTransformer:((Any?)->Any?)?):(SelectResultSet)->Any? {
-    override fun invoke(row: SelectResultSet): Any? {
-        var value:Any? = row.readCell(collabel)
+private class ReadFromRow(val collabel:String,val resultTransformer:((CellValue)->CellValue)?):(SelectResultSet)->CellValue {
+    override fun invoke(row: SelectResultSet): CellValue {
+        var value:CellValue = row.readCell(collabel)
         if (resultTransformer != null) {
             value = resultTransformer.invoke(value)
         }
@@ -440,21 +439,22 @@ private class ReadFromRow(val collabel:String,val resultTransformer:((Any?)->Any
     }
 }
 
-private class JsonTransformer(val key:String):(Any?)->Any? {
-    override fun invoke(inputValue: Any?): Any? {
-        if (inputValue !is String) {
-            return null
+private class JsonTransformer(val key:String):(CellValue)->CellValue {
+    override fun invoke(inputValue: CellValue): CellValue {
+        if (inputValue !is StringCellValue) {
+            return NullCellValue
         }
-        val jsonNode = JsonParser.parse(inputValue)
+        val jsonNode = JsonParser.parse(inputValue.myValue)
         if (jsonNode !is JsonObject) {
             throw SQLException("Expected jsonobject got $inputValue")
         }
-        return jsonNode.stringValue(key).orElse(null)
+        val readVal:String? = jsonNode.stringValue(key).orElse(null)
+        return readVal?.let { StringCellValue(it) }?:NullCellValue
     }
 }
 
-private class ConstantValue(val value:Any?):(SelectResultSet)->Any? {
-    override fun invoke(selectResultSet:SelectResultSet): Any? {
+private class ConstantValue(val value:CellValue):(SelectResultSet)->CellValue {
+    override fun invoke(selectResultSet:SelectResultSet): CellValue {
         return value
     }
 

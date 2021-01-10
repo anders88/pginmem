@@ -1,6 +1,9 @@
 package no.anksoft.pginmem.statements.select
 
 import no.anksoft.pginmem.statements.OrderPart
+import no.anksoft.pginmem.values.ByteArrayCellValue
+import no.anksoft.pginmem.values.CellValue
+import no.anksoft.pginmem.values.NullCellValue
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -16,7 +19,7 @@ class SelectResultSet(
 ):ResultSet {
 
     val numberOfRows = selectRowProvider.size()
-    fun valueAt(columnIndex:Int,rowIndex:Int):Any? = colums.first { it.isMatch(columnIndex) }.readValue(selectRowProvider,rowIndex)
+    fun valueAt(columnIndex:Int,rowIndex:Int):CellValue = colums.first { it.isMatch(columnIndex) }.readValue(selectRowProvider,rowIndex)
 
     private var rowindex = -1
     private var lastWasNull:Boolean = false
@@ -49,34 +52,33 @@ class SelectResultSet(
     }
 
 
-    fun readCell(columnLabel: String?): Any? {
+    fun readCell(columnLabel: String?): CellValue {
         if (columnLabel == null) {
             throw SQLException("Cannot get null")
         }
         val columnProvider:SelectColumnProvider = colums.firstOrNull { it.match(columnLabel) }
             ?:throw SQLException("Unknown column $columnLabel")
         val value = columnProvider.readValue(selectRowProvider,rowindex)
-        lastWasNull = (value == null)
+        lastWasNull = (value == NullCellValue)
         return value
     }
 
-    private fun readCell(columnIndex: Int):Any? {
+    private fun readCell(columnIndex: Int):CellValue {
         val columnProvider:SelectColumnProvider = colums.first { it.isMatch(columnIndex) }
         val value = columnProvider.readValue(selectRowProvider,rowindex)
-        lastWasNull = (value == null)
+        lastWasNull = (value == NullCellValue)
         return value
     }
 
     override fun getTimestamp(columnLabel: String?): Timestamp? {
-        val value = readCell(columnLabel)?:return null
-        if (value !is Timestamp) throw SQLException("Column $columnLabel is not timestamp")
-        return value
+        val value = readCell(columnLabel)
+        if (value == NullCellValue) return null
+        return Timestamp.valueOf(value.valueAsTimestamp().myValue)
     }
 
-    private fun getInt(value:Any?):Int {
-        if (value == null) return 0
-        if (value !is Number) throw SQLException("Column is not integer")
-        return value.toInt()
+    private fun getInt(value:CellValue):Int {
+        if (value == NullCellValue) return 0
+        return value.valueAsInteger().myValue.toInt()
     }
 
     override fun getInt(columnLabel: String?): Int {
@@ -99,9 +101,8 @@ class SelectResultSet(
     }
 
     override fun getBoolean(columnLabel: String?): Boolean {
-        val value = readCell(columnLabel) ?: return false
-        if (value !is Boolean) throw SQLException("Column $columnLabel is not integer")
-        return value
+        val value = readCell(columnLabel)
+        return value.valueAsBoolean().myValue
     }
 
     override fun getByte(columnIndex: Int): Byte {
@@ -121,16 +122,14 @@ class SelectResultSet(
     }
 
 
-    private fun getLong(value:Any?):Long {
-        if (value == null) return 0L
-        if (value !is Long) throw SQLException("Not long value")
-        return value
+    private fun getLong(value:CellValue):Long {
+        if (value == NullCellValue) return 0L
+        return value.valueAsInteger().myValue
     }
 
-    private fun getBigDecimal(value:Any?):BigDecimal? {
-        if (value == null) return null
-        if (value !is BigDecimal) throw SQLException("Not bigdecimal value")
-        return value
+    private fun getBigDecimal(value: CellValue):BigDecimal? {
+        if (value == NullCellValue) return null
+        return value.valueAsNumeric().myValue
     }
 
     override fun getBigDecimal(columnIndex: Int): BigDecimal? {
@@ -141,10 +140,10 @@ class SelectResultSet(
         return getBigDecimal(readCell(columnLabel))
     }
 
-    private fun getByteArray(value:Any?):ByteArray? {
-        if (value == null) return null
-        if (value !is ByteArray) throw SQLException("Not bytearray  value")
-        return value
+    private fun getByteArray(value:CellValue):ByteArray? {
+        if (value == NullCellValue) return null
+        if (value !is ByteArrayCellValue) throw SQLException("Not bytearray  value")
+        return value.myBytes
     }
 
     override fun getBytes(columnIndex: Int): ByteArray? {

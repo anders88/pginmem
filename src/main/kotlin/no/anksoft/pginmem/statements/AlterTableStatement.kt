@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
 
 class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, private val  dbTransaction: DbTransaction) : DbPreparedStatement() {
@@ -197,7 +198,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         val newTable = Table(table.name, adjustedColumns)
         for (row in table.rowsForReading()) {
             val adjustedCells = row.cells.toMutableList()
-            val newCell = Cell(newColumn, newColumn.defaultValue?.invoke(Pair(dbTransaction,row)))
+            val newCell = Cell(newColumn, newColumn.defaultValue?.invoke(Pair(dbTransaction,row))?:NullCellValue)
             adjustedCells.add(newCell)
             newTable.addRow(Row(adjustedCells))
         }

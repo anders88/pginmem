@@ -1,10 +1,12 @@
 package no.anksoft.pginmem
 
+import no.anksoft.pginmem.values.IntegerCellValue
+
 class Sequence(val name:String) {
     private var currentValue = 0L
 
-    fun nextVal():Long {
+    fun nextVal():IntegerCellValue {
         currentValue++
-        return currentValue
+        return IntegerCellValue(currentValue)
     }
 }

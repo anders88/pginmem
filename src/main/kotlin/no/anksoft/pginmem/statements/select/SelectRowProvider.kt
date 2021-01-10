@@ -5,11 +5,12 @@ import no.anksoft.pginmem.Column
 import no.anksoft.pginmem.Table
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.statements.OrderPart
+import no.anksoft.pginmem.values.CellValue
 import java.sql.SQLException
 
 interface SelectRowProvider {
     fun size():Int
-    fun readValue(column: Column,rowno: Int):Any?
+    fun readValue(column: Column,rowno: Int):CellValue
 }
 
 private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
@@ -86,7 +87,7 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
 
     override fun size(): Int = values.size
 
-    override fun readValue(column: Column,rowno:Int): Any? {
+    override fun readValue(column: Column,rowno:Int): CellValue {
         val row = values[rowno]
         val cell = row.first { it.column == column }
         return cell.value
@@ -96,7 +97,7 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
 class ImplicitOneRowSelectProvider:SelectRowProvider {
     override fun size(): Int = 1
 
-    override fun readValue(column: Column, rowno: Int): Any? {
+    override fun readValue(column: Column, rowno: Int): CellValue {
         throw SQLException("No columns in select")
     }
 

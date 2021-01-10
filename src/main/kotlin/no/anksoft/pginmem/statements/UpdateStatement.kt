@@ -4,16 +4,18 @@ import no.anksoft.pginmem.*
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.statements.select.SelectResultSet
+import no.anksoft.pginmem.values.CellValue
+import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
 
 private fun <T> wordvalue(list:List<T>, index:Int):T = if (index >= 0 && index < list.size) list[index] else throw SQLException("Unexpected end of statement")
 
 
 private class CellToUpdateByBinding(val column:Column) {
-    var value:Any?=null
+    var value:CellValue=NullCellValue
 }
 
-private class CellToUpdateByFunction(val column: Column,val function:(SelectResultSet)->Any?)
+private class CellToUpdateByFunction(val column: Column,val function:(SelectResultSet)->CellValue)
 
 class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction) : StatementWithSet() {
     private val table:Table
@@ -86,7 +88,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
         //whereClause = createWhereClause(statementAnalyzer, mapOf(Pair(table.name,table)),toUpdateByBinding.size+1,dbTransaction)
     }
 
-    override fun setSomething(parameterIndex: Int, x: Any?) {
+    override fun setSomething(parameterIndex: Int, x: CellValue) {
         if (parameterIndex > numBindingsBeforeWhere) {
             selectStatement.setSomething(parameterIndex,x)
             return
@@ -104,7 +106,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
 
         while (selectResultSet.next()) {
             val rowCells:List<Cell> = table.colums.map { column ->
-                val colvalue:Any? = toUpdateByBinding.firstOrNull { it.column == column }?.value
+                val colvalue:CellValue = toUpdateByBinding.firstOrNull { it.column == column }?.value
                     ?: toUpdateByFunction.firstOrNull { it.column == column }?.function?.invoke(selectResultSet)
                     ?: selectResultSet.readCell(table.name + "." + column.name)
                 Cell(column,colvalue)

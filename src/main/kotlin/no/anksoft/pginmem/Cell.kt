@@ -1,4 +1,6 @@
 package no.anksoft.pginmem
 
-class Cell(val column: Column,val value:Any?) {
+import no.anksoft.pginmem.values.CellValue
+
+class Cell(val column: Column,val value:CellValue) {
 }

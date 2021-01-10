@@ -7,6 +7,7 @@ import no.anksoft.pginmem.Table
 import no.anksoft.pginmem.clauses.MatchAllClause
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
+import no.anksoft.pginmem.values.CellValue
 import java.sql.SQLException
 
 class DeleteStatement constructor(statementAnalyzer:StatementAnalyzer, private val dbTransaction: DbTransaction, private val sql:String):StatementWithSet() {
@@ -15,7 +16,7 @@ class DeleteStatement constructor(statementAnalyzer:StatementAnalyzer, private v
     private val whereClause:WhereClause =
         createWhereClause(statementAnalyzer.addIndex(), mapOf(Pair(tableForUpdate.name,tableForUpdate)),1,dbTransaction)
 
-    override fun setSomething(parameterIndex: Int, x: Any?) {
+    override fun setSomething(parameterIndex: Int, x: CellValue) {
         whereClause.registerBinding(parameterIndex,x)
     }
 

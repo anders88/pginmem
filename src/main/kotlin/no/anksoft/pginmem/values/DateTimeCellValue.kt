@@ -1,8 +1,27 @@
 package no.anksoft.pginmem.values
 
+import java.sql.SQLException
 import java.time.LocalDateTime
 
-class DateTimeCellValue(private val myValue:LocalDateTime):CellValue {
+class DateTimeCellValue(val myValue:LocalDateTime):CellValue {
+    override fun valueAsText(): StringCellValue = StringCellValue(myValue.toString())
+
+    override fun valueAsInteger(): IntegerCellValue {
+        throw SQLException("Cannot get timestamp as integer")
+    }
+
+    override fun valueAsBoolean(): BooleanCellValue {
+        throw SQLException("Cannot get timestamp as boolean")
+    }
+
+    override fun valueAsDate(): DateCellValue = DateCellValue(myValue.toLocalDate())
+
+    override fun valueAsTimestamp(): DateTimeCellValue = this
+
+    override fun valueAsNumeric(): NumericCellValue {
+        throw SQLException("Cannot get timestamp as numeric")
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
