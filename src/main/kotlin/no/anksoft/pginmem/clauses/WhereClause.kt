@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.values.CellValue
 import java.sql.SQLException
 
 
@@ -78,7 +79,7 @@ private fun readWhereClausePart(
 
 interface WhereClause {
     fun isMatch(cells:List<Cell>):Boolean
-    fun registerBinding(index:Int,value:Any?):Boolean
+    fun registerBinding(index:Int,value: CellValue):Boolean
 }
 
 class MatchAllClause:WhereClause {
@@ -86,7 +87,7 @@ class MatchAllClause:WhereClause {
         return true
     }
 
-    override fun registerBinding(index: Int, value: Any?): Boolean {
+    override fun registerBinding(index: Int, value: CellValue): Boolean {
         return false
     }
 

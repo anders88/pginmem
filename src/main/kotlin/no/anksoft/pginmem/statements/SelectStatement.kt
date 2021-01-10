@@ -4,6 +4,10 @@ import no.anksoft.pginmem.*
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.statements.select.*
+import no.anksoft.pginmem.values.CellValue
+import no.anksoft.pginmem.values.IntegerCellValue
+import no.anksoft.pginmem.values.NullCellValue
+import no.anksoft.pginmem.values.StringCellValue
 import java.sql.ResultSet
 import java.sql.SQLException
 
@@ -112,14 +116,14 @@ class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTra
     fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider)
 
     override fun setString(parameterIndex: Int, x: String?) {
-        selectAnalyze.whereClause.registerBinding(parameterIndex,x)
+        selectAnalyze.whereClause.registerBinding(parameterIndex,if (x == null) NullCellValue else StringCellValue(x))
     }
 
     override fun setInt(parameterIndex: Int, x: Int) {
-        selectAnalyze.whereClause.registerBinding(parameterIndex,x.toLong())
+        selectAnalyze.whereClause.registerBinding(parameterIndex,IntegerCellValue(x.toLong()))
     }
 
-    fun setSomething(parameterIndex: Int, x: Any?) {
+    fun setSomething(parameterIndex: Int, x: CellValue) {
         selectAnalyze.whereClause.registerBinding(parameterIndex,x)
     }
 

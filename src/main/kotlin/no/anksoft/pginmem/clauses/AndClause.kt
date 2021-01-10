@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.Cell
+import no.anksoft.pginmem.values.CellValue
 
 class AndClause(private val left: WhereClause,private val right:WhereClause,private val bindLimit:Int):WhereClause {
     override fun isMatch(cells: List<Cell>): Boolean {
@@ -8,7 +9,7 @@ class AndClause(private val left: WhereClause,private val right:WhereClause,priv
         return leftMatch && right.isMatch(cells)
     }
 
-    override fun registerBinding(index: Int, value: Any?): Boolean {
+    override fun registerBinding(index: Int, value: CellValue): Boolean {
         if (index < bindLimit) {
             return left.registerBinding(index,value)
         } else {

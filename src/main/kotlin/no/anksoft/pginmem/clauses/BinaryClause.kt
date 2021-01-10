@@ -1,6 +1,8 @@
 package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.values.CellValue
+import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
 
 abstract class BinaryClause(
@@ -12,7 +14,7 @@ abstract class BinaryClause(
 ) :WhereClause {
 
     private val expectedIndex:Int?
-    private var valueToMatch:Any? = null
+    private var valueToMatch:CellValue = NullCellValue
     private var isRegistered:Boolean
     private val rightValue: ValueFromExpression?
 
@@ -43,7 +45,7 @@ abstract class BinaryClause(
 
     abstract fun matchValues(left:Any?,right:Any?):Boolean
 
-    override fun registerBinding(index: Int, value: Any?):Boolean {
+    override fun registerBinding(index: Int, value: CellValue):Boolean {
         if (expectedIndex == index) {
             valueToMatch = value
             isRegistered = true
