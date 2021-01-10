@@ -22,6 +22,17 @@ class DateTimeCellValue(val myValue:LocalDateTime):CellValue {
         throw SQLException("Cannot get timestamp as numeric")
     }
 
+    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int = when {
+        this == other -> 0
+        other == NullCellValue -> if (nullsFirst) 1 else -1
+        other is DateCellValue -> this.myValue.compareTo(other.myValue.atStartOfDay())
+        other is DateTimeCellValue -> this.myValue.compareTo(other.myValue)
+        else -> throw SQLException("Cannot compare $this and $other")
+    }
+
+
+
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -35,5 +46,9 @@ class DateTimeCellValue(val myValue:LocalDateTime):CellValue {
 
     override fun hashCode(): Int {
         return myValue.hashCode()
+    }
+
+    override fun toString(): String {
+        return "DateTimeCellValue(myValue=$myValue)"
     }
 }

@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.values.CellValue
 
 class NotEqualCause(
     leftValueFromExpression: ValueFromExpression,
@@ -10,7 +11,7 @@ class NotEqualCause(
     tables: Map<String, Table>
 ) : BinaryClause(leftValueFromExpression, expectedIndex, statementAnalyzer, dbTransaction, tables) {
 
-    override fun matchValues(left: Any?, right: Any?): Boolean {
+    override fun matchValues(left: CellValue, right: CellValue): Boolean {
         return (left != right)
     }
 

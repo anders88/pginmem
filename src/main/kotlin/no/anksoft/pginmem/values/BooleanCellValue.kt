@@ -20,6 +20,16 @@ class BooleanCellValue(val myValue:Boolean):CellValue {
 
     override fun valueAsNumeric(): NumericCellValue = NumericCellValue(if (myValue) BigDecimal.ONE else BigDecimal.ZERO)
 
+    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int {
+        if (this == other) return 0
+        return when {
+            (other is NullCellValue) -> if (nullsFirst) 1 else -1
+            (other is BooleanCellValue) -> this.myValue.compareTo(other.myValue)
+            else -> throw SQLException("Cannot compare $this to $other")
+        }
+
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -34,4 +44,10 @@ class BooleanCellValue(val myValue:Boolean):CellValue {
     override fun hashCode(): Int {
         return myValue.hashCode()
     }
+
+    override fun toString(): String {
+        return "BooleanCellValue(myValue=$myValue)"
+    }
+
+
 }

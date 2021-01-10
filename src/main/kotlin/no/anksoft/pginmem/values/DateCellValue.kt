@@ -23,6 +23,15 @@ class DateCellValue(val myValue:LocalDate):CellValue {
         throw SQLException("Cannot get date as numeric")
     }
 
+    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int = when {
+        this == other -> 0
+        other == NullCellValue -> if (nullsFirst) 1 else -1
+        other is DateCellValue -> this.myValue.compareTo(other.myValue)
+        other is DateTimeCellValue -> this.myValue.atStartOfDay().compareTo(other.myValue)
+        else -> throw SQLException("Cannot compare $this and $other")
+    }
+
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -36,5 +45,9 @@ class DateCellValue(val myValue:LocalDate):CellValue {
 
     override fun hashCode(): Int {
         return myValue.hashCode()
+    }
+
+    override fun toString(): String {
+        return "DateCellValue(myValue=$myValue)"
     }
 }

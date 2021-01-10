@@ -7,4 +7,6 @@ interface CellValue {
     fun valueAsDate():DateCellValue
     fun valueAsTimestamp():DateTimeCellValue
     fun valueAsNumeric():NumericCellValue
+
+    fun compareMeTo(other:CellValue,nullsFirst:Boolean):Int
 }

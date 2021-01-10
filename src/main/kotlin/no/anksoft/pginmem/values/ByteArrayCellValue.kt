@@ -30,5 +30,14 @@ class ByteArrayCellValue(givenArr:ByteArray):CellValue {
         throw SQLException("Cannot read bytearray as numeric")
     }
 
+    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int {
+        throw SQLException("Cannot compare byte array")
+    }
+
+    override fun toString(): String {
+        return "ByteArrayCellValue()"
+    }
+
+
     val myBytes:ByteArray get() = myValue.clone()
 }

@@ -24,4 +24,13 @@ object NullCellValue:CellValue {
     override fun valueAsNumeric(): NumericCellValue {
         TODO("Not yet implemented")
     }
+
+    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int = when (other) {
+        this -> 0
+        else -> if (nullsFirst) -1 else 1
+    }
+
+    override fun toString(): String {
+        return "NullCellValue"
+    }
 }

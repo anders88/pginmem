@@ -21,6 +21,12 @@ class StringCellValue(val myValue:String):CellValue {
 
     override fun valueAsNumeric(): NumericCellValue = NumericCellValue(myValue.toBigDecimalOrNull()?:throw SQLException("Invalid numeric $myValue"))
 
+    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int = when {
+        this == other -> 0
+        other == NullCellValue -> if (nullsFirst) 1 else -1
+        else -> this.myValue.compareTo(other.valueAsText().myValue)
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -35,4 +41,10 @@ class StringCellValue(val myValue:String):CellValue {
     override fun hashCode(): Int {
         return myValue.hashCode()
     }
+
+    override fun toString(): String {
+        return "StringCellValue(myValue='$myValue')"
+    }
+
+
 }

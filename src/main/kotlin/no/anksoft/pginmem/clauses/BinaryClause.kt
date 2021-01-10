@@ -43,7 +43,7 @@ abstract class BinaryClause(
         return matchValues(leftValue,valueToMatch)
     }
 
-    abstract fun matchValues(left:Any?,right:Any?):Boolean
+    abstract fun matchValues(left:CellValue,right:CellValue):Boolean
 
     override fun registerBinding(index: Int, value: CellValue):Boolean {
         if (expectedIndex == index) {
