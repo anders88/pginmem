@@ -81,10 +81,18 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
         var selectcolindex = 0
         while ((statementAnalyzer.word()?:"from") != "from") {
-            val valueFromExpression:ValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tablesUsed)?:throw SQLException("Unknown select column")
+            val valueFromExpression:ValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tablesUsed)
             selectcolindex++
-            addedSelected.add(ReadExpressionSelectColumnProvider(valueFromExpression,selectcolindex,dbTransaction))
-            if (statementAnalyzer.addIndex().word() == ",") {
+            val columnProvider:SelectColumnProvider = ReadExpressionSelectColumnProvider(valueFromExpression,selectcolindex,dbTransaction)
+            statementAnalyzer.addIndex()
+            val possibleAlias:SelectColumnProvider = if (statementAnalyzer.word() == "as") {
+                val alias = statementAnalyzer.addIndex().word() ?: throw SQLException("Expeted alias after as")
+                statementAnalyzer.addIndex()
+                SelectColumnWithAlias(selectcolindex,columnProvider,alias)
+            } else columnProvider
+            addedSelected.add(possibleAlias)
+
+            if (statementAnalyzer.word() == ",") {
                 statementAnalyzer.addIndex()
             }
         }

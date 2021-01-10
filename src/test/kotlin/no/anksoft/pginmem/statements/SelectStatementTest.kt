@@ -243,4 +243,25 @@ class SelectStatementTest {
             }
         }
     }
+
+    @Test
+    fun selectWithRenameWithAs() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"mykey")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select id, 'hello' as greeting from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("greeting")).isEqualTo("hello")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+
+    }
+
 }

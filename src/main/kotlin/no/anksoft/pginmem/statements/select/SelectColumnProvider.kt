@@ -10,7 +10,7 @@ abstract class SelectColumnProvider(val colindex:Int) {
     abstract fun readValue(selectRowProvider: SelectRowProvider,rowindex:Int):CellValue
 }
 
-class SelectDbColumn(private val column: Column,colindex: Int,private val aliasMapping:Map<String,String>):SelectColumnProvider(colindex) {
+class SelectDbColumn constructor(private val column: Column,colindex: Int,private val aliasMapping:Map<String,String>):SelectColumnProvider(colindex) {
     override fun match(identificator: String): Boolean {
         val ind = identificator.indexOf(".")
         val tablename:String
@@ -26,6 +26,16 @@ class SelectDbColumn(private val column: Column,colindex: Int,private val aliasM
         return column.matches(tablename,colname)
     }
     override fun readValue(selectRowProvider: SelectRowProvider, rowindex: Int): CellValue = selectRowProvider.readValue(column,rowindex)
+}
+
+class SelectColumnWithAlias(colindex: Int,val aliasFor:SelectColumnProvider, val alias:String):SelectColumnProvider(colindex) {
+    override fun match(identificator: String): Boolean {
+        return (alias == identificator)
+    }
+
+    override fun readValue(selectRowProvider: SelectRowProvider, rowindex: Int): CellValue {
+        return aliasFor.readValue(selectRowProvider,rowindex)
+    }
 }
 
 class SelectFromSequence(private val sequence: Sequence, colindex:Int):SelectColumnProvider(colindex) {
