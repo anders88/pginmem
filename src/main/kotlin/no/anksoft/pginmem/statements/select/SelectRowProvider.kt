@@ -66,24 +66,11 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
             if (aVal == bVal) {
                 continue
             }
-            if (aVal == null) {
-                return if (orderPart.nullsFirst) -1 else 1
-            }
-            if (bVal == null) {
-                return if (orderPart.nullsFirst) 1 else -1
-            }
-            if (!((aVal is Comparable<*>) && (bVal is Comparable<*>))) {
-                throw SQLException("Not comparable values")
-            }
-            return if (orderPart.ascending) if (isLessThan(aVal,bVal)) -1 else 1
-            else if (isLessThan(bVal,aVal)) -1 else 1
+            return if (orderPart.ascending) aVal.compareMeTo(bVal,orderPart.nullsFirst) else bVal.compareMeTo(aVal,orderPart.nullsFirst)
         }
         return 0
     }
 
-    private fun <T> isLessThan(first:Comparable<T>,second:Any?):Boolean {
-        return first < second as T
-    }
 
     override fun size(): Int = values.size
 
