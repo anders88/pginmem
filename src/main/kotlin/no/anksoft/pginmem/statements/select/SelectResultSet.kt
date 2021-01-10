@@ -43,12 +43,12 @@ class SelectResultSet(
 
     override fun getString(columnLabel: String?): String? {
         val value = readCell(columnLabel)
-        return value?.toString()
+        return if (value == NullCellValue) null else value.valueAsText().myValue
     }
 
     override fun getString(columnIndex: Int): String? {
         val value = readCell(columnIndex)
-        return value?.toString()
+        return if (value == NullCellValue) null else value.valueAsText().myValue
     }
 
 
