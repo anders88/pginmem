@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 import java.util.*
 
 enum class ColumnType(private val altNames:Set<String> = emptySet()) {
-    TEXT, TIMESTAMP,DATE,INTEGER(setOf("int","bigint")),BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL;
+    TEXT(setOf("json","jsonb")), TIMESTAMP,DATE,INTEGER(setOf("int","bigint")),BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL;
 
     fun validateValue(value:CellValue):CellValue {
         if (value == NullCellValue) {
