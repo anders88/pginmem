@@ -178,4 +178,15 @@ class CreateTableTest {
             }
         }
     }
+
+    @Test
+    fun createDropTable() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+
+            conn.createStatement().execute("drop table mytable")
+
+            conn.createStatement().execute("create table mytable(id text)")
+        }
+    }
 }

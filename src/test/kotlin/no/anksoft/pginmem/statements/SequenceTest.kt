@@ -15,6 +15,8 @@ class SequenceTest {
             conn.createStatement().execute("create sequence numgenerator")
             assertThat(readSeqVal(conn)).isEqualTo(1L)
             assertThat(readSeqVal(conn)).isEqualTo(2L)
+            conn.createStatement().execute("ALTER SEQUENCE numgenerator RESTART")
+            assertThat(readSeqVal(conn)).isEqualTo(1L)
         }
 
     }

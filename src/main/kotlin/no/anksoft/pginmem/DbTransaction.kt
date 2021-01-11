@@ -39,6 +39,7 @@ class DbTransaction(private val dbStore: DbStore) {
 
     fun removeTable(table: Table) {
         dbStore.removeTable(table)
+        updatingTables.remove(table.name)
     }
 
     fun setAutoCommit(value: Boolean) {
@@ -64,5 +65,8 @@ class DbTransaction(private val dbStore: DbStore) {
     fun sequence(name: String):Sequence = dbStore.sequence(name)
 
     fun addSequence(name: String) = dbStore.addSequence(name)
+
+    fun resetSequence(sequence: Sequence) = dbStore.resetSequence(sequence)
+
 
 }

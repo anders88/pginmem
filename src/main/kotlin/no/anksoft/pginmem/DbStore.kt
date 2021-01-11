@@ -67,6 +67,11 @@ class DbStore {
         sequences[name] = Sequence(name)
     }
 
+    fun resetSequence(sequence: Sequence) {
+        sequences[sequence.name] = Sequence(sequence.name)
+    }
+
     fun doesTableExsist(tablename: String): Boolean = (tables[tablename] != null)
+
 
 }
