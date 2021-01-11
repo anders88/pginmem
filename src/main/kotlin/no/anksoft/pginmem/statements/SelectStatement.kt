@@ -68,11 +68,11 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     val tablesUsed:Map<String,Table> = if (fromInd != -1) {
         val mappingTablesUsed:MutableMap<String,Table> = mutableMapOf()
         var tabind = fromInd+1
-        while (!setOf("where","order","group").contains(statementAnalyzer.wordAt(tabind)?:"where")) {
+        while (!setOf("where","order","group",")").contains(statementAnalyzer.wordAt(tabind)?:"where")) {
             val table = dbTransaction.tableForRead(stripSeachName(statementAnalyzer.wordAt(tabind)?:""))
             tabind++
             val nextWord = statementAnalyzer.wordAt(tabind)
-            val alias = if (nextWord != null && nextWord != "where" && nextWord != "," && nextWord != "order" && nextWord != "group") {
+            val alias = if (nextWord != null && nextWord != "where" && nextWord != "," && nextWord != "order" && nextWord != "group" && nextWord != ")") {
                 tabind++
                 nextWord
             } else table.name

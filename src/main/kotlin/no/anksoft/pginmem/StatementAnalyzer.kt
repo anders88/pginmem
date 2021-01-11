@@ -387,7 +387,10 @@ class StatementAnalyzer {
             if (tablename.startsWith("\"") && tablename.endsWith("\"")) {
                 tablename = tablename.substring(1, tablename.length - 1)
             }
-            val table: Table = tables[tablename] ?: throw SQLException("Unknown table $tablename")
+            val table: Table? = tables[tablename]
+            if (table == null) {
+                throw SQLException("Unknown table $tablename")
+            }
             val colname = aword.substring(ind + 1)
             table.findColumn(colname) ?: throw SQLException("Unknown column $colname")
         }

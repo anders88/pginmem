@@ -16,8 +16,12 @@ class CreateTableStatement(val statementAnalyzer: StatementAnalyzer,private val 
         } else false
         val name = statementAnalyzer.word()?:throw SQLException("Expecting tablename")
 
-        if (onlyIfNotExsists && dbTransaction.doesTableExsist(name)) {
-            return 0
+        if (dbTransaction.doesTableExsist(name)) {
+            if (onlyIfNotExsists) {
+                return 0
+            } else {
+                throw SQLException("Table already exsists $name")
+            }
         }
 
         statementAnalyzer.addIndex(2)

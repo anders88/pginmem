@@ -48,6 +48,9 @@ class InsertIntoTest {
             conn.createStatement().use {
                 it.execute("create table yourtable(id text)")
             }
+            conn.createStatement().use {
+                it.execute("create table myduplicate(id text,include text)")
+            }
             conn.prepareStatement("insert into mytable(id,include) values ('one','yes')").use {
                 it.executeUpdate()
             }
@@ -61,6 +64,11 @@ class InsertIntoTest {
                 insert into yourtable(id) (select id from mytable where include = ?)
             """.trimIndent()).use {
                 it.setString(1,"yes")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("""
+                insert into myduplicate(id,include) (select id,include from mytable)
+            """.trimIndent()).use {
                 it.executeUpdate()
             }
             conn.prepareStatement("select * from yourtable").use {
