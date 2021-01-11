@@ -291,6 +291,8 @@ class StatementAnalyzer {
             }
             ("true" == aword) -> BasicValueFromExpression({ BooleanCellValue(true) },null)
             ("false" == aword) -> BasicValueFromExpression({ BooleanCellValue(false) },null)
+            ("null" == aword) -> BasicValueFromExpression({ NullCellValue },null)
+
             (aword.toLongOrNull() != null) -> BasicValueFromExpression({ IntegerCellValue(aword.toLong())},null)
             (aword.toBigDecimalOrNull() != null) -> BasicValueFromExpression({ NumericCellValue(aword.toBigDecimal()) },null)
             aword.startsWith("'") -> {
@@ -349,6 +351,7 @@ class StatementAnalyzer {
                 }
                 ToDateValue(fromExpression,dateformat.substring(1,dateformat.length-1))
             }
+
             else -> readColumnValue(tables,aword)
         }
         if (word(1) == "::") {
