@@ -5,11 +5,11 @@ import no.anksoft.pginmem.values.CellValue
 
 class SelectColumnProvider(
     val colindex:Int,
-    val alias:String?,
-    val valueFromExpression: ValueFromExpression,
-    val dbTransaction: DbTransaction,
+    private val alias:String?,
+    private val valueFromExpression: ValueFromExpression,
+    private val dbTransaction: DbTransaction,
     val aggregateFunction: AggregateFunction?,
-    val tableAliases:Map<String,String>
+    private val tableAliases:Map<String,String>
     ) {
     fun readValue(selectRowProvider: SelectRowProvider,rowindex:Int):CellValue {
         val row = selectRowProvider.readRow(rowindex)

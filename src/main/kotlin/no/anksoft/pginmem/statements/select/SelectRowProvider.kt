@@ -11,7 +11,6 @@ import java.sql.SQLException
 
 interface SelectRowProvider {
     fun size():Int
-    fun readValue(column: Column,rowno: Int):CellValue
     fun readRow(rowno: Int):Row
 }
 
@@ -76,12 +75,6 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
 
     override fun size(): Int = values.size
 
-    override fun readValue(column: Column,rowno:Int): CellValue {
-        val row = values[rowno]
-        val cell = row.first { it.column == column }
-        return cell.value
-    }
-
     override fun readRow(rowno: Int): Row {
         val cells = values[rowno]
         return Row(cells)
@@ -90,10 +83,6 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
 
 class ImplicitOneRowSelectProvider:SelectRowProvider {
     override fun size(): Int = 1
-
-    override fun readValue(column: Column, rowno: Int): CellValue {
-        throw SQLException("No columns in select")
-    }
 
     override fun readRow(rowno: Int): Row {
         return Row(emptyList())
@@ -106,9 +95,6 @@ class AggregateSelectRowProvider:SelectRowProvider {
         TODO("Not yet implemented")
     }
 
-    override fun readValue(column: Column, rowno: Int): CellValue {
-        TODO("Not yet implemented")
-    }
 
     override fun readRow(rowno: Int): Row {
         TODO("Not yet implemented")

@@ -13,10 +13,20 @@ import java.sql.Array
 import java.sql.Date
 import java.util.*
 
+
+private fun setupSelectRowProvider(colums: List<SelectColumnProvider>,selectRowProvider: SelectRowProvider):SelectRowProvider {
+    if (colums.none { it.aggregateFunction != null }) {
+        return selectRowProvider
+    }
+    TODO()
+}
+
+
 class SelectResultSet constructor(
     private val colums: List<SelectColumnProvider>,
-    private val selectRowProvider: SelectRowProvider,
+    selectRowProviderGiven: SelectRowProvider,
 ):ResultSet {
+    val selectRowProvider:SelectRowProvider = setupSelectRowProvider(colums,selectRowProviderGiven)
 
     val numberOfRows = selectRowProvider.size()
     fun valueAt(columnIndex:Int,rowIndex:Int):CellValue = colums.first { it.colindex == columnIndex }.readValue(selectRowProvider,rowIndex)
@@ -38,7 +48,7 @@ class SelectResultSet constructor(
 
     override fun next(): Boolean {
         rowindex++
-        return (rowindex < selectRowProvider.size())
+        return (rowindex < numberOfRows)
     }
 
     override fun getString(columnLabel: String?): String? {
