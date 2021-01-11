@@ -48,7 +48,14 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
     return orderPats
 }
 
-private class SelectAnalyze(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>)
+private class SelectAnalyze constructor(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>)
+
+private class ValueGenFromDbCell(override val column: Column):ValueFromExpression {
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        it.second?.cells?.firstOrNull { it.column == column }?.value?:NullCellValue
+    }
+
+}
 
 private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,startOnWhereClauseBindingNo:Int):SelectAnalyze {
     val fromInd = statementAnalyzer.indexOf("from")
@@ -77,20 +84,55 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     val allColumns:List<Column> = tablesUsed.map { it.value.colums }.flatten()
     statementAnalyzer.addIndex()
 
-    val selectedColumns:List<SelectColumnProvider> = if (statementAnalyzer.word() == "*") allColumns.mapIndexed { index, column -> SelectDbColumn(column,index+1,aliasMapping) } else {
+    val selectedColumns:List<SelectColumnProvider> = if (statementAnalyzer.word() == "*") {
+        allColumns.mapIndexed { index, column ->
+            SelectColumnProvider(
+                colindex = index+1,
+                alias = null,
+                valueFromExpression = ValueGenFromDbCell(column),
+                dbTransaction = dbTransaction,
+                aggregateFunction = null,
+                tableAliases = aliasMapping
+            )
+        }
+    } else {
         val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
         var selectcolindex = 0
         while ((statementAnalyzer.word()?:"from") != "from") {
-            val valueFromExpression:ValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tablesUsed)
-            selectcolindex++
-            val columnProvider:SelectColumnProvider = ReadExpressionSelectColumnProvider(valueFromExpression,selectcolindex,dbTransaction)
-            statementAnalyzer.addIndex()
-            val possibleAlias:SelectColumnProvider = if (statementAnalyzer.word() == "as") {
-                val alias = statementAnalyzer.addIndex().word() ?: throw SQLException("Expeted alias after as")
+            val aggregateFunction:AggregateFunction? = when (statementAnalyzer.word()) {
+                "max" -> MaxAggregateFunction()
+                else -> null
+            }
+            if (aggregateFunction != null) {
+                if (statementAnalyzer.addIndex().word() != "(") {
+                    throw SQLException("Expected ( after aggregate")
+                }
                 statementAnalyzer.addIndex()
-                SelectColumnWithAlias(selectcolindex,columnProvider,alias)
-            } else columnProvider
-            addedSelected.add(possibleAlias)
+            }
+            val valueFromExpression:ValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tablesUsed)
+
+            if (aggregateFunction != null) {
+                if (statementAnalyzer.addIndex().word() != ")") {
+                    throw SQLException("Expected ) after aggregate")
+                }
+            }
+
+            selectcolindex++
+            statementAnalyzer.addIndex()
+            val possibleAlias:String? = if (statementAnalyzer.word() == "as") {
+                val a = statementAnalyzer.addIndex().word() ?: throw SQLException("Expeted alias after as")
+                statementAnalyzer.addIndex()
+                a
+            } else null
+            val columnProvider = SelectColumnProvider(
+                colindex = selectcolindex,
+                alias = possibleAlias,
+                valueFromExpression = valueFromExpression,
+                dbTransaction = dbTransaction,
+                aggregateFunction = aggregateFunction,
+                tableAliases = aliasMapping
+            )
+            addedSelected.add(columnProvider)
 
             if (statementAnalyzer.word() == ",") {
                 statementAnalyzer.addIndex()

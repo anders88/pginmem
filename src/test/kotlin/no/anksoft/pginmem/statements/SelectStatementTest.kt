@@ -264,4 +264,36 @@ class SelectStatementTest {
 
     }
 
+    @Test
+    fun aggregateFunctionsTest() {
+        connection.use { conn ->
+            conn.createStatement().execute("""
+                create table mytable(               
+                    description text,
+                    numvalue int
+                )
+            """.trimIndent())
+        }
+        val valuesToInsert:List<Pair<String,Int>> = listOf(
+            Pair("a",1),
+            Pair("a",2),
+            Pair("b",3),
+        )
+        valuesToInsert.forEach { valToInsert ->
+            connection.prepareStatement("insert into mytable(description,numvalue) values (?,?)").use {
+                it.setString(1,valToInsert.first)
+                it.setInt(2,valToInsert.second)
+                it.executeUpdate()
+            }
+        }
+        connection.prepareStatement("select max(numvalue) from mytable").use {
+            it.executeQuery().use {
+                assertThat(it.next()).isTrue()
+                assertThat(it.getInt(1)).isEqualTo(3)
+                assertThat(it.next()).isFalse()
+
+            }
+        }
+    }
+
 }

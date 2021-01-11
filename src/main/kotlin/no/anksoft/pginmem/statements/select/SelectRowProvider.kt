@@ -2,6 +2,7 @@ package no.anksoft.pginmem.statements.select
 
 import no.anksoft.pginmem.Cell
 import no.anksoft.pginmem.Column
+import no.anksoft.pginmem.Row
 import no.anksoft.pginmem.Table
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.statements.OrderPart
@@ -11,6 +12,7 @@ import java.sql.SQLException
 interface SelectRowProvider {
     fun size():Int
     fun readValue(column: Column,rowno: Int):CellValue
+    fun readRow(rowno: Int):Row
 }
 
 private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
@@ -79,6 +81,11 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
         val cell = row.first { it.column == column }
         return cell.value
     }
+
+    override fun readRow(rowno: Int): Row {
+        val cells = values[rowno]
+        return Row(cells)
+    }
 }
 
 class ImplicitOneRowSelectProvider:SelectRowProvider {
@@ -88,4 +95,22 @@ class ImplicitOneRowSelectProvider:SelectRowProvider {
         throw SQLException("No columns in select")
     }
 
+    override fun readRow(rowno: Int): Row {
+        return Row(emptyList())
+    }
+
+}
+
+class AggregateSelectRowProvider:SelectRowProvider {
+    override fun size(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun readValue(column: Column, rowno: Int): CellValue {
+        TODO("Not yet implemented")
+    }
+
+    override fun readRow(rowno: Int): Row {
+        TODO("Not yet implemented")
+    }
 }

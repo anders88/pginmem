@@ -13,13 +13,13 @@ import java.sql.Array
 import java.sql.Date
 import java.util.*
 
-class SelectResultSet(
+class SelectResultSet constructor(
     private val colums: List<SelectColumnProvider>,
     private val selectRowProvider: SelectRowProvider,
 ):ResultSet {
 
     val numberOfRows = selectRowProvider.size()
-    fun valueAt(columnIndex:Int,rowIndex:Int):CellValue = colums.first { it.isMatch(columnIndex) }.readValue(selectRowProvider,rowIndex)
+    fun valueAt(columnIndex:Int,rowIndex:Int):CellValue = colums.first { it.colindex == columnIndex }.readValue(selectRowProvider,rowIndex)
 
     private var rowindex = -1
     private var lastWasNull:Boolean = false
@@ -56,7 +56,7 @@ class SelectResultSet(
         if (columnLabel == null) {
             throw SQLException("Cannot get null")
         }
-        val columnProvider:SelectColumnProvider = colums.firstOrNull { it.match(columnLabel) }
+        val columnProvider:SelectColumnProvider = colums.firstOrNull { it.isMatch(columnLabel) }
             ?:throw SQLException("Unknown column $columnLabel")
         val value = columnProvider.readValue(selectRowProvider,rowindex)
         lastWasNull = (value == NullCellValue)
@@ -64,7 +64,7 @@ class SelectResultSet(
     }
 
     private fun readCell(columnIndex: Int):CellValue {
-        val columnProvider:SelectColumnProvider = colums.first { it.isMatch(columnIndex) }
+        val columnProvider:SelectColumnProvider = colums.first { it.colindex == columnIndex }
         val value = columnProvider.readValue(selectRowProvider,rowindex)
         lastWasNull = (value == NullCellValue)
         return value
