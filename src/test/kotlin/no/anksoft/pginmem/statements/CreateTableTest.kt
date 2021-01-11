@@ -46,7 +46,7 @@ class CreateTableTest {
             conn.createStatement().use {
                 it.execute(
                     """
-                create table mytable(
+                create table if not exists mytable(
                     id  text,
                     created timestamp default now(),
                     installed integer

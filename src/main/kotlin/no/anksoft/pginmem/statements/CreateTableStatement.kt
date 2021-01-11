@@ -10,7 +10,16 @@ class CreateTableStatement(val statementAnalyzer: StatementAnalyzer,private val 
 
     override fun executeUpdate(): Int {
         statementAnalyzer.addIndex(2)
+        val onlyIfNotExsists:Boolean = if (statementAnalyzer.word() == "if" && statementAnalyzer.word(1) == "not" && statementAnalyzer.word(2) == "exists") {
+            statementAnalyzer.addIndex(3)
+            true
+        } else false
         val name = statementAnalyzer.word()?:throw SQLException("Expecting tablename")
+
+        if (onlyIfNotExsists && dbTransaction.doesTableExsist(name)) {
+            return 0
+        }
+
         statementAnalyzer.addIndex(2)
 
         val columns:MutableList<Column> = mutableListOf()

@@ -25,6 +25,9 @@ class DbTransaction(private val dbStore: DbStore) {
         return updatingTables[tablename]?:dbStore.tableForRead(tablename)
     }
 
+    fun doesTableExsist(tablename:String):Boolean = dbStore.doesTableExsist(tablename)
+
+
     fun registerTableUpdate(table: Table) {
         if (autoCommit) {
             dbStore.updateTableContent(table)

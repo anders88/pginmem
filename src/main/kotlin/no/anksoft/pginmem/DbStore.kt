@@ -67,4 +67,6 @@ class DbStore {
         sequences[name] = Sequence(name)
     }
 
+    fun doesTableExsist(tablename: String): Boolean = (tables[tablename] != null)
+
 }
