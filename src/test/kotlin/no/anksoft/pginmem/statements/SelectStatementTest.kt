@@ -273,29 +273,47 @@ class SelectStatementTest {
                     numvalue int
                 )
             """.trimIndent())
-        }
-        val valuesToInsert:List<Pair<String,Int>> = listOf(
-            Pair("a",1),
-            Pair("a",2),
-            Pair("b",3),
-        )
-        valuesToInsert.forEach { valToInsert ->
-            connection.prepareStatement("insert into mytable(description,numvalue) values (?,?)").use {
-                it.setString(1,valToInsert.first)
-                it.setInt(2,valToInsert.second)
-                it.executeUpdate()
+            val valuesToInsert:List<Pair<String,Int>> = listOf(
+                Pair("a",1),
+                Pair("a",2),
+                Pair("b",3),
+            )
+            valuesToInsert.forEach { valToInsert ->
+                connection.prepareStatement("insert into mytable(description,numvalue) values (?,?)").use {
+                    it.setString(1,valToInsert.first)
+                    it.setInt(2,valToInsert.second)
+                    it.executeUpdate()
+                }
             }
-        }
-        connection.prepareStatement("select max(numvalue) as mymax, min(numvalue) as mymin from mytable").use {
-            it.executeQuery().use {
-                assertThat(it.next()).isTrue()
-                assertThat(it.getInt(1)).isEqualTo(3)
-                assertThat(it.getInt("mymax")).isEqualTo(3)
-                assertThat(it.getInt(2)).isEqualTo(1)
-                assertThat(it.next()).isFalse()
 
+            conn.prepareStatement("select description, max(numvalue) from mytable group by description").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("a")
+                    assertThat(it.getInt(2)).isEqualTo(2)
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("b")
+                    assertThat(it.getInt(2)).isEqualTo(3)
+                    assertThat(it.next()).isFalse()
+
+                }
             }
+
+
+            conn.prepareStatement("select max(numvalue) as mymax, min(numvalue) as mymin from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt(1)).isEqualTo(3)
+                    assertThat(it.getInt("mymax")).isEqualTo(3)
+                    assertThat(it.getInt(2)).isEqualTo(1)
+                    assertThat(it.next()).isFalse()
+
+                }
+            }
+
+
         }
+
     }
 
 }
