@@ -245,6 +245,9 @@ class AlterTableTest {
                 it.execute("create table mytable(id text)")
             }
             conn.createStatement().use {
+                it.execute("alter table mytable ADD COLUMN IF NOT EXISTS somenumber numeric")
+            }
+            conn.createStatement().use {
                 it.execute("alter table if exists yourtable add if not exists greeting text default 'hello'")
             }
             conn.createStatement().use {
@@ -256,6 +259,8 @@ class AlterTableTest {
             conn.createStatement().use {
                 it.execute("alter table if exists mytable add if not exists somete text default null")
             }
+
+
             conn.prepareStatement("insert into mytable(id) values (?)").use {
                 it.setString(1,"myid")
                 it.executeUpdate()

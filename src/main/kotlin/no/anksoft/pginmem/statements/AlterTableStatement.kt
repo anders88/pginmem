@@ -26,6 +26,10 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
             val command = statementAnalyzer.word()
             statementAnalyzer.addIndex()
 
+            if (statementAnalyzer.word() == "column") {
+                statementAnalyzer.addIndex()
+            }
+
             val onlyIfExists:Boolean = if (statementAnalyzer.word() == "if" && statementAnalyzer.word(1) == "exists") {
                 statementAnalyzer.addIndex(2)
                 true
