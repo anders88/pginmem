@@ -13,5 +13,13 @@ class MaxAggregateFunction:AggregateFunction {
         if (b == NullCellValue) return a
         return if (a.compareMeTo(b,false) > 0) a else b
     }
+}
+
+class MinAggregateFunction:AggregateFunction {
+    override fun aggregate(a: CellValue, b: CellValue): CellValue {
+        if (a == NullCellValue) return b
+        if (b == NullCellValue) return a
+        return if (a.compareMeTo(b,false) < 0) a else b
+    }
 
 }

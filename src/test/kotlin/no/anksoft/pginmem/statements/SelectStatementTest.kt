@@ -286,10 +286,12 @@ class SelectStatementTest {
                 it.executeUpdate()
             }
         }
-        connection.prepareStatement("select max(numvalue) from mytable").use {
+        connection.prepareStatement("select max(numvalue) as mymax, min(numvalue) as mymin from mytable").use {
             it.executeQuery().use {
                 assertThat(it.next()).isTrue()
                 assertThat(it.getInt(1)).isEqualTo(3)
+                assertThat(it.getInt("mymax")).isEqualTo(3)
+                assertThat(it.getInt(2)).isEqualTo(1)
                 assertThat(it.next()).isFalse()
 
             }

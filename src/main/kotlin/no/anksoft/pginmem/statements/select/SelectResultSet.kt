@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.statements.select
 
-import no.anksoft.pginmem.statements.OrderPart
+import no.anksoft.pginmem.DbTransaction
+import no.anksoft.pginmem.Row
 import no.anksoft.pginmem.values.ByteArrayCellValue
 import no.anksoft.pginmem.values.CellValue
 import no.anksoft.pginmem.values.NullCellValue
@@ -12,24 +13,83 @@ import java.sql.*
 import java.sql.Array
 import java.sql.Date
 import java.util.*
+import kotlin.collections.ArrayList
 
 
-private fun setupSelectRowProvider(colums: List<SelectColumnProvider>,selectRowProvider: SelectRowProvider):SelectRowProvider {
-    if (colums.none { it.aggregateFunction != null }) {
-        return selectRowProvider
+private fun computeSelectSet(colums: List<SelectColumnProvider>,selectRowProvider: SelectRowProvider,dbTransaction: DbTransaction):List<List<CellValue>> {
+    val res:MutableList<List<CellValue>> = mutableListOf()
+    for (i in 0 until selectRowProvider.size()) {
+        val row:Row = selectRowProvider.readRow(i)
+        val valuesThisRow:List<CellValue> = colums.map { colProvider ->
+            colProvider.valueFromExpression.valuegen.invoke(Pair(dbTransaction,row))
+        }
+        res.add(valuesThisRow)
     }
-    TODO()
+    if (colums.none { it.aggregateFunction != null }) {
+        return res
+    }
+    val resArr:ArrayList<List<CellValue>> = ArrayList()
+
+    for (genrow in res) {
+        var matchRow:Int? = null
+        for (index in 0 until resArr.size) {
+            val alreadyFound = resArr[index]
+            var isMatch = true
+            for (i in 0 until colums.size) {
+                if (colums[i].aggregateFunction != null) {
+                    continue
+                }
+                if (genrow[i] != alreadyFound[i]) {
+                    isMatch = false
+                    break
+                }
+            }
+            if (isMatch) {
+                matchRow = index
+                break
+            }
+        }
+        if (matchRow == null) {
+            resArr.add(genrow)
+            continue
+        }
+        val currentMatch = resArr[matchRow]
+        val combinedRow:List<CellValue> = colums.mapIndexed { myindex,acol ->
+            if (acol.aggregateFunction == null) {
+                currentMatch[myindex]
+            } else {
+                acol.aggregateFunction.aggregate(currentMatch[myindex],genrow[myindex])
+            }
+        }
+        resArr.set(matchRow,combinedRow)
+    }
+
+    return resArr
 }
 
 
-class SelectResultSet constructor(
+class SelectResultSet(
     private val colums: List<SelectColumnProvider>,
     selectRowProviderGiven: SelectRowProvider,
+    dbTransaction: DbTransaction,
 ):ResultSet {
-    val selectRowProvider:SelectRowProvider = setupSelectRowProvider(colums,selectRowProviderGiven)
 
-    val numberOfRows = selectRowProvider.size()
-    fun valueAt(columnIndex:Int,rowIndex:Int):CellValue = colums.first { it.colindex == columnIndex }.readValue(selectRowProvider,rowIndex)
+
+    private val selectSet:List<List<CellValue>> by lazy {
+        computeSelectSet(colums,selectRowProviderGiven,dbTransaction)
+    }
+
+
+
+    val numberOfRows:Int by lazy { selectSet.size}
+
+    fun valueAt(columnIndex:Int,rowIndex:Int):CellValue {
+        val ind = colums.indexOfFirst { it.colindex == columnIndex }
+        if (ind == -1) {
+            throw SQLException("Illegal column no $columnIndex")
+        }
+        return selectSet[rowIndex][ind]
+    }
 
     private var rowindex = -1
     private var lastWasNull:Boolean = false
@@ -66,16 +126,16 @@ class SelectResultSet constructor(
         if (columnLabel == null) {
             throw SQLException("Cannot get null")
         }
+
         val columnProvider:SelectColumnProvider = colums.firstOrNull { it.isMatch(columnLabel) }
             ?:throw SQLException("Unknown column $columnLabel")
-        val value = columnProvider.readValue(selectRowProvider,rowindex)
+        val value = valueAt(columnProvider.colindex,rowindex)
         lastWasNull = (value == NullCellValue)
         return value
     }
 
     private fun readCell(columnIndex: Int):CellValue {
-        val columnProvider:SelectColumnProvider = colums.first { it.colindex == columnIndex }
-        val value = columnProvider.readValue(selectRowProvider,rowindex)
+        val value = valueAt(columnIndex,rowindex)
         lastWasNull = (value == NullCellValue)
         return value
     }

@@ -6,7 +6,7 @@ import no.anksoft.pginmem.values.CellValue
 class SelectColumnProvider(
     val colindex:Int,
     private val alias:String?,
-    private val valueFromExpression: ValueFromExpression,
+    val valueFromExpression: ValueFromExpression,
     private val dbTransaction: DbTransaction,
     val aggregateFunction: AggregateFunction?,
     private val tableAliases:Map<String,String>

@@ -101,6 +101,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         while ((statementAnalyzer.word()?:"from") != "from") {
             val aggregateFunction:AggregateFunction? = when (statementAnalyzer.word()) {
                 "max" -> MaxAggregateFunction()
+                "min" -> MinAggregateFunction()
                 else -> null
             }
             if (aggregateFunction != null) {
@@ -155,7 +156,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
 
 }
 
-class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction,startOnWhereClauseBindingNo: Int = 1):DbPreparedStatement() {
+class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,startOnWhereClauseBindingNo: Int = 1):DbPreparedStatement() {
     private val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,startOnWhereClauseBindingNo)
 
 
@@ -163,7 +164,7 @@ class SelectStatement(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTra
 
     override fun executeQuery(): ResultSet = internalExecuteQuery()
 
-    fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider)
+    fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider,dbTransaction)
 
     override fun setString(parameterIndex: Int, x: String?) {
         selectAnalyze.whereClause.registerBinding(parameterIndex,if (x == null) NullCellValue else StringCellValue(x))
