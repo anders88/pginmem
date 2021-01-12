@@ -4,6 +4,7 @@ import java.sql.SQLException
 
 class DbTransaction(private val dbStore: DbStore) {
     private var autoCommit:Boolean = true
+    private var isClosed:Boolean = false
 
 
     fun createAlterTableSetup(table: Table) {
@@ -60,6 +61,7 @@ class DbTransaction(private val dbStore: DbStore) {
 
     fun close() {
         rollback()
+        isClosed = true
     }
 
     fun sequence(name: String):Sequence = dbStore.sequence(name)
@@ -68,5 +70,6 @@ class DbTransaction(private val dbStore: DbStore) {
 
     fun resetSequence(sequence: Sequence) = dbStore.resetSequence(sequence)
 
+    fun isClosed():Boolean = isClosed
 
 }

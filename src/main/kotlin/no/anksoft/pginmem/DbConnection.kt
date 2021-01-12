@@ -102,7 +102,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun isClosed(): Boolean {
-        TODO("Not yet implemented")
+        return transaction.isClosed()
     }
 
     override fun getMetaData(): DatabaseMetaData {
