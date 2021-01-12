@@ -176,7 +176,15 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
     }
 
     override val column: Column? = null
+}
 
+private class LowerExpression(val startValue:ValueFromExpression):ValueFromExpression {
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        val startVal = startValue.valuegen.invoke(it)
+        if (startVal is StringCellValue) StringCellValue(startVal.myValue.toLowerCase()) else startVal
+    }
+
+    override val column: Column? = null
 
 }
 
@@ -350,6 +358,17 @@ class StatementAnalyzer {
                     throw SQLException("Expected dateformat after to_date")
                 }
                 ToDateValue(fromExpression,dateformat.substring(1,dateformat.length-1))
+            }
+            aword == "lower" -> {
+                if (addIndex().word() != "(") {
+                    throw SQLException("Expected ( after lower")
+                }
+                addIndex()
+                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables)
+                if (addIndex().word() != ")") {
+                    throw SQLException("Expected ) after lower")
+                }
+                LowerExpression(fromExpression)
             }
 
             else -> readColumnValue(tables,aword)

@@ -316,4 +316,25 @@ class SelectStatementTest {
 
     }
 
+    @Test
+    fun testWitLower() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text,description text)")
+
+            conn.prepareStatement("insert into mytable(id,description) values (?,?)").use {
+                it.setString(1,"myid")
+                it.setString(2,"I have a Dog")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable where lower(description) = ?").use {
+                it.setString(1,"i have a dog")
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+
+
+        }
+    }
+
 }
