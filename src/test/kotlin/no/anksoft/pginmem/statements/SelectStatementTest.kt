@@ -317,7 +317,7 @@ class SelectStatementTest {
     }
 
     @Test
-    fun testWitLower() {
+    fun testWitLowerAndOr() {
         connection.use { conn ->
             conn.createStatement().execute("create table mytable(id text,description text)")
 
@@ -326,12 +326,20 @@ class SelectStatementTest {
                 it.setString(2,"I have a Dog")
                 it.executeUpdate()
             }
+            conn.prepareStatement("select * from mytable where  description = ? or lower(description) = ?").use {
+                it.setString(1,"i have a dog")
+                it.setString(2,"i have a dog")
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
             conn.prepareStatement("select * from mytable where lower(description) = ?").use {
                 it.setString(1,"i have a dog")
                 it.executeQuery().use {
                     assertThat(it.next()).isTrue()
                 }
             }
+
 
 
         }

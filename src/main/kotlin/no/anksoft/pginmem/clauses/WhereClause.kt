@@ -5,6 +5,7 @@ import no.anksoft.pginmem.values.CellValue
 import java.sql.SQLException
 
 
+
 fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,Table>,startOnIndex:Int,dbTransaction: DbTransaction):WhereClause {
     if (statementAnalyzer.word() != "where") {
         return MatchAllClause()
@@ -16,15 +17,18 @@ fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,Tab
 
         val nextIndexToUse = IndexToUse(startOnIndex)
         var leftAndPart:WhereClause? = null
+        var isAndNotOr:Boolean = true
         while (true) {
             val indAtStart = nextIndexToUse.nextIndex
             val nextPart = readWhereClausePart(statementAnalyzer, tables, nextIndexToUse, dbTransaction)
 
             leftAndPart = if (leftAndPart != null) {
-                AndClause(leftAndPart,nextPart,indAtStart)
+                if (isAndNotOr) AndClause(leftAndPart,nextPart,indAtStart) else OrClause(leftAndPart,nextPart,indAtStart)
             } else nextPart
 
-            if (statementAnalyzer.addIndex().word() != "and") {
+            if (setOf("and","or").contains(statementAnalyzer.addIndex().word())) {
+                isAndNotOr = statementAnalyzer.word() == "and"
+            } else {
                 return leftAndPart
             }
             statementAnalyzer.addIndex()
