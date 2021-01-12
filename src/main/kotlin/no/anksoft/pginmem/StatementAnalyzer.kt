@@ -216,6 +216,25 @@ class StatementAnalyzer {
         return StatementAnalyzer(newWords)
     }
 
+    fun extractParantesStepForward():StatementAnalyzer? {
+        var offSet = -1
+        var parensCount = 0
+        do {
+            offSet++
+            when (word(offSet)) {
+                "(" -> parensCount++
+                ")" -> parensCount --
+                null -> throw SQLException("Unexpected end of statement")
+            }
+        } while (parensCount > 0)
+        if (word(offSet+1) == "::") {
+            return null
+        }
+        val newWords = words.subList(currentIndex+1,currentIndex+offSet)
+        currentIndex = currentIndex + offSet
+        return StatementAnalyzer(newWords)
+    }
+
     fun word(indexOffset:Int=0):String? {
         val readAt = currentIndex+indexOffset
         if (readAt < 0 || readAt >= words.size) {
@@ -376,16 +395,17 @@ class StatementAnalyzer {
         if (word(1) == "::") {
             if (word(2) == "json" && word(3) == "->>") {
                 addIndex(4)
-                return ReadJsonProperty(toReturn,word())
+                return ReadJsonProperty(toReturn, word())
             }
-            val coltypeToConvToText = word(2)?:throw SQLException("Unexpected end of statement")
-            val columnType:ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(coltypeToConvToText) }?:throw SQLException("Unknown convert to $$coltypeToConvToText")
+            val coltypeToConvToText = word(2) ?: throw SQLException("Unexpected end of statement")
+            val columnType: ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(coltypeToConvToText) }
+                ?: throw SQLException("Unknown convert to $$coltypeToConvToText")
             addIndex(2)
-            return ConvertToColtype(toReturn,columnType)
+            return ConvertToColtype(toReturn, columnType)
         }
-
         return toReturn
     }
+
 
     private fun readColumnValue(tables: Map<String, Table>, aword: String):ValueFromExpression {
         val column: Column = findColumnFromIdentifier(aword, tables)

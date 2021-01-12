@@ -326,6 +326,14 @@ class SelectStatementTest {
                 it.setString(2,"I have a Dog")
                 it.executeUpdate()
             }
+            conn.prepareStatement("select * from mytable where id = ? and (description = ? or lower(description) = ?)").use {
+                it.setString(1,"myid")
+                it.setString(2,"i have a dog")
+                it.setString(3,"i have a dog")
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
             conn.prepareStatement("select * from mytable where  description = ? or lower(description) = ?").use {
                 it.setString(1,"i have a dog")
                 it.setString(2,"i have a dog")
