@@ -35,7 +35,7 @@ class SelectStatementTest {
                 statement.setInt(1,1)
                 statement.executeQuery().use {
                     assertThat(it.next()).isTrue()
-                    assertThat(it.getString("description")).isEqualTo("two")
+                    assertThat(it.getString("Description")).isEqualTo("two")
                     assertThat(it.next()).isFalse()
                 }
             }

@@ -127,7 +127,7 @@ class SelectResultSet(
             throw SQLException("Cannot get null")
         }
 
-        val columnProvider:SelectColumnProvider = colums.firstOrNull { it.isMatch(columnLabel) }
+        val columnProvider:SelectColumnProvider = colums.firstOrNull { it.isMatch(columnLabel.toLowerCase()) }
             ?:throw SQLException("Unknown column $columnLabel")
         val value = valueAt(columnProvider.colindex,rowindex)
         lastWasNull = (value == NullCellValue)
