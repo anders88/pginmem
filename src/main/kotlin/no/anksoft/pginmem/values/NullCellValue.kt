@@ -9,9 +9,7 @@ object NullCellValue:CellValue {
         TODO("Not yet implemented")
     }
 
-    override fun valueAsBoolean(): BooleanCellValue {
-        TODO("Not yet implemented")
-    }
+    override fun valueAsBoolean(): BooleanCellValue = BooleanCellValue(false)
 
     override fun valueAsDate(): DateCellValue {
         TODO("Not yet implemented")
