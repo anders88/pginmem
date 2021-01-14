@@ -111,7 +111,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
                     Cell(newColumn,if (valueTransformation !=null) valueTransformation.valuegen.invoke(Pair(dbTransaction,row)) else it.value)
                 else it
             }
-            newTable.addRow(Row(newCells))
+            newTable.addRow(Row(newCells,row.rowids))
         }
         return newTable
     }
@@ -123,7 +123,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         val newCols = table.colums.map { it.renameTable(toName) }
         val newTable = Table(toName,newCols)
         table.rowsForReading().forEach { exrow ->
-            val newRow = Row(exrow.cells.map { Cell(it.column.renameTable(toName),it.value) })
+            val newRow = Row(exrow.cells.map { Cell(it.column.renameTable(toName),it.value) },exrow.rowids)
             newTable.addRow(newRow)
         }
         dbTransaction.removeTable(table)
@@ -163,7 +163,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
                     Cell(newColumn,it.value)
                 } else it
             }
-            newTable.addRow(Row(adjustedCells))
+            newTable.addRow(Row(adjustedCells,row.rowids))
         }
         return newTable
     }
@@ -182,7 +182,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         val newTable = Table(table.name, adjustedColumns)
         for (row in table.rowsForReading()) {
             val adjustedCells = row.cells.filter { it.column != columnToDelete }
-            newTable.addRow(Row(adjustedCells))
+            newTable.addRow(Row(adjustedCells,row.rowids))
         }
         return newTable
     }
@@ -204,7 +204,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
             val adjustedCells = row.cells.toMutableList()
             val newCell = Cell(newColumn, newColumn.defaultValue?.invoke(Pair(dbTransaction,row))?:NullCellValue)
             adjustedCells.add(newCell)
-            newTable.addRow(Row(adjustedCells))
+            newTable.addRow(Row(adjustedCells,row.rowids))
         }
         return newTable
     }

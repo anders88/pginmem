@@ -27,9 +27,11 @@ private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
     return false
 }
 
+private class TableJoinRow(val rowids:Map<String,String>,val cells:List<Cell>)
+
 class TablesSelectRowProvider(private val tables: List<Table>,private val whereClause: WhereClause,private val orderParts: List<OrderPart>):SelectRowProvider {
 
-    private val values:List<List<Cell>> by lazy {
+    private val values:List<TableJoinRow> by lazy {
         if (tables.isEmpty() || tables.any { it.size() <= 0 }) {
             emptyList()
         } else {
@@ -38,25 +40,27 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
                 indexes.add(0)
             }
 
-            val genrows: MutableList<List<Cell>> = mutableListOf()
+            val genrows: MutableList<TableJoinRow> = mutableListOf()
 
             do {
                 val cellsThisRow: MutableList<Cell> = mutableListOf()
+                val rowidsThisRow:MutableMap<String,String> = mutableMapOf()
                 for (i in 0 until indexes.size) {
-                    val tc: List<Cell> = tables[i].rowsForReading()[indexes[i]].cells
+                    val row:Row = tables[i].rowsForReading()[indexes[i]]
+                    val tc: List<Cell> = row.cells
                     cellsThisRow.addAll(tc)
+                    rowidsThisRow.putAll(row.rowids)
                 }
                 if (whereClause.isMatch(cellsThisRow)) {
-                    genrows.add(cellsThisRow)
+                    genrows.add(TableJoinRow(rowidsThisRow,cellsThisRow))
                 }
                 val isMore = incIndex(indexes, tables)
             } while (isMore)
 
             if (orderParts.isNotEmpty()) {
-                genrows.sortWith { a, b -> compareRows(a,b) }
+                genrows.sortWith { a, b -> compareRows(a.cells,b.cells) }
             }
             genrows
-            //table.rowsForReading().filter { whereClause.isMatch(it.cells) }.map { it.cells }
         }
     }
 
@@ -76,8 +80,8 @@ class TablesSelectRowProvider(private val tables: List<Table>,private val whereC
     override fun size(): Int = values.size
 
     override fun readRow(rowno: Int): Row {
-        val cells = values[rowno]
-        return Row(cells)
+        val myRow:TableJoinRow = values[rowno]
+        return Row(myRow.cells,myRow.rowids)
     }
 }
 

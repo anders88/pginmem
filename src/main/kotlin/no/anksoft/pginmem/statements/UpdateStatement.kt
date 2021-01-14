@@ -104,6 +104,23 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
 
         val selectResultSet:SelectResultSet = selectStatement.internalExecuteQuery()
 
+
+        for (exsistingRow:Row in table.rowsForReading()) {
+            var matchedUpdate:Row? = null
+            for (i in 0 until selectResultSet.numberOfRows) {
+                val possibleRow = selectResultSet.selectRowProviderGiven.readRow(i)
+                val possibleRowid = possibleRow.rowids[table.name]
+                if (possibleRowid != null && exsistingRow.rowids[table.name] == possibleRowid) {
+                    matchedUpdate = possibleRow
+                    break
+                }
+            }
+            if (matchedUpdate == null) {
+                newTable.addRow(exsistingRow)
+                continue
+            }
+        }
+
         while (selectResultSet.next()) {
             val rowCells:List<Cell> = table.colums.map { column ->
                 val colvalue:CellValue = toUpdateByBinding.firstOrNull { it.column == column }?.value

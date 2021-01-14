@@ -5,6 +5,7 @@ import no.anksoft.pginmem.statements.select.SelectResultSet
 import no.anksoft.pginmem.values.CellValue
 import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
+import java.util.*
 
 private class LinkedValue(val column: Column,val index:Int?,var value:(Pair<DbTransaction,Row?>)->CellValue={NullCellValue})
 
@@ -98,7 +99,7 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
                 }
                 Cell(col, value)
             }
-            tableForUpdate.addRow(Row(cells))
+            tableForUpdate.addRow(Row(cells, mapOf(Pair(tableForUpdate.name,UUID.randomUUID().toString()))))
             dbTransaction.registerTableUpdate(tableForUpdate)
             return 1
         }
@@ -117,7 +118,7 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
                 }
                 Cell(col, value)
             }
-            tableForUpdate.addRow(Row(cells))
+            tableForUpdate.addRow(Row(cells, mapOf(Pair(tableForUpdate.name,UUID.randomUUID().toString()))))
         }
         dbTransaction.registerTableUpdate(tableForUpdate)
         return numRows

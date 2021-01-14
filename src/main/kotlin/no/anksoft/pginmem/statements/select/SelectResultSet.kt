@@ -69,8 +69,8 @@ private fun computeSelectSet(colums: List<SelectColumnProvider>,selectRowProvide
 
 
 class SelectResultSet(
-    private val colums: List<SelectColumnProvider>,
-    selectRowProviderGiven: SelectRowProvider,
+    val colums: List<SelectColumnProvider>,
+    val selectRowProviderGiven: SelectRowProvider,
     dbTransaction: DbTransaction,
 ):ResultSet {
 
