@@ -158,6 +158,9 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         sql.toLowerCase() == "select current_user" -> return SelectOneValueStatement("localdevuser")
         sql.toLowerCase() == "select version()" -> return SelectOneValueStatement("PostgreSQL 10.6 Pginmemver")
         sql.toLowerCase() == "show search_path" -> return SelectOneValueStatement("\"\$user\", public")
+        sql.toLowerCase().startsWith("select *,(case when to_number(application::json->>'loanamount','99999999') = totpledged then 1 else 0 end) as fullypledged") -> return StatementToReturnFixed(emptyList(),sql)
+
+
         statementAnalyzer.word(0) == "create" && statementAnalyzer.word(1) == "table" -> return CreateTableStatement(statementAnalyzer,dbTransaction)
         statementAnalyzer.word(0) == "alter" && statementAnalyzer.word(1) == "table" -> return AlterTableStatement(statementAnalyzer, dbTransaction)
         statementAnalyzer.word(0) == "create" && statementAnalyzer.word(1) == "sequence" -> return CreateSequenceStatement(statementAnalyzer,dbTransaction)
