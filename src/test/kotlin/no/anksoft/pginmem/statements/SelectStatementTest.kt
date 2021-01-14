@@ -387,11 +387,11 @@ class SelectStatementTest {
                     it.executeUpdate()
                 }
             }
-            conn.prepareStatement("select sum(price) from mytable").use {
+            conn.prepareStatement("select sum(price),count(*) from mytable").use {
                 it.executeQuery().use {
                     assertThat(it.next()).isTrue()
                     assertThat(it.getBigDecimal(1)).isCloseTo(BigDecimal.valueOf(111L), Offset.offset(BigDecimal.valueOf(0.0001)))
-                    //assertThat(it.getInt(2)).isEqualTo(3)
+                    assertThat(it.getInt(2)).isEqualTo(3)
                 }
 
             }

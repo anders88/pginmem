@@ -112,6 +112,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                 "max" -> MaxAggregateFunction()
                 "min" -> MinAggregateFunction()
                 "sum" -> SumAggregateFunction()
+                "count" -> CountAggregateFunction()
                 else -> null
             }
             if (aggregateFunction != null) {
@@ -120,7 +121,12 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                 }
                 statementAnalyzer.addIndex()
             }
-            val valueFromExpression:ValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tablesUsed)
+            val valueFromExpression:ValueFromExpression = if (aggregateFunction is CountAggregateFunction) {
+                if (statementAnalyzer.word() != "*") {
+                    throw SQLException("Only support count(*)")
+                }
+                BasicValueFromExpression({ IntegerCellValue(1)},null)
+            } else statementAnalyzer.readValueFromExpression(dbTransaction,tablesUsed)
 
             if (aggregateFunction != null) {
                 if (statementAnalyzer.addIndex().word() != ")") {

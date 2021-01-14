@@ -23,9 +23,12 @@ class MinAggregateFunction:AggregateFunction {
     }
 }
 
-class SumAggregateFunction:AggregateFunction {
+open class SumAggregateFunction:AggregateFunction {
     override fun aggregate(a: CellValue, b: CellValue): CellValue {
         return a.add(b)
     }
-
 }
+
+class CountAggregateFunction:SumAggregateFunction()
+
+

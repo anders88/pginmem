@@ -97,7 +97,7 @@ interface ValueFromExpression {
 }
 
 
-private class BasicValueFromExpression(
+class BasicValueFromExpression(
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue,
     override val column: Column?
 ) :ValueFromExpression
