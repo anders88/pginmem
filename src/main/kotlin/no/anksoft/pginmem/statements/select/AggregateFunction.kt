@@ -21,5 +21,11 @@ class MinAggregateFunction:AggregateFunction {
         if (b == NullCellValue) return a
         return if (a.compareMeTo(b,false) < 0) a else b
     }
+}
+
+class SumAggregateFunction:AggregateFunction {
+    override fun aggregate(a: CellValue, b: CellValue): CellValue {
+        return a.add(b)
+    }
 
 }

@@ -1,5 +1,7 @@
 package no.anksoft.pginmem.values
 
+import java.sql.SQLException
+
 object NullCellValue:CellValue {
     override fun valueAsText(): StringCellValue {
         TODO("Not yet implemented")
@@ -31,4 +33,6 @@ object NullCellValue:CellValue {
     override fun toString(): String {
         return "NullCellValue"
     }
+
+    override fun add(cellValue: CellValue): CellValue = cellValue
 }

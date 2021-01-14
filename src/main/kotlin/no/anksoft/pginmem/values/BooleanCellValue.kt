@@ -30,6 +30,9 @@ class BooleanCellValue(val myValue:Boolean):CellValue {
 
     }
 
+    override fun add(cellValue: CellValue): CellValue = throw SQLException("Add not supperted for boolean")
+
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

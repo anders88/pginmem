@@ -49,4 +49,11 @@ class NumericCellValue(val myValue: BigDecimal):CellValue {
     override fun toString(): String {
         return "NumericCellValue(myValue=${myValue.toDouble()})"
     }
+
+    override fun add(cellValue: CellValue): CellValue = when {
+        cellValue == NullCellValue -> this
+        cellValue is IntegerCellValue -> NumericCellValue(myValue.add(cellValue.myValue.toBigDecimal()))
+        cellValue is NumericCellValue -> NumericCellValue(this.myValue.add(cellValue.myValue))
+        else -> throw SQLException("Cannot add $cellValue to int")
+    }
 }

@@ -38,6 +38,7 @@ class ByteArrayCellValue(givenArr:ByteArray):CellValue {
         return "ByteArrayCellValue()"
     }
 
+    override fun add(cellValue: CellValue): CellValue = throw SQLException("Add not supperted for bytearray")
 
     val myBytes:ByteArray get() = myValue.clone()
 }

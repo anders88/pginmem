@@ -111,6 +111,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
             val aggregateFunction:AggregateFunction? = when (statementAnalyzer.word()) {
                 "max" -> MaxAggregateFunction()
                 "min" -> MinAggregateFunction()
+                "sum" -> SumAggregateFunction()
                 else -> null
             }
             if (aggregateFunction != null) {

@@ -51,4 +51,6 @@ class DateTimeCellValue(val myValue:LocalDateTime):CellValue {
     override fun toString(): String {
         return "DateTimeCellValue(myValue=$myValue)"
     }
+
+    override fun add(cellValue: CellValue): CellValue = throw SQLException("Add not supperted for timestamp")
 }

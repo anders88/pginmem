@@ -9,4 +9,6 @@ interface CellValue {
     fun valueAsNumeric():NumericCellValue
 
     fun compareMeTo(other:CellValue,nullsFirst:Boolean):Int
+
+    fun add(cellValue: CellValue):CellValue
 }

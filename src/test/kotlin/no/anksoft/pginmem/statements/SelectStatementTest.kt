@@ -3,7 +3,9 @@ package no.anksoft.pginmem.statements
 import no.anksoft.pginmem.PgInMemDatasource
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.data.Offset
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.LocalDateTime
@@ -368,6 +370,30 @@ class SelectStatementTest {
                     assertThat(it.getString("id")).isEqualTo("first")
                     assertThat(it.next()).isFalse()
                 }
+            }
+        }
+    }
+
+    @Test
+    fun aggregateWithSumAndCount() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text, price numeric)")
+            listOf(Pair("a",BigDecimal.TEN), Pair("b", BigDecimal.valueOf(100L)),
+                Pair("c", BigDecimal.ONE)
+            ).forEach { pair ->
+                conn.prepareStatement("insert into mytable(id,price) values (?,?)").use {
+                    it.setString(1,pair.first)
+                    it.setBigDecimal(2,pair.second)
+                    it.executeUpdate()
+                }
+            }
+            conn.prepareStatement("select sum(price) from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getBigDecimal(1)).isCloseTo(BigDecimal.valueOf(111L), Offset.offset(BigDecimal.valueOf(0.0001)))
+                    //assertThat(it.getInt(2)).isEqualTo(3)
+                }
+
             }
         }
     }

@@ -50,4 +50,6 @@ class DateCellValue(val myValue:LocalDate):CellValue {
     override fun toString(): String {
         return "DateCellValue(myValue=$myValue)"
     }
+
+    override fun add(cellValue: CellValue): CellValue = throw SQLException("Add not supperted for date")
 }

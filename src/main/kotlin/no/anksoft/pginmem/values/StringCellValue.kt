@@ -46,5 +46,6 @@ class StringCellValue(val myValue:String):CellValue {
         return "StringCellValue(myValue='$myValue')"
     }
 
+    override fun add(cellValue: CellValue): CellValue = throw SQLException("Add not supperted for text")
 
 }

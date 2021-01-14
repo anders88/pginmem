@@ -29,7 +29,12 @@ class IntegerCellValue(val myValue:Long):CellValue {
         else -> throw SQLException("Cannot compare $this and $other")
     }
 
-
+    override fun add(cellValue: CellValue): CellValue = when {
+        cellValue == NullCellValue -> this
+        cellValue is IntegerCellValue -> IntegerCellValue(this.myValue+cellValue.myValue)
+        cellValue is NumericCellValue -> NumericCellValue(this.myValue.toBigDecimal().add(cellValue.myValue))
+        else -> throw SQLException("Cannot add $cellValue to int")
+    }
 
 
     override fun equals(other: Any?): Boolean {
