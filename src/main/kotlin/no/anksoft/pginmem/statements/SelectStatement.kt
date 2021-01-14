@@ -27,11 +27,11 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
             statementAnalyzer.addIndex()
         }
         val colnameText = statementAnalyzer.word()?:break
-        if (colnameText == "order") {
+        if (setOf("group").contains(colnameText)) {
             break
         }
         val column:Column = statementAnalyzer.findColumnFromIdentifier(colnameText,tablesUsed)
-        var nextWord = statementAnalyzer.addIndex().word()
+        val nextWord = statementAnalyzer.addIndex().word()
 
         var ascending:Boolean = true
         if (nextWord == "asc") {
@@ -50,6 +50,9 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
             res
         } else true
         orderPats.add(OrderPart(column,ascending,nullsFirst))
+        if (setOf("fetch","limit").contains(statementAnalyzer.word())) {
+            break
+        }
     }
     return orderPats
 }
@@ -159,7 +162,25 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     }
     val orderParts:List<OrderPart> = computeOrderParts(statementAnalyzer, tablesUsed)
 
-    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(tablesUsed.values.toList(),whereClause,orderParts) else ImplicitOneRowSelectProvider()
+    val (limitRowsTo:Int?,offsetRows:Int) = if (setOf("fetch","limit").contains(statementAnalyzer.word())) {
+        val isFetch = (statementAnalyzer.word() == "fetch")
+        if (isFetch) {
+            if (!setOf("first","next").contains(statementAnalyzer.addIndex().word())) {
+                throw SQLException("expecting first or next")
+            }
+            statementAnalyzer.addIndex()
+        }
+        val limit:Int = statementAnalyzer.word()?.toIntOrNull()?:throw SQLException("Limit must be numeric")
+
+        val offset:Int = if (isFetch) 0 else {
+            if (statementAnalyzer.word(1) == "offset") {
+                statementAnalyzer.addIndex(2).word()?.toIntOrNull()?:throw SQLException("Expected numeric offset")
+            } else 0
+        }
+        Pair(limit,offset)
+    } else Pair(null,0)
+
+    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(tablesUsed.values.toList(),whereClause,orderParts,limitRowsTo,offsetRows) else ImplicitOneRowSelectProvider()
 
 
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts)

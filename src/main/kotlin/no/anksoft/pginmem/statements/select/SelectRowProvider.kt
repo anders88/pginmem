@@ -12,6 +12,8 @@ import java.sql.SQLException
 interface SelectRowProvider {
     fun size():Int
     fun readRow(rowno: Int):Row
+    val limit:Int?
+    val offset:Int
 }
 
 private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
@@ -29,7 +31,8 @@ private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
 
 private class TableJoinRow(val rowids:Map<String,String>,val cells:List<Cell>)
 
-class TablesSelectRowProvider(private val tables: List<Table>,private val whereClause: WhereClause,private val orderParts: List<OrderPart>):SelectRowProvider {
+class TablesSelectRowProvider constructor(private val tables: List<Table>, private val whereClause: WhereClause, private val orderParts: List<OrderPart>, override val limit:Int?,
+                                          override val offset: Int):SelectRowProvider {
 
     private val values:List<TableJoinRow> by lazy {
         if (tables.isEmpty() || tables.any { it.size() <= 0 }) {
@@ -92,6 +95,9 @@ class ImplicitOneRowSelectProvider:SelectRowProvider {
         return Row(emptyList())
     }
 
+    override val limit: Int? = null
+    override val offset: Int = 0
+
 }
 
 class AggregateSelectRowProvider:SelectRowProvider {
@@ -103,4 +109,8 @@ class AggregateSelectRowProvider:SelectRowProvider {
     override fun readRow(rowno: Int): Row {
         TODO("Not yet implemented")
     }
+
+    override val limit: Int? = null
+
+    override val offset: Int = 0
 }

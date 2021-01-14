@@ -347,9 +347,28 @@ class SelectStatementTest {
                     assertThat(it.next()).isTrue()
                 }
             }
+        }
+    }
 
-
-
+    @Test
+    fun selectWithLimit() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"last")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"first")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable order by id fetch first 1 rows only").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("first")
+                    assertThat(it.next()).isFalse()
+                }
+            }
         }
     }
 

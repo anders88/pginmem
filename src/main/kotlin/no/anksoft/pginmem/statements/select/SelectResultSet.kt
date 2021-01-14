@@ -91,7 +91,7 @@ class SelectResultSet(
         return selectSet[rowIndex][ind]
     }
 
-    private var rowindex = -1
+    private var rowindex =  selectRowProviderGiven.offset-1
     private var lastWasNull:Boolean = false
 
     override fun <T : Any?> unwrap(iface: Class<T>?): T {
@@ -108,7 +108,8 @@ class SelectResultSet(
 
     override fun next(): Boolean {
         rowindex++
-        return (rowindex < numberOfRows)
+        val limit:Int? = selectRowProviderGiven.limit
+        return (rowindex < numberOfRows && (limit == null || rowindex < limit))
     }
 
     override fun getString(columnLabel: String?): String? {
