@@ -312,7 +312,7 @@ class StatementAnalyzer {
                     throw SQLException("Expected sequence name in nextval")
                 }
                 addIndex(4)
-                val seqname = seqnamestr.substring(1,seqnamestr.length-1)
+                val seqname = seqnamestr.substring(1,seqnamestr.length-1).toLowerCase()
                 dbTransaction.sequence(seqname)
                 BasicValueFromExpression({ it.first.sequence(seqname).nextVal() },null)
             }

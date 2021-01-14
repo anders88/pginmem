@@ -22,7 +22,7 @@ class SequenceTest {
     }
 
     private fun readSeqVal(conn: Connection):Long {
-        return conn.prepareStatement("select nextval('numgenerator')").use { ps ->
+        return conn.prepareStatement("select nextval('numGenerator')").use { ps ->
             ps.executeQuery().use {
                 assertThat(it.next()).isTrue()
                 it.getLong(1)
