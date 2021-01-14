@@ -5,6 +5,7 @@ import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.jsonbuddy.JsonObject
 import org.junit.jupiter.api.Test
+import java.time.LocalDateTime
 import java.util.*
 
 class InsertIntoTest {
@@ -118,6 +119,21 @@ class InsertIntoTest {
             }
         }
 
+    }
+
+    @Test
+    fun insertIntoTimestampWithString() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text,created timestamp)")
+            conn.createStatement().execute("INSERT INTO mytable (id, created) VALUES ('mykeyy', '2017-03-20 13:15:02.176000')")
+            conn.prepareStatement("select * from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    val pointInTime = it.getTimestamp("created").toLocalDateTime()
+                    assertThat(pointInTime).isEqualTo(LocalDateTime.of(2017,3,20,13,15,2,176_000_000))
+                }
+            }
+        }
     }
 
 }
