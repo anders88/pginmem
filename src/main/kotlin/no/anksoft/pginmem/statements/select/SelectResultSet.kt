@@ -16,12 +16,36 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 
-private fun computeSelectSet(colums: List<SelectColumnProvider>,selectRowProvider: SelectRowProvider,dbTransaction: DbTransaction):List<List<CellValue>> {
+private fun computeSelectSet(
+    colums: List<SelectColumnProvider>,
+    selectRowProvider: SelectRowProvider,
+    dbTransaction: DbTransaction,
+    disinctFlag: Boolean
+):List<List<CellValue>> {
     val res:MutableList<List<CellValue>> = mutableListOf()
     for (i in 0 until selectRowProvider.size()) {
         val row:Row = selectRowProvider.readRow(i)
         val valuesThisRow:List<CellValue> = colums.map { colProvider ->
             colProvider.valueFromExpression.valuegen.invoke(Pair(dbTransaction,row))
+        }
+        if (disinctFlag) {
+            var isDistinct=true
+            for (exsisting in res) {
+                var disinctThisRow = false
+                for (j in exsisting.indices) {
+                    if (exsisting[j] != valuesThisRow[j]) {
+                        disinctThisRow = true
+                        break
+                    }
+                }
+                isDistinct = disinctThisRow
+                if (!isDistinct) {
+                    break
+                }
+            }
+            if (!isDistinct) {
+                continue
+            }
         }
         res.add(valuesThisRow)
     }
@@ -72,11 +96,12 @@ class SelectResultSet(
     val colums: List<SelectColumnProvider>,
     val selectRowProviderGiven: SelectRowProvider,
     dbTransaction: DbTransaction,
+    disinctFlag:Boolean,
 ):ResultSet {
 
 
     private val selectSet:List<List<CellValue>> by lazy {
-        computeSelectSet(colums,selectRowProviderGiven,dbTransaction)
+        computeSelectSet(colums,selectRowProviderGiven,dbTransaction,disinctFlag)
     }
 
 

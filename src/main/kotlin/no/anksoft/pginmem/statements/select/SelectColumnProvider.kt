@@ -1,20 +1,14 @@
 package no.anksoft.pginmem.statements.select
 
 import no.anksoft.pginmem.*
-import no.anksoft.pginmem.values.CellValue
 
 class SelectColumnProvider(
-    val colindex:Int,
-    private val alias:String?,
+    val colindex: Int,
+    private val alias: String?,
     val valueFromExpression: ValueFromExpression,
-    private val dbTransaction: DbTransaction,
     val aggregateFunction: AggregateFunction?,
-    private val tableAliases:Map<String,String>
-    ) {
-    fun readValue(selectRowProvider: SelectRowProvider,rowindex:Int):CellValue {
-        val row = selectRowProvider.readRow(rowindex)
-        return valueFromExpression.valuegen.invoke(Pair(dbTransaction,row))
-    }
+    private val tableAliases: Map<String, String>
+) {
 
     fun isMatch(colidentifier:String):Boolean {
         if (alias != null) return (alias == colidentifier)

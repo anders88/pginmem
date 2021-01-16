@@ -31,8 +31,13 @@ private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
 
 private class TableJoinRow(val rowids:Map<String,String>,val cells:List<Cell>)
 
-class TablesSelectRowProvider constructor(private val tables: List<Table>, private val whereClause: WhereClause, private val orderParts: List<OrderPart>, override val limit:Int?,
-                                          override val offset: Int):SelectRowProvider {
+class TablesSelectRowProvider constructor(
+    private val tables: List<Table>,
+    private val whereClause: WhereClause,
+    private val orderParts: List<OrderPart>,
+    override val limit:Int?,
+    override val offset: Int,
+    ):SelectRowProvider {
 
     private val values:List<TableJoinRow> by lazy {
         if (tables.isEmpty() || tables.any { it.size() <= 0 }) {

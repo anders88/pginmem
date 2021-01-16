@@ -398,4 +398,31 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun selectDistinct() {
+        connection.use { conn ->
+            conn.createStatement().execute("""
+                create table mytable(id text,description text)
+            """.trimIndent())
+            listOf(Pair("a","desca"),Pair("a","descb"),Pair("b","descb"),Pair("b","descb")).forEach { pair ->
+                conn.prepareStatement("insert into mytable(id,description) values (?,?)").use {
+                    it.setString(1,pair.first)
+                    it.setString(2,pair.second)
+                    it.executeUpdate()
+                }
+            }
+            val res:MutableList<String> = mutableListOf()
+            conn.prepareStatement("select distinct id from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    res.add(it.getString("id"))
+                    assertThat(it.next()).isTrue()
+                    res.add(it.getString("id"))
+                    assertThat(it.next()).isFalse()
+                }
+            }
+            assertThat(res).containsAll(listOf("a","b"))
+        }
+    }
+
 }

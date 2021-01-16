@@ -57,7 +57,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
     return orderPats
 }
 
-private class SelectAnalyze constructor(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>)
+private class SelectAnalyze constructor(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>,val distinctFlag:Boolean)
 
 private class ValueGenFromDbCell(override val column: Column):ValueFromExpression {
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
@@ -93,13 +93,17 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     val allColumns:List<Column> = tablesUsed.map { it.value.colums }.flatten()
     statementAnalyzer.addIndex()
 
+    val distinctFlag:Boolean = if (statementAnalyzer.word() == "distinct") {
+        statementAnalyzer.addIndex()
+        true
+    } else false
+
     val selectedColumns:List<SelectColumnProvider> = if (statementAnalyzer.word() == "*") {
         allColumns.mapIndexed { index, column ->
             SelectColumnProvider(
                 colindex = index+1,
                 alias = null,
                 valueFromExpression = ValueGenFromDbCell(column),
-                dbTransaction = dbTransaction,
                 aggregateFunction = null,
                 tableAliases = aliasMapping
             )
@@ -145,7 +149,6 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                 colindex = selectcolindex,
                 alias = possibleAlias,
                 valueFromExpression = valueFromExpression,
-                dbTransaction = dbTransaction,
                 aggregateFunction = aggregateFunction,
                 tableAliases = aliasMapping
             )
@@ -190,7 +193,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(tablesUsed.values.toList(),whereClause,orderParts,limitRowsTo,offsetRows) else ImplicitOneRowSelectProvider()
 
 
-    return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts)
+    return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts,distinctFlag)
 
 
 }
@@ -203,7 +206,7 @@ class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: D
 
     override fun executeQuery(): ResultSet = internalExecuteQuery()
 
-    fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider,dbTransaction)
+    fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider,dbTransaction,selectAnalyze.distinctFlag)
 
     override fun setString(parameterIndex: Int, x: String?) {
         selectAnalyze.whereClause.registerBinding(parameterIndex,if (x == null) NullCellValue else StringCellValue(x))
