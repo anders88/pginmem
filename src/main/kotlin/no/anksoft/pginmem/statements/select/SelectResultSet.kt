@@ -108,12 +108,21 @@ class SelectResultSet(
 
     val numberOfRows:Int by lazy { selectSet.size}
 
+
+
     fun valueAt(columnIndex:Int,rowIndex:Int):CellValue {
         val ind = colums.indexOfFirst { it.colindex == columnIndex }
         if (ind == -1) {
             throw SQLException("Illegal column no $columnIndex")
         }
         return selectSet[rowIndex][ind]
+    }
+
+    fun valueAt(columnLabel:String,rowno: Int):CellValue {
+        val columnProvider:SelectColumnProvider = colums.firstOrNull { it.isMatch(columnLabel.toLowerCase()) }
+            ?:throw SQLException("Unknown column $columnLabel")
+        val value = valueAt(columnProvider.colindex,rowno)
+        return value
     }
 
     private var rowindex =  selectRowProviderGiven.offset-1

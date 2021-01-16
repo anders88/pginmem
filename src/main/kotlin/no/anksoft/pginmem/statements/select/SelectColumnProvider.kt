@@ -7,7 +7,7 @@ class SelectColumnProvider(
     private val alias: String?,
     val valueFromExpression: ValueFromExpression,
     val aggregateFunction: AggregateFunction?,
-    private val tableAliases: Map<String, String>
+    val tableAliases: Map<String, String>
 ) {
 
     fun isMatch(colidentifier:String):Boolean {

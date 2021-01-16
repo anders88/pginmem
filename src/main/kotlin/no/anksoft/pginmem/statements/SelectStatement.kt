@@ -57,7 +57,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
     return orderPats
 }
 
-private class SelectAnalyze constructor(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>,val distinctFlag:Boolean)
+class SelectAnalyze constructor(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>,val distinctFlag:Boolean)
 
 private class ValueGenFromDbCell(override val column: Column):ValueFromExpression {
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
@@ -199,7 +199,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
 }
 
 class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,startOnWhereClauseBindingNo: Int = 1):DbPreparedStatement() {
-    private val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,startOnWhereClauseBindingNo)
+    val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,startOnWhereClauseBindingNo)
 
 
 

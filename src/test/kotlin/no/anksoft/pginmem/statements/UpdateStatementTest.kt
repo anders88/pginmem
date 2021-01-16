@@ -37,4 +37,26 @@ class UpdateStatementTest {
             }
         }
     }
+
+    @Test
+    fun updateWithBoolean() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text,boolval boolean)")
+            conn.prepareStatement("insert into mytable(id,boolval) values (?,?)").use {
+                it.setString(1,"a")
+                it.setBoolean(2,false)
+                it.executeUpdate()
+            }
+            conn.prepareStatement("update mytable set boolval=true where id = ?").use {
+                it.setString(1,"a")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getBoolean("boolval")).isTrue()
+                }
+            }
+        }
+    }
 }

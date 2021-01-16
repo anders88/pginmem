@@ -15,7 +15,7 @@ private class CellToUpdateByBinding(val column:Column) {
     var value:CellValue=NullCellValue
 }
 
-private class CellToUpdateByFunction(val column: Column,val function:(SelectResultSet)->CellValue)
+private class CellToUpdateByFunction(val column: Column,val valueFromExpression: ValueFromExpression)
 
 class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction) : StatementWithSet() {
     private val table:Table
@@ -41,23 +41,15 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
         }
         this.numBindingsBeforeWhere = numBindingsBeforeWhere
 
-        /*
-        val toPrepend:MutableList<String> = mutableListOf("select")
-        for (colind in table.colums.indices) {
-            toPrepend.add(table.name + "." + table.colums[colind].name)
-            if (colind < table.colums.size-1) {
-                toPrepend.add(",")
-            }
-        }
-        toPrepend.add("from")
-        toPrepend.add(table.name)
-        toPrepend.add(table.name)Æ/
-
-         */
         val toPrepend:List<String> = listOf("select","*","from",table.name,table.name)
 
         val selectStatementAnalyzer = statementAnalyzer.extractSelect(toPrepend)
         selectStatement = SelectStatement(selectStatementAnalyzer,dbTransaction,numBindingsBeforeWhere+1)
+
+        val tableAliasesMap:MutableMap<String,String> = mutableMapOf()
+        selectStatement.selectAnalyze.selectedColumns.forEach { tableAliasesMap.putAll(it.tableAliases) }
+
+        val tableAliases:Map<String,Table> = tableAliasesMap.entries.associate { it.key to dbTransaction.tableForRead(it.value) }
 
         statementAnalyzer.addIndex(2)
         val updateByBindings:MutableList<CellToUpdateByBinding> = mutableListOf()
@@ -72,7 +64,8 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
                 updateByBindings.add(CellToUpdateByBinding(column))
                 statementAnalyzer.addIndex()
             } else {
-                val function = statementAnalyzer.readValueOnRow()
+                val function = statementAnalyzer.readValueFromExpression(dbTransaction,tableAliases)
+                statementAnalyzer.addIndex()
                 toUpdateByFunctions.add(CellToUpdateByFunction(column,function))
             }
             if (setOf("where","from").contains(statementAnalyzer.word()?:"where")) {
@@ -121,6 +114,17 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
             }
         }
 
+        for (rowno in 0 until selectResultSet.selectRowProviderGiven.size()) {
+            val rowCells:List<Cell> = table.colums.map { column ->
+                val colvalue:CellValue = toUpdateByBinding.firstOrNull { it.column == column }?.value
+                    ?: toUpdateByFunction.firstOrNull { it.column == column }
+                        ?.valueFromExpression?.valuegen?.invoke(Pair(dbTransaction,selectResultSet.selectRowProviderGiven.readRow(rowno)))
+                    ?: selectResultSet.valueAt(table.name + "." + column.name,rowno)
+                Cell(column,colvalue)
+            }
+            newTable.addRow(Row(rowCells))
+        }
+        /*
         while (selectResultSet.next()) {
             val rowCells:List<Cell> = table.colums.map { column ->
                 val colvalue:CellValue = toUpdateByBinding.firstOrNull { it.column == column }?.value
@@ -130,6 +134,8 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
             }
             newTable.addRow(Row(rowCells))
         }
+        */
+
         dbTransaction.registerTableUpdate(newTable)
         return selectResultSet.numberOfRows
     }
