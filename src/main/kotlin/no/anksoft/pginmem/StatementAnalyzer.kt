@@ -292,6 +292,9 @@ class StatementAnalyzer {
                     addIndex(3)
                     BasicValueFromExpression({ DateTimeCellValue(LocalDateTime.now()) },null)
                 }
+            (aword == "current_timestamp") ->
+                BasicValueFromExpression({ DateTimeCellValue(LocalDateTime.now()) },null)
+
             (aword == "uuid_in" && word(1) == "(") -> {
                 var parind = 0
                 do {

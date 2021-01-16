@@ -88,6 +88,18 @@ private fun computeSelectSet(
         resArr.set(matchRow,combinedRow)
     }
 
+    if (resArr.isEmpty()) {
+        val cellValues:MutableList<CellValue> = mutableListOf()
+
+        for (column in colums) {
+            if (column.aggregateFunction == null) {
+                return resArr
+            }
+            cellValues.add(column.aggregateFunction.emptyResultValue())
+        }
+        resArr.add(cellValues)
+    }
+
     return resArr
 }
 

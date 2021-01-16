@@ -447,4 +447,20 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun aggregatesShouldReturnNullIfEmpty() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(mynum numeric)")
+            conn.prepareStatement("select sum(mynum) as tablesum, min(mynum) as tablemin, count(*) as counttable from mytable").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getBigDecimal("tablesum")).isNull()
+                    assertThat(it.getBigDecimal("tablemin")).isNull()
+                    assertThat(it.getInt("counttable")).isEqualTo(0)
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
 }
