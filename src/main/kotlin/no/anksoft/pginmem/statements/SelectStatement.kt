@@ -178,8 +178,8 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
             if (!setOf("first","next").contains(statementAnalyzer.addIndex().word())) {
                 throw SQLException("expecting first or next")
             }
-            statementAnalyzer.addIndex()
         }
+        statementAnalyzer.addIndex()
         val limit:Int = statementAnalyzer.word()?.toIntOrNull()?:throw SQLException("Limit must be numeric")
 
         val offset:Int = if (isFetch) 0 else {
