@@ -89,7 +89,7 @@ private fun readWhereClausePart(
                 .word() == "null" -> IsNotNullClause(dbTransaction,leftValueFromExpression)
             else -> throw SQLException("Syntax error after is")
         }
-        "in" -> InClause(dbTransaction,leftValueFromExpression, statementAnalyzer)
+        "in" -> InClause(dbTransaction,leftValueFromExpression, statementAnalyzer,nextIndexToUse,tables)
         else -> throw SQLException("Syntax error in where clause. Not recognicing word ${statementAnalyzer.word()}")
     }
 }
