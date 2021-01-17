@@ -21,7 +21,11 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             DATE -> if (value is DateCellValue) value else null
             INTEGER -> if (value is IntegerCellValue) value else null
             BOOLEAN -> if (value is BooleanCellValue) value else null
-            NUMERIC -> if (value is NumericCellValue) value else null
+            NUMERIC -> when {
+                (value is NumericCellValue) -> value
+                (value is IntegerCellValue) -> NumericCellValue(value.myValue.toBigDecimal())
+                else ->null
+            }
             BYTEA -> if (value is ByteArrayCellValue) value else null
             SERIAL -> if (value is IntegerCellValue) value else null
         }
