@@ -20,6 +20,10 @@ abstract class StatementWithSet:DbPreparedStatement() {
         setSomething(parameterIndex,IntegerCellValue(x.toLong()))
     }
 
+    override fun setLong(parameterIndex: Int, x: Long) {
+        setSomething(parameterIndex,IntegerCellValue(x))
+    }
+
 
     override fun setBoolean(parameterIndex: Int, x: Boolean) {
         setSomething(parameterIndex,BooleanCellValue(x))
