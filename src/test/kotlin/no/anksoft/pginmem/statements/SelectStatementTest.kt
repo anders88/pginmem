@@ -484,4 +484,24 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun selectAllFromOneTable() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table tableone(oneid text)")
+            conn.createStatement().execute("create table tabletwo(twoid text, numval integer)")
+            conn.createStatement().execute("insert into tableone(oneid) values ('a')")
+            conn.createStatement().execute("insert into tableone(oneid) values ('b')")
+            conn.createStatement().execute("insert into tabletwo(twoid,numval) values ('c',42)")
+
+            conn.prepareStatement("select distinct b.* from tableone a, tabletwo b").use {
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("twoid")).isEqualTo("c")
+                    assertThat(it.getInt("numval")).isEqualTo(42)
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
 }

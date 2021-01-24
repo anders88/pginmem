@@ -125,35 +125,56 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                 }
                 statementAnalyzer.addIndex()
             }
-            val valueFromExpression:ValueFromExpression = if (aggregateFunction is CountAggregateFunction) {
-                if (statementAnalyzer.word() != "*") {
-                    throw SQLException("Only support count(*)")
+            val selword = statementAnalyzer.word()
+            if (selword != "*" && selword?.endsWith("*") == true) {
+                val aliasind = selword.indexOf(".")
+                if (aliasind != selword.length-2) {
+                    throw SQLException("Expected . before *")
                 }
-                BasicValueFromExpression({ IntegerCellValue(1)},null)
-            } else statementAnalyzer.readValueFromExpression(dbTransaction,tablesUsed)
-
-            if (aggregateFunction != null) {
-                if (statementAnalyzer.addIndex().word() != ")") {
-                    throw SQLException("Expected ) after aggregate")
+                val table:Table = dbTransaction.tableForRead(aliasMapping[selword.substring(0,aliasind)]?:throw SQLException("unknown columns $selword"))
+                for (columnToSelect in table.colums) {
+                    val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column == columnToSelect }?.value?:NullCellValue }
+                    val valueFromExpression = BasicValueFromExpression(valuegen,columnToSelect)
+                    selectcolindex++
+                    addedSelected.add(SelectColumnProvider(
+                        colindex = selectcolindex,
+                        alias = null,
+                        valueFromExpression = valueFromExpression,
+                        aggregateFunction = null,
+                        tableAliases = aliasMapping
+                    ))
                 }
-            }
-
-            selectcolindex++
-            statementAnalyzer.addIndex()
-            val possibleAlias:String? = if (statementAnalyzer.word() == "as") {
-                val a = statementAnalyzer.addIndex().word() ?: throw SQLException("Expeted alias after as")
                 statementAnalyzer.addIndex()
-                a
-            } else null
-            val columnProvider = SelectColumnProvider(
-                colindex = selectcolindex,
-                alias = possibleAlias,
-                valueFromExpression = valueFromExpression,
-                aggregateFunction = aggregateFunction,
-                tableAliases = aliasMapping
-            )
-            addedSelected.add(columnProvider)
+            } else {
+                val valueFromExpression: ValueFromExpression = if (aggregateFunction is CountAggregateFunction) {
+                    if (statementAnalyzer.word() != "*") {
+                        throw SQLException("Only support count(*)")
+                    }
+                    BasicValueFromExpression({ IntegerCellValue(1) }, null)
+                } else statementAnalyzer.readValueFromExpression(dbTransaction, tablesUsed)
 
+                if (aggregateFunction != null) {
+                    if (statementAnalyzer.addIndex().word() != ")") {
+                        throw SQLException("Expected ) after aggregate")
+                    }
+                }
+
+                selectcolindex++
+                statementAnalyzer.addIndex()
+                val possibleAlias: String? = if (statementAnalyzer.word() == "as") {
+                    val a = statementAnalyzer.addIndex().word() ?: throw SQLException("Expeted alias after as")
+                    statementAnalyzer.addIndex()
+                    a
+                } else null
+                val columnProvider = SelectColumnProvider(
+                    colindex = selectcolindex,
+                    alias = possibleAlias,
+                    valueFromExpression = valueFromExpression,
+                    aggregateFunction = aggregateFunction,
+                    tableAliases = aliasMapping
+                )
+                addedSelected.add(columnProvider)
+            }
             if (statementAnalyzer.word() == ",") {
                 statementAnalyzer.addIndex()
             }
