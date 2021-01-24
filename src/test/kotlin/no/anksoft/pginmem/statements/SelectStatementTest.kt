@@ -463,4 +463,25 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun notEqual() {
+        connection.use {  conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+            listOf("a","b").forEach { value ->
+                conn.prepareStatement("insert into mytable(id) values (?)").use {
+                    it.setString(1,value)
+                    it.executeUpdate()
+                }
+            }
+            conn.prepareStatement("select id from mytable where id <> ?").use {
+                it.setString(1,"a")
+                it.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("id")).isEqualTo("b")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
 }
