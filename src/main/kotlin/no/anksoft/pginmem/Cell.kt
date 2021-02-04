@@ -23,4 +23,9 @@ private fun adjustCellValue(columnType: ColumnType,input:CellValue):CellValue {
 
 class Cell(val column: Column,inputCellValue: CellValue) {
     val value:CellValue = adjustCellValue(column.columnType,inputCellValue)
+    override fun toString(): String {
+        return "Cell(column=$column, value=$value)"
+    }
+
+
 }
