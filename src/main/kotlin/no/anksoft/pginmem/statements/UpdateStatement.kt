@@ -99,43 +99,29 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
 
 
         for (exsistingRow:Row in table.rowsForReading()) {
-            var matchedUpdate:Row? = null
+            var matchedUpdateRow:Int? = null
             for (i in 0 until selectResultSet.numberOfRows) {
                 val possibleRow = selectResultSet.selectRowProviderGiven.readRow(i)
                 val possibleRowid = possibleRow.rowids[table.name]
                 if (possibleRowid != null && exsistingRow.rowids[table.name] == possibleRowid) {
-                    matchedUpdate = possibleRow
+                    matchedUpdateRow = i
                     break
                 }
             }
-            if (matchedUpdate == null) {
+            if (matchedUpdateRow == null) {
                 newTable.addRow(exsistingRow)
                 continue
             }
-        }
-
-        for (rowno in 0 until selectResultSet.selectRowProviderGiven.size()) {
             val rowCells:List<Cell> = table.colums.map { column ->
                 val colvalue:CellValue = toUpdateByBinding.firstOrNull { it.column == column }?.value
                     ?: toUpdateByFunction.firstOrNull { it.column == column }
-                        ?.valueFromExpression?.valuegen?.invoke(Pair(dbTransaction,selectResultSet.selectRowProviderGiven.readRow(rowno)))
-                    ?: selectResultSet.valueAt(table.name + "." + column.name,rowno)
+                        ?.valueFromExpression?.valuegen?.invoke(Pair(dbTransaction,selectResultSet.selectRowProviderGiven.readRow(matchedUpdateRow)))
+                    ?: selectResultSet.valueAt(table.name + "." + column.name,matchedUpdateRow)
                 Cell(column,colvalue)
             }
-            newTable.addRow(Row(rowCells))
+            newTable.addRow(Row(rowCells,exsistingRow.rowids))
         }
-        /*
-        while (selectResultSet.next()) {
-            val rowCells:List<Cell> = table.colums.map { column ->
-                val colvalue:CellValue = toUpdateByBinding.firstOrNull { it.column == column }?.value
-                    ?: toUpdateByFunction.firstOrNull { it.column == column }?.function?.invoke(selectResultSet)
-                    ?: selectResultSet.readCell(table.name + "." + column.name)
-                Cell(column,colvalue)
-            }
-            newTable.addRow(Row(rowCells))
-        }
-        */
-
+        
         dbTransaction.registerTableUpdate(newTable)
         return selectResultSet.numberOfRows
     }

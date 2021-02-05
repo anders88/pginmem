@@ -62,40 +62,36 @@ class UpdateStatementTest {
 
     @Test
     fun updateMoreThanOnce() {
-        datasource.connection.use {
+        connection.use {
             it.createStatement().execute(
                 """
                create table mytable(id text, oneval text, twoval text)
                 """.trimIndent()
             )
-            it.commit()
-        }
-        datasource.connection.use { it.prepareStatement("insert into mytable(id) values(?)").use {
-                it.setString(1,"a")
+            it.prepareStatement("insert into mytable(id) values(?)").use {
+                it.setString(1, "a")
                 it.executeUpdate()
             }
-            it.commit()
-        }
-        datasource.connection.use { it.prepareStatement("update mytable set oneval = ? where id = ?").use {
-                it.setString(1,"one")
-                it.setString(2,"a")
+
+            it.prepareStatement("update mytable set oneval = ? where id = ?").use {
+                it.setString(1, "one")
+                it.setString(2, "a")
                 it.executeUpdate()
             }
-            it.commit()
-        }
-        datasource.connection.use { it.prepareStatement("update mytable set twoval = ? where id = ?").use {
+
+            it.prepareStatement("update mytable set twoval = ? where id = ?").use {
                 it.setString(1, "two")
                 it.setString(2, "a")
                 it.executeUpdate()
             }
-            it.commit()
-        }
-        datasource.connection.use { it.prepareStatement("select * from mytable").use {
+
+            it.prepareStatement("select * from mytable").use {
                 it.executeQuery().use {
                     assertThat(it.next()).isTrue()
                     assertThat(it.next()).isFalse()
                 }
             }
+
         }
     }
 }
