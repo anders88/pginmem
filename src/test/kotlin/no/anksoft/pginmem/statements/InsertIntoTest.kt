@@ -145,8 +145,17 @@ class InsertIntoTest {
                 ps.setString(2,"Darth")
                 ps.executeUpdate()
             }
-            conn.createStatement().execute("create table othertable(id text,name text)")
+            conn.createStatement().execute("create table othertable(id text,namx text)")
             conn.createStatement().execute("insert into othertable select id, name from mytable")
+
+            conn.prepareStatement("select namx from othertable").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("namx")).isEqualTo("Darth")
+                    assertThat(it.next()).isFalse()
+
+                }
+            }
 
         }
     }
