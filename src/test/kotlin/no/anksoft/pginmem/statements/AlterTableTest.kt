@@ -274,4 +274,19 @@ class AlterTableTest {
             }
         }
     }
+
+    @Test
+    fun alterUsingSet() {
+        connection.use { conn ->
+            conn.createStatement().use {
+                it.execute("create table mytable(id text,invalid bool)")
+            }
+            conn.createStatement().use {
+                it.execute("alter table mytable alter column invalid set default false")
+            }
+            conn.createStatement().use {
+                it.execute("alter table mytable alter column invalid set not null")
+            }
+        }
+    }
 }

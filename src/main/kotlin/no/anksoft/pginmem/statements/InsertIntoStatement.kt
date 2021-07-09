@@ -17,8 +17,13 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
 
     init {
         val cols:MutableList<Column> = mutableListOf()
-        statementAnalyzer.addIndex(4)
-        while (true) {
+        statementAnalyzer.addIndex(3)
+        val readCols:Boolean = if (statementAnalyzer.word() == "(") {
+            statementAnalyzer.addIndex(1)
+            true
+        } else false
+
+        while (readCols) {
             cols.add(statementAnalyzer.word()?.let {  tableForUpdate.findColumn(it)}?:throw SQLException("Unknown column ${statementAnalyzer.word()}"))
             statementAnalyzer.addIndex()
             if (statementAnalyzer.word() == ")") {
@@ -29,8 +34,8 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             }
             statementAnalyzer.addIndex()
         }
-        columns = cols
-        if (statementAnalyzer.addIndex().word() == "values") {
+        columns = if (readCols) cols else tableForUpdate.colums
+        if (statementAnalyzer.addIndex(if (readCols) 1 else 0).word() == "values") {
             this.linkedValues = readLinkedValues(statementAnalyzer)
             this.selectStatement = null
         } else {

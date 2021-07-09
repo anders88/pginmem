@@ -95,7 +95,9 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
             val readValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap())
             val newCol = column.setDefault(readValueFromExpression.valuegen)
             return replaceCol(table,column,newCol,null)
-
+        }
+        if (statementAnalyzer.word() == "set" && (statementAnalyzer.word(1) == "null" || (statementAnalyzer.word(1) == "not" && statementAnalyzer.word(2) == "null"))) {
+            return table
         }
         throw SQLException("Unknown alter column command ${statementAnalyzer.word()}")
     }

@@ -136,4 +136,19 @@ class InsertIntoTest {
         }
     }
 
+    @Test
+    fun insertIntoSelect() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text,name text)")
+            conn.prepareStatement("insert into mytable(id,name) values (?,?)").use { ps ->
+                ps.setString(1,"ida")
+                ps.setString(2,"Darth")
+                ps.executeUpdate()
+            }
+            conn.createStatement().execute("create table othertable(id text,name text)")
+            conn.createStatement().execute("insert into othertable select id, name from mytable")
+
+        }
+    }
+
 }
