@@ -9,6 +9,7 @@ import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.function.Consumer
 
 class SelectStatementTest {
     private val datasource = PgInMemDatasource()
@@ -501,6 +502,45 @@ class SelectStatementTest {
                     assertThat(it.next()).isFalse()
                 }
             }
+        }
+    }
+
+    @Test
+    fun columnValueAsSelect() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table customer(id int,name text)")
+            conn.createStatement().execute("create table custorder(customerid int, amount numeric)")
+            val createCustomer:(Pair<Int,String>)->Int = { inp ->
+                conn.prepareStatement("insert into customer(id,name) values (?,?)").use {
+                    it.setInt(1,inp.first)
+                    it.setString(2,inp.second)
+                    it.executeUpdate()
+                }
+            }
+            createCustomer.invoke(Pair(1,"Darth"))
+            createCustomer.invoke(Pair(2,"Luke"))
+            val createOrder:(Pair<Int,BigDecimal>)->Int = { inp ->
+                conn.prepareStatement("insert into custorder(customerid,amount) values (?,?)").use {
+                    it.setInt(1,inp.first)
+                    it.setBigDecimal(2,inp.second)
+                    it.executeUpdate()
+                }
+            }
+            createOrder.invoke(Pair(1, BigDecimal(40.0)))
+            createOrder.invoke(Pair(1,BigDecimal(2)))
+            createOrder.invoke(Pair(2,BigDecimal(80)))
+            val all:List<Pair<String,BigDecimal>> = conn.prepareStatement("select c.name, (select sum(o.amount) from custorder o where o.customerid = c.id) from customer c").use { statement ->
+                val res:MutableList<Pair<String,BigDecimal>> = mutableListOf()
+                statement.executeQuery().use {
+                    while (it.next()) {
+                        res.add(Pair(it.getString(1),it.getBigDecimal(2)))
+                    }
+                }
+                res
+            }
+            assertThat(all).hasSize(2)
+            assertThat(all.first { it.first == "Luke" }.second).isCloseTo(BigDecimal(80.0), Offset.offset(BigDecimal.valueOf(0.0001)))
+            assertThat(all.first { it.first == "Darth" }.second).isCloseTo(BigDecimal(42.0), Offset.offset(BigDecimal.valueOf(0.0001)))
         }
     }
 

@@ -43,6 +43,9 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             if (statementAnalyzer.word() == "(") {
                 statementAnalyzer.addIndex()
             }
+            if (statementAnalyzer.word() != "select") {
+                throw SQLException("Expected values or select in insert statament")
+            }
             this.selectStatement = SelectStatement(statementAnalyzer,dbTransaction)
         }
 

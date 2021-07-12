@@ -14,6 +14,8 @@ interface SelectRowProvider {
     fun readRow(rowno: Int):Row
     val limit:Int?
     val offset:Int
+
+    fun providerWithFixed(row:Row?):SelectRowProvider
 }
 
 private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
@@ -37,6 +39,7 @@ class TablesSelectRowProvider constructor(
     private val orderParts: List<OrderPart>,
     override val limit:Int?,
     override val offset: Int,
+    private val injectCells:List<Cell> = emptyList()
     ):SelectRowProvider {
 
     private val values:List<TableJoinRow> by lazy {
@@ -59,6 +62,7 @@ class TablesSelectRowProvider constructor(
                     cellsThisRow.addAll(tc)
                     rowidsThisRow.putAll(row.rowids)
                 }
+                cellsThisRow.addAll(injectCells)
                 if (whereClause.isMatch(cellsThisRow)) {
                     genrows.add(TableJoinRow(rowidsThisRow,cellsThisRow))
                 }
@@ -91,31 +95,32 @@ class TablesSelectRowProvider constructor(
         val myRow:TableJoinRow = values[rowno]
         return Row(myRow.cells,myRow.rowids)
     }
+
+    override fun providerWithFixed(row: Row?): SelectRowProvider {
+        if (row == null) {
+            return this
+        }
+        return TablesSelectRowProvider(
+            this.tables,
+            this.whereClause,
+            this.orderParts,
+            this.limit,
+            this.offset,
+            row.cells
+        )
+    }
 }
 
-class ImplicitOneRowSelectProvider:SelectRowProvider {
+class ImplicitOneRowSelectProvider(val injectedRow:Row?=null):SelectRowProvider {
     override fun size(): Int = 1
 
     override fun readRow(rowno: Int): Row {
-        return Row(emptyList())
+        return injectedRow?:Row(emptyList())
     }
 
     override val limit: Int? = null
     override val offset: Int = 0
+    override fun providerWithFixed(row: Row?): SelectRowProvider = ImplicitOneRowSelectProvider(row)
 
 }
 
-class AggregateSelectRowProvider:SelectRowProvider {
-    override fun size(): Int {
-        TODO("Not yet implemented")
-    }
-
-
-    override fun readRow(rowno: Int): Row {
-        TODO("Not yet implemented")
-    }
-
-    override val limit: Int? = null
-
-    override val offset: Int = 0
-}

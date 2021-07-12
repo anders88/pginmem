@@ -66,9 +66,30 @@ private class ValueGenFromDbCell(override val column: Column):ValueFromExpressio
 
 }
 
-private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,startOnWhereClauseBindingNo:Int):SelectAnalyze {
+
+class SelectColumnValue(val x:SelectAnalyze):ValueFromExpression {
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        val rowProvider = x.selectRowProvider.providerWithFixed(it.second)
+        val selectResultSet = SelectResultSet(
+            x.selectedColumns,
+            rowProvider,
+            it.first,
+            x.distinctFlag
+        )
+        if (selectResultSet.numberOfRows < 1) {
+            NullCellValue
+        } else {
+            selectResultSet.valueAt(1,0)
+        }
+    }
+
+    override val column: Column? = null
+
+}
+
+private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,startOnWhereClauseBindingNo:Int,givenTablesUsed:Map<String,Table>):SelectAnalyze {
     val fromInd = statementAnalyzer.indexOf("from")
-    val tablesUsed:Map<String,Table> = if (fromInd != -1) {
+    val myTablesUsed:Map<String,Table> = if (fromInd != -1) {
         val mappingTablesUsed:MutableMap<String,Table> = mutableMapOf()
         var tabind = fromInd+1
         while (!setOf("where","order","group",")").contains(statementAnalyzer.wordAt(tabind)?:"where")) {
@@ -87,6 +108,8 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         }
         mappingTablesUsed
     } else emptyMap()
+
+    val tablesUsed:Map<String,Table> = myTablesUsed + givenTablesUsed
 
     val aliasMapping:Map<String,String> = tablesUsed.mapValues { it.value.name }
 
@@ -151,6 +174,10 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                         throw SQLException("Only support count(*)")
                     }
                     BasicValueFromExpression({ IntegerCellValue(1) }, null)
+                } else if (statementAnalyzer.word() == "(") {
+                    val parantes = statementAnalyzer.extractParantesStepForward()?:throw SQLException("Could not read subquery in select")
+                    val innerSelect = analyseSelect(parantes,dbTransaction,startOnWhereClauseBindingNo,tablesUsed)
+                    SelectColumnValue(innerSelect)
                 } else statementAnalyzer.readValueFromExpression(dbTransaction, tablesUsed)
 
                 if (aggregateFunction != null) {
@@ -211,16 +238,15 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         Pair(limit,offset)
     } else Pair(null,0)
 
-    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(tablesUsed.values.toList(),whereClause,orderParts,limitRowsTo,offsetRows) else ImplicitOneRowSelectProvider()
+    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(myTablesUsed.values.toList(),whereClause,orderParts,limitRowsTo,offsetRows) else ImplicitOneRowSelectProvider()
 
 
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts,distinctFlag)
 
-
 }
 
 class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,startOnWhereClauseBindingNo: Int = 1):DbPreparedStatement() {
-    val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,startOnWhereClauseBindingNo)
+    val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,startOnWhereClauseBindingNo, emptyMap())
 
 
 
