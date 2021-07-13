@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.statements.select.*
@@ -87,7 +88,9 @@ class SelectColumnValue(val x:SelectAnalyze):ValueFromExpression {
 
 }
 
-private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,startOnWhereClauseBindingNo:Int,givenTablesUsed:Map<String,Table>):SelectAnalyze {
+
+
+private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,indexToUse: IndexToUse,givenTablesUsed:Map<String,Table>):SelectAnalyze {
     val fromInd = statementAnalyzer.indexOf("from")
     val myTablesUsed:Map<String,Table> = if (fromInd != -1) {
         val mappingTablesUsed:MutableMap<String,Table> = mutableMapOf()
@@ -176,7 +179,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                     BasicValueFromExpression({ IntegerCellValue(1) }, null)
                 } else if (statementAnalyzer.word() == "(") {
                     val parantes = statementAnalyzer.extractParantesStepForward()?:throw SQLException("Could not read subquery in select")
-                    val innerSelect = analyseSelect(parantes,dbTransaction,startOnWhereClauseBindingNo,tablesUsed)
+                    val innerSelect = analyseSelect(parantes,dbTransaction,indexToUse,tablesUsed)
                     SelectColumnValue(innerSelect)
                 } else statementAnalyzer.readValueFromExpression(dbTransaction, tablesUsed)
 
@@ -213,7 +216,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     while (!setOf("where","order","group").contains(statementAnalyzer.word()?:"where")) {
         statementAnalyzer.addIndex()
     }
-    val whereClause:WhereClause = createWhereClause(statementAnalyzer,tablesUsed,startOnWhereClauseBindingNo,dbTransaction)
+    val whereClause:WhereClause = createWhereClause(statementAnalyzer,tablesUsed,indexToUse,dbTransaction)
 
     while (statementAnalyzer.word()?:"order" != "order") {
         statementAnalyzer.addIndex()
@@ -245,8 +248,8 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
 
 }
 
-class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,startOnWhereClauseBindingNo: Int = 1):DbPreparedStatement() {
-    val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,startOnWhereClauseBindingNo, emptyMap())
+class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,indexToUse: IndexToUse= IndexToUse()):DbPreparedStatement() {
+    val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,indexToUse, emptyMap())
 
 
 
@@ -263,8 +266,8 @@ class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: D
         selectAnalyze.whereClause.registerBinding(parameterIndex,IntegerCellValue(x.toLong()))
     }
 
-    fun setSomething(parameterIndex: Int, x: CellValue) {
-        selectAnalyze.whereClause.registerBinding(parameterIndex,x)
+    fun setSomething(parameterIndex: Int, x: CellValue):Boolean {
+        return selectAnalyze.whereClause.registerBinding(parameterIndex,x)
     }
 
 }

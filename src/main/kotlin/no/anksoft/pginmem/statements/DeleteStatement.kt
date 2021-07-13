@@ -4,6 +4,7 @@ import no.anksoft.pginmem.Column
 import no.anksoft.pginmem.DbTransaction
 import no.anksoft.pginmem.StatementAnalyzer
 import no.anksoft.pginmem.Table
+import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.clauses.MatchAllClause
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
@@ -14,7 +15,8 @@ class DeleteStatement constructor(statementAnalyzer:StatementAnalyzer, private v
     private val tableForUpdate: Table = dbTransaction.tableForUpdate(statementAnalyzer.addIndex(2).word()?:throw SQLException("Expected tablename"))
     //private val whereClause:WhereClause = if (statementAnalyzer.size > 4  && statementAnalyzer.wordAt(3) == "where") createWhereClause(statementAnalyzer.subList(4,statementAnalyzer.size), listOf(tableForUpdate),1) else MatchAllClause()
     private val whereClause:WhereClause =
-        createWhereClause(statementAnalyzer.addIndex(), mapOf(Pair(tableForUpdate.name,tableForUpdate)),1,dbTransaction)
+        createWhereClause(statementAnalyzer.addIndex(), mapOf(Pair(tableForUpdate.name,tableForUpdate)),
+            IndexToUse(),dbTransaction)
 
     override fun setSomething(parameterIndex: Int, x: CellValue) {
         whereClause.registerBinding(parameterIndex,x)

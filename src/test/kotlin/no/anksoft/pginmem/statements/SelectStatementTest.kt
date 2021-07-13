@@ -544,4 +544,31 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun whereClauseWithInSelect() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+            conn.createStatement().execute("create table totable(id text)")
+
+            val insTable:(Pair<String,String>)->Unit = { pairval ->
+                conn.prepareStatement("insert into ${pairval.first} (id) values (?)").use {
+                    it.setString(1,pairval.second)
+                    it.executeUpdate()
+                }
+            }
+            insTable.invoke(Pair("mytable","one"))
+            insTable.invoke(Pair("mytable","two"))
+            insTable.invoke(Pair("mytable","three"))
+            insTable.invoke(Pair("totable","one"))
+
+            conn.prepareStatement("select id from mytable where id in (select id from totable)").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("one")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
 }

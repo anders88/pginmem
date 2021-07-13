@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.statements.select.SelectResultSet
@@ -44,7 +45,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
         val toPrepend:List<String> = listOf("select","*","from",table.name,table.name)
 
         val selectStatementAnalyzer = statementAnalyzer.extractSelect(toPrepend)
-        selectStatement = SelectStatement(selectStatementAnalyzer,dbTransaction,numBindingsBeforeWhere+1)
+        selectStatement = SelectStatement(selectStatementAnalyzer,dbTransaction,IndexToUse(numBindingsBeforeWhere+1))
 
         val tableAliasesMap:MutableMap<String,String> = mutableMapOf()
         selectStatement.selectAnalyze.selectedColumns.forEach { tableAliasesMap.putAll(it.tableAliases) }

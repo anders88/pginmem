@@ -6,12 +6,12 @@ import java.sql.SQLException
 
 
 
-fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,Table>,startOnIndex:Int,dbTransaction: DbTransaction):WhereClause {
+fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,Table>,indexToUse: IndexToUse,dbTransaction: DbTransaction):WhereClause {
     if (statementAnalyzer.word() != "where") {
         return MatchAllClause()
     }
     statementAnalyzer.addIndex()
-    val nextIndexToUse = IndexToUse(startOnIndex)
+    val nextIndexToUse = indexToUse
 
     return parseWhereClause(nextIndexToUse, statementAnalyzer, tables, dbTransaction)
 
@@ -54,7 +54,7 @@ private fun parseWhereClause(
 }
 
 
-class IndexToUse(private var index:Int) {
+class IndexToUse(private var index:Int=1) {
     fun takeInd():Int {
         val res = index
         index++

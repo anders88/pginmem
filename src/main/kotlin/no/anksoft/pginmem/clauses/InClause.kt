@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.statements.SelectStatement
 import no.anksoft.pginmem.values.CellValue
 import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
@@ -19,29 +20,36 @@ class InClause(
     tables: Map<String, Table>
 ):WhereClause {
     private val inValues:List<InItem>
+    private val selectStatement:SelectStatement?
 
     init {
         if (statementAnalyzer.addIndex().word() != "(") {
             throw SQLException("Expected ( in in")
         }
         val givenValue:MutableList<InItem> = mutableListOf()
-        while (true) {
-            statementAnalyzer.addIndex()
-            if (statementAnalyzer.word() == ")") {
-                break
-            }
-            if (statementAnalyzer.word() == ",") {
+        if (statementAnalyzer.word(1) == "select") {
+            val selectsa = statementAnalyzer.extractParantesStepForward()?:throw SQLException("Expected end of select")
+            selectStatement = SelectStatement(selectsa,dbTransaction,nextIndexToUse)
+        } else {
+            selectStatement = null
+            while (true) {
                 statementAnalyzer.addIndex()
-            }
-            val aword = statementAnalyzer.word()
+                if (statementAnalyzer.word() == ")") {
+                    break
+                }
+                if (statementAnalyzer.word() == ",") {
+                    statementAnalyzer.addIndex()
+                }
+                val aword = statementAnalyzer.word()
 
-            val inItem:InItem = if (aword == "?") {
-                InItem(nextIndexToUse.takeInd(),null)
-            } else {
-                val valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
-                InItem(null,valueFromExpression)
+                val inItem: InItem = if (aword == "?") {
+                    InItem(nextIndexToUse.takeInd(), null)
+                } else {
+                    val valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction, tables)
+                    InItem(null, valueFromExpression)
+                }
+                givenValue.add(inItem)
             }
-            givenValue.add(inItem)
         }
         inValues = givenValue
     }
@@ -51,6 +59,15 @@ class InClause(
             throw SQLException("Binding not registered")
         }
         val value:CellValue = leftValueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
+        if (selectStatement != null) {
+            val queryRes = selectStatement.internalExecuteQuery()
+            for (rowindex in 0 until queryRes.numberOfRows) {
+                val valueAt = queryRes.valueAt(1, rowindex)
+                if (valueAt == value) {
+                    return true
+                }
+            }
+        }
         for (initem in inValues) {
             val invalue:CellValue = initem.givenValue?:
                 initem.valueFromExpression?.valuegen?.invoke(Pair(dbTransaction,Row(cells)))?:
@@ -63,6 +80,9 @@ class InClause(
     }
 
     override fun registerBinding(index: Int, value: CellValue): Boolean {
+        if (selectStatement?.setSomething(index,value) == true) {
+            return true
+        }
         val inItem:InItem = inValues.firstOrNull { it.index == index }?:return false
         inItem.givenValue = value
         return true
