@@ -57,6 +57,26 @@ class UpdateStatementTest {
                     assertThat(it.getBoolean("boolval")).isTrue()
                 }
             }
+            conn.prepareStatement("select * from mytable where boolval = true").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+            conn.prepareStatement("select * from mytable where boolval is true").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+            conn.prepareStatement("select * from mytable where boolval is false").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isFalse()
+                }
+            }
+            conn.prepareStatement("select * from mytable where boolval is false and boolval is true").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isFalse()
+                }
+            }
         }
     }
 

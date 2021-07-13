@@ -571,4 +571,28 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun selectWithImplisitOneRow() {
+        connection.use { conn ->
+            conn.prepareStatement("select 'a' where 1 = 1").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("a")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun selectBindingsOutsideWhere() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+            conn.prepareStatement("select 'a' where not exists (select 1 from mytable)").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+        }
+    }
+
 }

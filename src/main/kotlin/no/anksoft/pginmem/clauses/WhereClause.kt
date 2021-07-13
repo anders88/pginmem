@@ -85,9 +85,16 @@ private fun readWhereClausePart(
                 statementAnalyzer.addIndex(2)
                 NotEqualCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
             }
-            statementAnalyzer.addIndex().word() == "null" -> IsNullClause(dbTransaction,leftValueFromExpression)
-            statementAnalyzer.word() == "not" && statementAnalyzer.addIndex()
-                .word() == "null" -> IsNotNullClause(dbTransaction,leftValueFromExpression)
+            statementAnalyzer.word(1) == "null" -> {
+                statementAnalyzer.addIndex()
+                IsNullClause(dbTransaction,leftValueFromExpression)
+            }
+            statementAnalyzer.word(1) == "not" && statementAnalyzer.word(2) == "null" -> {
+                statementAnalyzer.addIndex(2)
+                IsNotNullClause(dbTransaction,leftValueFromExpression)
+            }
+            statementAnalyzer.word(1) == "true" -> EqualCase(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+            statementAnalyzer.word(1) == "false" -> EqualCase(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
             else -> throw SQLException("Syntax error after is")
         }
         "in" -> InClause(dbTransaction,leftValueFromExpression, statementAnalyzer,nextIndexToUse,tables)

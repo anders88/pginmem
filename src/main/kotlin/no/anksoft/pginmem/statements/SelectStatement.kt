@@ -137,7 +137,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     } else {
         val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
         var selectcolindex = 0
-        while ((statementAnalyzer.word()?:"from") != "from") {
+        while (!setOf("from","where").contains(statementAnalyzer.word()?:"from")) {
             val aggregateFunction:AggregateFunction? = when (statementAnalyzer.word()) {
                 "max" -> MaxAggregateFunction()
                 "min" -> MinAggregateFunction()
