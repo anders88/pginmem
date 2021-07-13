@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.statements.SelectStatement
 import no.anksoft.pginmem.values.CellValue
 import java.sql.SQLException
 
@@ -71,6 +72,18 @@ private fun readWhereClausePart(
     nextIndexToUse: IndexToUse,
     dbTransaction: DbTransaction
 ): WhereClause {
+
+    if (statementAnalyzer.word() == "exists" || (statementAnalyzer.word() == "not" && statementAnalyzer.word(1) == "exists")) {
+        val doesExsists = statementAnalyzer.word() == "exists"
+        statementAnalyzer.addIndex(if (doesExsists) 1 else 2)
+        if (statementAnalyzer.word() != "(") {
+            throw SQLException("Expected ( after exsists")
+        }
+        val innerSelectAn =
+            statementAnalyzer.extractParantesStepForward() ?: throw SQLException("Unexpected end after exsists")
+        val selectStatement = SelectStatement(innerSelectAn, dbTransaction, nextIndexToUse)
+        return ExsistsClause(selectStatement,doesExsists)
+    }
 
     val leftValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
 

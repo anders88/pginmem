@@ -111,16 +111,22 @@ class TablesSelectRowProvider constructor(
     }
 }
 
-class ImplicitOneRowSelectProvider(val injectedRow:Row?=null):SelectRowProvider {
-    override fun size(): Int = 1
+class ImplicitOneRowSelectProvider(val whereClause: WhereClause,val injectedRow:Row?=null):SelectRowProvider {
+    private val rowExsists:Boolean by lazy {
+        whereClause.isMatch(injectedRow?.cells?: emptyList())
+    }
+    override fun size(): Int = if (rowExsists) 1 else 0
 
     override fun readRow(rowno: Int): Row {
+        if (!rowExsists) {
+            throw SQLException("No row found")
+        }
         return injectedRow?:Row(emptyList())
     }
 
     override val limit: Int? = null
     override val offset: Int = 0
-    override fun providerWithFixed(row: Row?): SelectRowProvider = ImplicitOneRowSelectProvider(row)
+    override fun providerWithFixed(row: Row?): SelectRowProvider = ImplicitOneRowSelectProvider(whereClause,row)
 
 }
 

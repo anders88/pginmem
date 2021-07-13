@@ -574,6 +574,13 @@ class SelectStatementTest {
     @Test
     fun selectWithImplisitOneRow() {
         connection.use { conn ->
+            conn.prepareStatement("select 'a' where 1 <> 1").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+        connection.use { conn ->
             conn.prepareStatement("select 'a' where 1 = 1").use { ps ->
                 ps.executeQuery().use {
                     assertThat(it.next()).isTrue()
