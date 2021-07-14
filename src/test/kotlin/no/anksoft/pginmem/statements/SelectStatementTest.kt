@@ -641,4 +641,16 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun jsonConveringValue() {
+        connection.use { conn ->
+            conn.prepareStatement("""select '{"obje": {"value":"42"}}'::json->'obje'->>'value'""").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("42")
+                }
+
+            }
+        }
+    }
 }

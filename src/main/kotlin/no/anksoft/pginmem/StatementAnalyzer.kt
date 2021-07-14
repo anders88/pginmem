@@ -137,11 +137,30 @@ private class ReadJsonProperty(val inputValue:ValueFromExpression,jsonPropertyTe
 
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
         val startVal:CellValue = inputValue.valuegen.invoke(it)
-        if (startVal !is StringCellValue) {
-            throw SQLException("Expected string as json")
+        val jsonObject:JsonObject = when {
+            startVal is JsonCellValue -> startVal.myvalue
+            startVal is StringCellValue -> JsonParser.parseToObject(startVal.myValue)
+            else -> throw SQLException("Expected string as json")
         }
-        val jsonObject = JsonParser.parseToObject(startVal.myValue)
         StringCellValue(jsonObject.requiredString(jsonProperty))
+    }
+
+    override val column: Column? = null
+
+    override fun registerBinding(index:Int,value: CellValue):Boolean = false
+}
+
+private class ReadJsonObject(val inputValue:ValueFromExpression,jsonPropertyText:String?):ValueFromExpression {
+    private val jsonProperty:String = readJsonProperty(jsonPropertyText)
+
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        val startVal:CellValue = inputValue.valuegen.invoke(it)
+        val jsonObject:JsonObject = when {
+            startVal is JsonCellValue -> startVal.myvalue
+            startVal is StringCellValue -> JsonParser.parseToObject(startVal.myValue)
+            else -> throw SQLException("Expected string as json")
+        }
+        JsonCellValue(jsonObject.requiredObject(jsonProperty))
     }
 
     override val column: Column? = null
@@ -323,7 +342,7 @@ class StatementAnalyzer {
 
     fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,Table>,indexToUse: IndexToUse?):ValueFromExpression {
         val aword:String = word()?:throw SQLException("Unexpected end of statement")
-        val toReturn:ValueFromExpression = when {
+        var toReturn:ValueFromExpression = when {
             (aword == "now" && word(1) == "(" && word(2) == ")") -> {
                     addIndex(3)
                     BasicValueFromExpression({ DateTimeCellValue(LocalDateTime.now()) },null)
@@ -432,16 +451,30 @@ class StatementAnalyzer {
                 BindingValueFromExpression(indexToUse)
             else -> readColumnValue(tables,aword)
         }
-        if (word(1) == "::") {
-            if (word(2) == "json" && word(3) == "->>") {
-                addIndex(4)
-                return ReadJsonProperty(toReturn, word())
+        while (true) {
+            toReturn = when(word(1)) {
+                "::" -> {
+                            /*if (word(2) == "json" && word(3) == "->>") {
+                            addIndex(4)
+                            return ReadJsonProperty(toReturn, word())
+                        }*/
+                    val coltypeToConvToText = word(2) ?: throw SQLException("Unexpected end of statement")
+                    val columnType: ColumnType =
+                        ColumnType.values().firstOrNull { it.matchesColumnType(coltypeToConvToText) }
+                            ?: throw SQLException("Unknown convert to $$coltypeToConvToText")
+                    addIndex(2)
+                    ConvertToColtype(toReturn, columnType)
+                }
+                "->>" -> {
+                    addIndex(2)
+                    ReadJsonProperty(toReturn,word())
+                }
+                "->" -> {
+                    addIndex(2)
+                    ReadJsonObject(toReturn,word())
+                }
+                else -> break
             }
-            val coltypeToConvToText = word(2) ?: throw SQLException("Unexpected end of statement")
-            val columnType: ColumnType = ColumnType.values().firstOrNull { it.matchesColumnType(coltypeToConvToText) }
-                ?: throw SQLException("Unknown convert to $$coltypeToConvToText")
-            addIndex(2)
-            return ConvertToColtype(toReturn, columnType)
         }
         return toReturn
     }

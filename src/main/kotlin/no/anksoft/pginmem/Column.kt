@@ -2,6 +2,9 @@ package no.anksoft.pginmem
 
 import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.values.*
+import org.jsonbuddy.JsonObject
+import org.jsonbuddy.JsonValue
+import org.jsonbuddy.parse.JsonParser
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
@@ -10,7 +13,7 @@ import java.time.LocalDateTime
 import java.util.*
 
 enum class ColumnType(private val altNames:Set<String> = emptySet()) {
-    TEXT(setOf("json","jsonb")), TIMESTAMP,DATE,INTEGER(setOf("int","bigint")),BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL;
+    TEXT, TIMESTAMP,DATE,INTEGER(setOf("int","bigint")),BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL,JSON(setOf("jsonb"));
 
     fun validateValue(value:CellValue):CellValue {
         if (value == NullCellValue) {
@@ -33,6 +36,11 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             }
             BYTEA -> if (value is ByteArrayCellValue) value else null
             SERIAL -> if (value is IntegerCellValue) value else null
+            JSON -> when {
+                (value is JsonCellValue) -> value
+                (value is StringCellValue) -> JsonCellValue(JsonParser.parseToObject(value.myValue))
+                else -> null
+            }
         }
         if (returnValue == null) {
             throw SQLException("Binding value not valid for $this")
@@ -45,40 +53,6 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
         return this.altNames.contains(colTypeText)
     }
 
-    fun convertValue(to:ColumnType,value:Any?):Any? {
-        if (value == null) {
-            return null
-        }
-        return when (this) {
-            TEXT -> when(to) {
-                TEXT -> value
-                TIMESTAMP -> LocalDateTime.parse(value.toString())
-                DATE -> LocalDate.parse(value.toString()).atStartOfDay()
-                INTEGER -> value.toString().toLong()
-                BOOLEAN -> if (value == true) true else false
-                NUMERIC -> BigDecimal.valueOf(value.toString().toDouble())
-                BYTEA -> throw SQLException("Bytea conversion not supported")
-                SERIAL -> throw SQLException("Serial conversion not supported")
-            }
-            TIMESTAMP -> TODO()
-            DATE -> TODO()
-            INTEGER -> TODO()
-            BOOLEAN -> return when(to) {
-                TEXT -> return value.toString()
-                TIMESTAMP -> TODO()
-                DATE -> TODO()
-                INTEGER -> if (value == true) 1 else 0
-                BOOLEAN -> value
-                NUMERIC -> if (value == true) BigDecimal.ONE else BigDecimal.ZERO
-                BYTEA -> TODO()
-                SERIAL -> TODO()
-            }
-            NUMERIC -> TODO()
-            BYTEA -> throw SQLException("Bytea conversion not supported")
-            SERIAL -> throw SQLException("Serial conversion not supported")
-            NUMERIC -> TODO()
-        }
-    }
 
     fun convertToMe(cellValue: CellValue):CellValue {
         if (cellValue == NullCellValue) {
@@ -88,6 +62,7 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             TEXT -> cellValue.valueAsText()
             INTEGER -> cellValue.valueAsInteger()
             BOOLEAN -> cellValue.valueAsBoolean()
+            JSON -> if (cellValue is StringCellValue) JsonCellValue(JsonParser.parseToObject(cellValue.myValue)) else throw SQLException("Cannot convert to Json")
             else -> throw SQLException("Conversion not supported for ${this.name}")
         }
     }

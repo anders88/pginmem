@@ -260,27 +260,19 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
 
 }
 
-class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,indexToUse: IndexToUse= IndexToUse()):DbPreparedStatement() {
+class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,indexToUse: IndexToUse= IndexToUse()):StatementWithSet() {
     val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,indexToUse, emptyMap())
 
     fun registerBinding(index:Int,value: CellValue):Boolean = selectAnalyze.registerBinding(index,value)
 
+    override fun setSomething(parameterIndex: Int, x: CellValue) {
+        registerBinding(parameterIndex,x)
+    }
 
     override fun executeQuery(): ResultSet = internalExecuteQuery()
 
     fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider,dbTransaction,selectAnalyze.distinctFlag)
 
-    override fun setString(parameterIndex: Int, x: String?) {
-        registerBinding(parameterIndex,if (x == null) NullCellValue else StringCellValue(x))
-    }
-
-    override fun setInt(parameterIndex: Int, x: Int) {
-        registerBinding(parameterIndex,IntegerCellValue(x.toLong()))
-    }
-
-    override fun setTimestamp(parameterIndex: Int, x: Timestamp?) {
-        registerBinding(parameterIndex,x?.let { DateTimeCellValue(it.toLocalDateTime()) }?:NullCellValue)
-    }
 
 
 }
