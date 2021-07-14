@@ -3,6 +3,7 @@ package no.anksoft.pginmem.statements
 import no.anksoft.pginmem.DbPreparedStatement
 import no.anksoft.pginmem.values.*
 import java.math.BigDecimal
+import java.sql.Date
 import java.sql.Timestamp
 
 abstract class StatementWithSet:DbPreparedStatement() {
@@ -14,6 +15,10 @@ abstract class StatementWithSet:DbPreparedStatement() {
 
     override fun setTimestamp(parameterIndex: Int, x: Timestamp?) {
         setSomething(parameterIndex,x?.let { DateTimeCellValue(it.toLocalDateTime()) }?:NullCellValue)
+    }
+
+    override fun setDate(parameterIndex: Int, x: Date?) {
+        setSomething(parameterIndex,x?.let { DateCellValue(it.toLocalDate()) }?:NullCellValue)
     }
 
     override fun setInt(parameterIndex: Int, x: Int) {

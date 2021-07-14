@@ -18,7 +18,11 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
         }
         val returnValue:CellValue? = when (this) {
             TEXT -> if (value is StringCellValue) value else null
-            TIMESTAMP -> if (value is DateTimeCellValue) value else null
+            TIMESTAMP -> when {
+                (value is DateTimeCellValue) -> value
+                (value is DateCellValue) -> value.valueAsTimestamp()
+                else -> null
+            }
             DATE -> if (value is DateCellValue) value else null
             INTEGER -> if (value is IntegerCellValue) value else null
             BOOLEAN -> if (value is BooleanCellValue) value else null

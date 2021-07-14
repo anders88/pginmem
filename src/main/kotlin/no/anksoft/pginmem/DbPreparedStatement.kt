@@ -419,11 +419,11 @@ abstract class DbPreparedStatement():PreparedStatement {
     }
 
     override fun setDate(parameterIndex: Int, x: Date?) {
-        logger.warn("Base setDate")
+        logger.warn("Base setDate only date")
     }
 
     override fun setDate(parameterIndex: Int, x: Date?, cal: Calendar?) {
-        logger.warn("Base setDate")
+        logger.warn("Base setDate with calendar")
     }
 
     override fun setTime(parameterIndex: Int, x: Time?) {
