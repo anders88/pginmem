@@ -160,4 +160,27 @@ class InsertIntoTest {
         }
     }
 
+    @Test
+    fun insertWithSelectExsists() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+            val insertStatement:(String)->Unit = { keyval ->
+                conn.prepareStatement("insert into mytable(id) select ? where not exists (select 1 from mytable where id = ?)").use { ps ->
+                    ps.setString(1,keyval)
+                    ps.setString(2,keyval)
+                    ps.executeUpdate()
+                }
+            }
+            insertStatement.invoke("a")
+            insertStatement.invoke("a")
+            insertStatement.invoke("b")
+            conn.prepareStatement("select count(*) from mytable").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt(1)).isEqualTo(2)
+                }
+            }
+        }
+    }
+
 }

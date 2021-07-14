@@ -428,10 +428,8 @@ class StatementAnalyzer {
                 }
                 LowerExpression(fromExpression)
             }
-            aword == "?" -> {
-                addIndex()
+            aword == "?" ->
                 BindingValueFromExpression(indexToUse)
-            }
             else -> readColumnValue(tables,aword)
         }
         if (word(1) == "::") {
