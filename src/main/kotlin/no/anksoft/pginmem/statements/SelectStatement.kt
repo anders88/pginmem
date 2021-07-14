@@ -251,7 +251,9 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
 class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,indexToUse: IndexToUse= IndexToUse()):DbPreparedStatement() {
     val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,indexToUse, emptyMap())
 
-
+    fun registerBinding(index:Int,value: CellValue):Boolean {
+        return selectAnalyze.whereClause.registerBinding(index,value)
+    }
 
 
     override fun executeQuery(): ResultSet = internalExecuteQuery()
@@ -259,15 +261,11 @@ class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: D
     fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider,dbTransaction,selectAnalyze.distinctFlag)
 
     override fun setString(parameterIndex: Int, x: String?) {
-        selectAnalyze.whereClause.registerBinding(parameterIndex,if (x == null) NullCellValue else StringCellValue(x))
+        registerBinding(parameterIndex,if (x == null) NullCellValue else StringCellValue(x))
     }
 
     override fun setInt(parameterIndex: Int, x: Int) {
-        selectAnalyze.whereClause.registerBinding(parameterIndex,IntegerCellValue(x.toLong()))
-    }
-
-    fun setSomething(parameterIndex: Int, x: CellValue):Boolean {
-        return selectAnalyze.whereClause.registerBinding(parameterIndex,x)
+        registerBinding(parameterIndex,IntegerCellValue(x.toLong()))
     }
 
 }

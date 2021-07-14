@@ -81,7 +81,7 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
 
     override fun setSomething(parameterIndex: Int, x: CellValue) {
         if (selectStatement != null) {
-            selectStatement.setSomething(parameterIndex,x)
+            selectStatement.registerBinding(parameterIndex, x)
             return
         }
         val linkedValue:LinkedValue = linkedValues.firstOrNull { it.index == parameterIndex }?:throw SQLException("Unknown binding index $parameterIndex")

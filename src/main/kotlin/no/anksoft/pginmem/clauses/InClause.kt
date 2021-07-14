@@ -80,7 +80,7 @@ class InClause(
     }
 
     override fun registerBinding(index: Int, value: CellValue): Boolean {
-        if (selectStatement?.setSomething(index,value) == true) {
+        if (selectStatement?.registerBinding(index, value) == true) {
             return true
         }
         val inItem:InItem = inValues.firstOrNull { it.index == index }?:return false

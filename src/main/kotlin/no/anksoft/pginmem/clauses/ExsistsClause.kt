@@ -11,6 +11,6 @@ class ExsistsClause(val selectStatement: SelectStatement,val doesExsists:Boolean
     }
 
     override fun registerBinding(index: Int, value: CellValue): Boolean {
-        return false
+        return selectStatement.registerBinding(index,value)
     }
 }

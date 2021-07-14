@@ -2,8 +2,6 @@ package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.*
 import no.anksoft.pginmem.clauses.IndexToUse
-import no.anksoft.pginmem.clauses.WhereClause
-import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.statements.select.SelectResultSet
 import no.anksoft.pginmem.values.CellValue
 import no.anksoft.pginmem.values.NullCellValue
@@ -84,7 +82,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
 
     override fun setSomething(parameterIndex: Int, x: CellValue) {
         if (parameterIndex > numBindingsBeforeWhere) {
-            selectStatement.setSomething(parameterIndex,x)
+            selectStatement.registerBinding(parameterIndex, x)
             return
         }
             val updatedValue = toUpdateByBinding[parameterIndex-1].column.columnType.validateValue(x)

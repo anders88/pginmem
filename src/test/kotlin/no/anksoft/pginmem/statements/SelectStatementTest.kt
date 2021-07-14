@@ -591,10 +591,27 @@ class SelectStatementTest {
     }
 
     @Test
-    fun selectBindingsOutsideWhere() {
+    fun selectWithExsists() {
         connection.use { conn ->
             conn.createStatement().execute("create table mytable(id text)")
             conn.prepareStatement("select 'a' where not exists (select 1 from mytable)").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun selectBindingsOutsideWhere() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"a")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select 'a' where not exists (select 1 from mytable where id = ?)").use { ps ->
+                ps.setString(1,"b")
                 ps.executeQuery().use {
                     assertThat(it.next()).isTrue()
                 }
