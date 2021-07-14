@@ -63,7 +63,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
                 updateByBindings.add(CellToUpdateByBinding(column))
                 statementAnalyzer.addIndex()
             } else {
-                val function = statementAnalyzer.readValueFromExpression(dbTransaction,tableAliases)
+                val function = statementAnalyzer.readValueFromExpression(dbTransaction,tableAliases,null)
                 statementAnalyzer.addIndex()
                 toUpdateByFunctions.add(CellToUpdateByFunction(column,function))
             }

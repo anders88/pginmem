@@ -45,7 +45,7 @@ class InClause(
                 val inItem: InItem = if (aword == "?") {
                     InItem(nextIndexToUse.takeInd(), null)
                 } else {
-                    val valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction, tables)
+                    val valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction, tables,nextIndexToUse)
                     InItem(null, valueFromExpression)
                 }
                 givenValue.add(inItem)

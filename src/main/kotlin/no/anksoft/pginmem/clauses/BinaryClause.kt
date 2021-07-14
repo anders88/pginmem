@@ -25,7 +25,7 @@ abstract class BinaryClause(
             this.rightValue = null
             this.expectedIndex = expectedIndex.takeInd()
         } else {
-            this.rightValue = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
+            this.rightValue = statementAnalyzer.readValueFromExpression(dbTransaction,tables,expectedIndex)
             this.isRegistered = true
             this.expectedIndex = null
         }

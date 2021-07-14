@@ -1,5 +1,6 @@
 package no.anksoft.pginmem
 
+import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.values.*
 import java.math.BigDecimal
 import java.sql.SQLException
@@ -108,7 +109,7 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
                 }
                 (statementAnalyzer.word() == "default") -> {
                     statementAnalyzer.addIndex()
-                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap()).valuegen
+                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap(), null).valuegen
                 }
                 else -> null
             }

@@ -605,15 +605,37 @@ class SelectStatementTest {
     @Test
     fun selectBindingsOutsideWhere() {
         connection.use { conn ->
-            conn.createStatement().execute("create table mytable(id text)")
-            conn.prepareStatement("insert into mytable(id) values (?)").use {
-                it.setString(1,"a")
-                it.executeUpdate()
+            conn.prepareStatement("select ?").use { ps ->
+                ps.setString(1,"answer")
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("answer")
+                }
             }
+            conn.createStatement().execute("create table mytable(id text)")
+            val insStatement:(String)->Unit = { idval ->
+                conn.prepareStatement("insert into mytable(id) values (?)").use {
+                    it.setString(1, idval)
+                    it.executeUpdate()
+                }
+            }
+            insStatement.invoke("a")
+            insStatement.invoke("b")
             conn.prepareStatement("select 'a' where not exists (select 1 from mytable where id = ?)").use { ps ->
+                ps.setString(1,"c")
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+            conn.prepareStatement("select (select a.id from mytable a where a.id = ?) from mytable b").use { ps ->
                 ps.setString(1,"b")
                 ps.executeQuery().use {
                     assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("b")
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("b")
+                    assertThat(it.next()).isFalse()
+
                 }
             }
         }

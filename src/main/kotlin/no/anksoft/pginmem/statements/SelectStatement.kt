@@ -5,12 +5,10 @@ import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.statements.select.*
-import no.anksoft.pginmem.values.CellValue
-import no.anksoft.pginmem.values.IntegerCellValue
-import no.anksoft.pginmem.values.NullCellValue
-import no.anksoft.pginmem.values.StringCellValue
+import no.anksoft.pginmem.values.*
 import java.sql.ResultSet
 import java.sql.SQLException
+import java.sql.Timestamp
 
 class OrderPart(val column: Column,val ascending:Boolean,val nullsFirst:Boolean)
 
@@ -58,24 +56,36 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
     return orderPats
 }
 
-class SelectAnalyze constructor(val selectedColumns:List<SelectColumnProvider>,val selectRowProvider: SelectRowProvider,val whereClause: WhereClause,val orderParts:List<OrderPart>,val distinctFlag:Boolean)
+class SelectAnalyze constructor(
+    val selectedColumns:List<SelectColumnProvider>,
+    val selectRowProvider: SelectRowProvider,val
+    whereClause: WhereClause,val orderParts:List<OrderPart>,val distinctFlag:Boolean) {
+
+    fun registerBinding(index:Int,value: CellValue):Boolean {
+        for (sc in selectedColumns) {
+            if (sc.valueFromExpression.registerBinding(index,value)) return true
+        }
+        return whereClause.registerBinding(index,value)
+    }
+}
 
 private class ValueGenFromDbCell(override val column: Column):ValueFromExpression {
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
         it.second?.cells?.firstOrNull { it.column == column }?.value?:NullCellValue
     }
 
+    override fun registerBinding(index:Int,value: CellValue):Boolean = false
 }
 
 
-class SelectColumnValue(val x:SelectAnalyze):ValueFromExpression {
+class SelectColumnValue(val selectAnalyze:SelectAnalyze):ValueFromExpression {
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val rowProvider = x.selectRowProvider.providerWithFixed(it.second)
+        val rowProvider = selectAnalyze.selectRowProvider.providerWithFixed(it.second)
         val selectResultSet = SelectResultSet(
-            x.selectedColumns,
+            selectAnalyze.selectedColumns,
             rowProvider,
             it.first,
-            x.distinctFlag
+            selectAnalyze.distinctFlag
         )
         if (selectResultSet.numberOfRows < 1) {
             NullCellValue
@@ -85,6 +95,8 @@ class SelectColumnValue(val x:SelectAnalyze):ValueFromExpression {
     }
 
     override val column: Column? = null
+
+    override fun registerBinding(index:Int,value: CellValue):Boolean = selectAnalyze.registerBinding(index,value)
 
 }
 
@@ -181,7 +193,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                     val parantes = statementAnalyzer.extractParantesStepForward()?:throw SQLException("Could not read subquery in select")
                     val innerSelect = analyseSelect(parantes,dbTransaction,indexToUse,tablesUsed)
                     SelectColumnValue(innerSelect)
-                } else statementAnalyzer.readValueFromExpression(dbTransaction, tablesUsed)
+                } else statementAnalyzer.readValueFromExpression(dbTransaction, tablesUsed,indexToUse)
 
                 if (aggregateFunction != null) {
                     if (statementAnalyzer.addIndex().word() != ")") {
@@ -251,9 +263,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
 class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,indexToUse: IndexToUse= IndexToUse()):DbPreparedStatement() {
     val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,indexToUse, emptyMap())
 
-    fun registerBinding(index:Int,value: CellValue):Boolean {
-        return selectAnalyze.whereClause.registerBinding(index,value)
-    }
+    fun registerBinding(index:Int,value: CellValue):Boolean = selectAnalyze.registerBinding(index,value)
 
 
     override fun executeQuery(): ResultSet = internalExecuteQuery()
@@ -267,5 +277,10 @@ class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: D
     override fun setInt(parameterIndex: Int, x: Int) {
         registerBinding(parameterIndex,IntegerCellValue(x.toLong()))
     }
+
+    override fun setTimestamp(parameterIndex: Int, x: Timestamp?) {
+        registerBinding(parameterIndex,x?.let { DateTimeCellValue(it.toLocalDateTime()) }?:NullCellValue)
+    }
+
 
 }

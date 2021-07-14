@@ -85,7 +85,7 @@ private fun readWhereClausePart(
         return ExsistsClause(selectStatement,doesExsists)
     }
 
-    val leftValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables)
+    val leftValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables,nextIndexToUse)
 
     statementAnalyzer.addIndex()
     return when (statementAnalyzer.word()) {

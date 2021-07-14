@@ -84,7 +84,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
 
             val sourceValue:ValueFromExpression? = if ( statementAnalyzer.word(1) == "using") {
                 statementAnalyzer.addIndex(2)
-                statementAnalyzer.readValueFromExpression(dbTransaction,mapOf(Pair(table.name,table)))
+                statementAnalyzer.readValueFromExpression(dbTransaction,mapOf(Pair(table.name,table)),null)
             } else null
             val newColumn = column.changeColumnType(newColumnType)
 
@@ -92,7 +92,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         }
         if (statementAnalyzer.word() == "set" && statementAnalyzer.word(1) == "default") {
             statementAnalyzer.addIndex(2)
-            val readValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap())
+            val readValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap(),null)
             val newCol = column.setDefault(readValueFromExpression.valuegen)
             return replaceCol(table,column,newCol,null)
         }

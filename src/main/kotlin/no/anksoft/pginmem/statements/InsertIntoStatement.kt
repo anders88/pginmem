@@ -65,7 +65,8 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             } else {
                 val value = statementAnalyzer.readValueFromExpression(
                     dbTransaction,
-                    mapOf(Pair(tableForUpdate.name, tableForUpdate))
+                    mapOf(Pair(tableForUpdate.name, tableForUpdate)),
+                    null
                 )
                     ?: throw SQLException("Could not read value in statement")
                 LinkedValue(columns[i], null, value.valuegen)

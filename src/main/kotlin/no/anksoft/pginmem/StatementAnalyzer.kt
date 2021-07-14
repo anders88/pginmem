@@ -1,5 +1,6 @@
 package no.anksoft.pginmem
 
+import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.statements.select.SelectResultSet
 import no.anksoft.pginmem.values.*
 import org.jsonbuddy.JsonObject
@@ -94,13 +95,35 @@ private fun splitStringToWords(sqlinp:String):List<String> {
 interface ValueFromExpression {
     val valuegen: ((Pair<DbTransaction, Row?>) -> CellValue)
     val column: Column?
+    fun registerBinding(index:Int,value: CellValue):Boolean
 }
 
 
 class BasicValueFromExpression(
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue,
     override val column: Column?
-) :ValueFromExpression
+) :ValueFromExpression {
+    override fun registerBinding(index:Int,value: CellValue):Boolean = false
+}
+
+class BindingValueFromExpression(indexToUse: IndexToUse?):ValueFromExpression {
+    private val expectedIndex:Int = indexToUse?.takeInd()?:throw SQLException("Cannot use binding here")
+    private var cellValue:CellValue? = null
+
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        cellValue?:throw SQLException("Binding not set for binding $expectedIndex")
+    }
+
+    override val column: Column? = null
+
+    override fun registerBinding(index: Int, value: CellValue): Boolean {
+        if (index == expectedIndex) {
+            cellValue = value
+            return true
+        }
+        return false
+    }
+}
 
 private fun readJsonProperty(input:String?):String {
     if (!(input?.startsWith("'") == true && input.endsWith("'") && input.length >= 3)) {
@@ -122,6 +145,8 @@ private class ReadJsonProperty(val inputValue:ValueFromExpression,jsonPropertyTe
     }
 
     override val column: Column? = null
+
+    override fun registerBinding(index:Int,value: CellValue):Boolean = false
 }
 
 private class ConvertToColtype(val inputValue: ValueFromExpression,val columnType: ColumnType):ValueFromExpression {
@@ -132,6 +157,7 @@ private class ConvertToColtype(val inputValue: ValueFromExpression,val columnTyp
     }
 
     override val column: Column? = null
+    override fun registerBinding(index:Int,value: CellValue):Boolean = false
 }
 
 private class CoalesceValue(val coalvalues:List<ValueFromExpression>):ValueFromExpression {
@@ -148,6 +174,14 @@ private class CoalesceValue(val coalvalues:List<ValueFromExpression>):ValueFromE
     }
 
     override val column: Column? = null
+    override fun registerBinding(index:Int,value: CellValue):Boolean {
+        for (vfe in coalvalues) {
+            if (vfe.registerBinding(index,value)) {
+                return true
+            }
+        }
+        return false
+    }
 }
 
 private fun convertToJavaDateFormat(sqlFormat:String):DateTimeFormatter {
@@ -176,6 +210,7 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
     }
 
     override val column: Column? = null
+    override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
 }
 
 private class LowerExpression(val startValue:ValueFromExpression):ValueFromExpression {
@@ -185,6 +220,7 @@ private class LowerExpression(val startValue:ValueFromExpression):ValueFromExpre
     }
 
     override val column: Column? = null
+    override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
 
 }
 
@@ -285,7 +321,7 @@ class StatementAnalyzer {
     val size: Int
         get() = words.size
 
-    fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,Table>):ValueFromExpression {
+    fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,Table>,indexToUse: IndexToUse?):ValueFromExpression {
         val aword:String = word()?:throw SQLException("Unexpected end of statement")
         val toReturn:ValueFromExpression = when {
             (aword == "now" && word(1) == "(" && word(2) == ")") -> {
@@ -346,7 +382,7 @@ class StatementAnalyzer {
                 } while (parcount > 0)
                 val parentsWords = words.subList(currentIndex+1,currentIndex+toAdd)
                 currentIndex = currentIndex+toAdd
-                StatementAnalyzer(parentsWords).readValueFromExpression(dbTransaction,tables)
+                StatementAnalyzer(parentsWords).readValueFromExpression(dbTransaction,tables,indexToUse)
             }
             aword == "coalesce" -> {
                 if (addIndex().word() != "(") {
@@ -355,7 +391,7 @@ class StatementAnalyzer {
                 val coalvalues:MutableList<ValueFromExpression> = mutableListOf()
                 while (true) {
                     addIndex()
-                    val nextVal = readValueFromExpression(dbTransaction,tables)
+                    val nextVal = readValueFromExpression(dbTransaction,tables,indexToUse)
                     coalvalues.add(nextVal)
                     val nextWord = addIndex().word()
                     when (nextWord) {
@@ -371,7 +407,7 @@ class StatementAnalyzer {
                     throw SQLException("Expected ( after to_date")
                 }
                 addIndex()
-                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables)
+                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables,indexToUse)
                 if (addIndex().word() != ",") {
                     throw SQLException("Expected , after to_date")
                 }
@@ -386,13 +422,16 @@ class StatementAnalyzer {
                     throw SQLException("Expected ( after lower")
                 }
                 addIndex()
-                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables)
+                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables,indexToUse)
                 if (addIndex().word() != ")") {
                     throw SQLException("Expected ) after lower")
                 }
                 LowerExpression(fromExpression)
             }
-
+            aword == "?" -> {
+                addIndex()
+                BindingValueFromExpression(indexToUse)
+            }
             else -> readColumnValue(tables,aword)
         }
         if (word(1) == "::") {
