@@ -41,7 +41,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
         }
         val nullsFirst:Boolean = if (statementAnalyzer.word() == "nulls") {
             statementAnalyzer.addIndex()
-            if (!setOf("first","last").contains(statementAnalyzer.addIndex().word())) {
+            if (!setOf("first","last").contains(statementAnalyzer.word())) {
                 throw SQLException("Expected first or last")
             }
             val res = (statementAnalyzer.word() == "first")

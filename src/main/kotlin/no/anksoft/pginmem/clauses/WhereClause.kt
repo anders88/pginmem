@@ -91,7 +91,9 @@ private fun readWhereClausePart(
     return when (statementAnalyzer.word()) {
         "=" -> EqualCase(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         ">" -> GreaterThanCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+        ">=" -> GreaterThanOrEqualCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "<" -> LessThanCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+        "<=" -> LessThanOrEqualCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "<>" -> NotEqualCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "is" -> when {
             statementAnalyzer.word(1) == "distinct" && statementAnalyzer.word(2) == "from" -> {
