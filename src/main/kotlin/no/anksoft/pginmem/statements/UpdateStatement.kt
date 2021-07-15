@@ -16,7 +16,7 @@ private class CellToUpdateByBinding(val column:Column) {
 
 private class CellToUpdateByFunction(val column: Column,val valueFromExpression: ValueFromExpression)
 
-class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction) : StatementWithSet() {
+class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction) : StatementWithSet(dbTransaction) {
     private val table:Table
     //private val whereClause: WhereClause
     private val toUpdateByBinding:List<CellToUpdateByBinding>

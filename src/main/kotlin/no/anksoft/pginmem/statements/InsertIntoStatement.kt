@@ -9,7 +9,7 @@ import java.util.*
 
 private class LinkedValue(val column: Column,val index:Int?,var value:(Pair<DbTransaction,Row?>)->CellValue={NullCellValue})
 
-class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,private val sql:String) : StatementWithSet() {
+class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,private val sql:String) : StatementWithSet(dbTransaction) {
     private val tableForUpdate:Table = dbTransaction.tableForUpdate(statementAnalyzer.word(2)?:throw SQLException("Expected table name"))
     private val columns:List<Column>
     private val linkedValues:List<LinkedValue>

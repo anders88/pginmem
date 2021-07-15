@@ -89,7 +89,9 @@ private fun readWhereClausePart(
 
     statementAnalyzer.addIndex()
     return when (statementAnalyzer.word()) {
-        "=" -> EqualCase(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+        "=" -> if (statementAnalyzer.matchesWord(listOf("=","any","(","?",")")))
+                AnyClause(leftValueFromExpression,nextIndexToUse,dbTransaction)
+                else EqualCase(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         ">" -> GreaterThanCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         ">=" -> GreaterThanOrEqualCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "<" -> LessThanCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)

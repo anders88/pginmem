@@ -4,7 +4,7 @@ import no.anksoft.pginmem.*
 import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
 
-class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, private val  dbTransaction: DbTransaction) : DbPreparedStatement() {
+class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, private val  dbTransaction: DbTransaction) : DbPreparedStatement(dbTransaction) {
 
     override fun executeUpdate(): Int {
         statementAnalyzer.addIndex(2)

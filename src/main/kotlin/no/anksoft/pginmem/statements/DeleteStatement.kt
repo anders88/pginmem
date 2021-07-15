@@ -11,7 +11,7 @@ import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.values.CellValue
 import java.sql.SQLException
 
-class DeleteStatement constructor(statementAnalyzer:StatementAnalyzer, private val dbTransaction: DbTransaction, private val sql:String):StatementWithSet() {
+class DeleteStatement constructor(statementAnalyzer:StatementAnalyzer, private val dbTransaction: DbTransaction, private val sql:String):StatementWithSet(dbTransaction) {
     private val tableForUpdate: Table = dbTransaction.tableForUpdate(statementAnalyzer.addIndex(2).word()?:throw SQLException("Expected tablename"))
     //private val whereClause:WhereClause = if (statementAnalyzer.size > 4  && statementAnalyzer.wordAt(3) == "where") createWhereClause(statementAnalyzer.subList(4,statementAnalyzer.size), listOf(tableForUpdate),1) else MatchAllClause()
     private val whereClause:WhereClause =

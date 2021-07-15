@@ -66,6 +66,23 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             else -> throw SQLException("Conversion not supported for ${this.name}")
         }
     }
+
+    fun readFromAny(value:Any?):CellValue {
+        if (value == null) {
+            return NullCellValue
+        }
+        return when (this) {
+            TEXT -> if (value is String) StringCellValue(value) else TODO()
+            TIMESTAMP -> TODO()
+            DATE -> TODO()
+            INTEGER -> TODO()
+            BOOLEAN -> TODO()
+            NUMERIC -> TODO()
+            BYTEA -> TODO()
+            SERIAL -> TODO()
+            JSON -> TODO()
+        }
+    }
 }
 
 class Column private constructor(val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)?,val isNotNull:Boolean) {

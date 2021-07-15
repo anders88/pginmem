@@ -1,9 +1,11 @@
 package no.anksoft.pginmem
 
 import no.anksoft.pginmem.statements.DbStatement
+import no.anksoft.pginmem.values.SqlArray
 import java.sql.*
 import java.util.*
 import java.util.concurrent.Executor
+import javax.sql.rowset.serial.SerialArray
 
 class DbConnection(private val transaction: DbTransaction):Connection {
 
@@ -206,7 +208,7 @@ class DbConnection(private val transaction: DbTransaction):Connection {
     }
 
     override fun createArrayOf(typeName: String?, elements: Array<out Any>?): java.sql.Array {
-        TODO("Not yet implemented")
+        return SqlArray(typeName,elements)
     }
 
     override fun createStruct(typeName: String?, attributes: Array<out Any>?): Struct {

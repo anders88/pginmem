@@ -1,12 +1,15 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.DbPreparedStatement
+import no.anksoft.pginmem.DbTransaction
 import no.anksoft.pginmem.values.*
 import java.math.BigDecimal
+import java.sql.Array
 import java.sql.Date
+import java.sql.SQLException
 import java.sql.Timestamp
 
-abstract class StatementWithSet:DbPreparedStatement() {
+abstract class StatementWithSet(dbTransaction: DbTransaction):DbPreparedStatement(dbTransaction) {
     abstract fun setSomething(parameterIndex: Int, x: CellValue)
 
     override fun setString(parameterIndex: Int, x: String?) {
@@ -44,6 +47,13 @@ abstract class StatementWithSet:DbPreparedStatement() {
 
     override fun setBytes(parameterIndex: Int, x: ByteArray?) {
         setSomething(parameterIndex,x?.let { ByteArrayCellValue(it) }?:NullCellValue)
+    }
+
+    override fun setArray(parameterIndex: Int, x: Array?) {
+        if (x !is SqlArray) {
+            throw SQLException("Unsupported implementation of java.sql.Array")
+        }
+        setSomething(parameterIndex,x.arrayCellValue)
     }
 
 

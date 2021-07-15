@@ -175,7 +175,7 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
     }
 }
 
-abstract class DbPreparedStatement():PreparedStatement {
+abstract class DbPreparedStatement(private val dbTransaction: DbTransaction?):PreparedStatement {
     private val logger = LoggerFactory.getLogger(this::class.java)
     override fun <T : Any?> unwrap(iface: Class<T>?): T {
         TODO("Not yet implemented")
@@ -339,7 +339,7 @@ abstract class DbPreparedStatement():PreparedStatement {
     }
 
     override fun getConnection(): Connection {
-        TODO("Not yet implemented")
+        return DbConnection(dbTransaction?:throw SQLException("No connection found"))
     }
 
     override fun getGeneratedKeys(): ResultSet {

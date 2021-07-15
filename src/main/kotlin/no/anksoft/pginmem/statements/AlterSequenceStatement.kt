@@ -5,7 +5,7 @@ import no.anksoft.pginmem.DbTransaction
 import no.anksoft.pginmem.StatementAnalyzer
 import java.sql.SQLException
 
-class AlterSequenceStatement(val statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction) : DbPreparedStatement() {
+class AlterSequenceStatement(val statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction) : DbPreparedStatement(dbTransaction) {
 
     override fun executeUpdate(): Int {
         val name:String = statementAnalyzer.addIndex(2).word()?:throw SQLException("Expected sequence name")

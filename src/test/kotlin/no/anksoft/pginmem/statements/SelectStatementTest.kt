@@ -644,12 +644,52 @@ class SelectStatementTest {
     @Test
     fun jsonConveringValue() {
         connection.use { conn ->
+            conn.prepareStatement("""select null::json->'obje'->>'value'""").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isNull()
+                }
+            }
+
+            conn.prepareStatement("""select '{"obje": {}}'::json->'obje'->>'value'""").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isNull()
+                }
+            }
+
             conn.prepareStatement("""select '{"obje": {"value":"42"}}'::json->'obje'->>'value'""").use { ps ->
                 ps.executeQuery().use {
                     assertThat(it.next()).isTrue()
                     assertThat(it.getString(1)).isEqualTo("42")
                 }
 
+            }
+        }
+    }
+
+    @Test
+    fun anyTest() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+            val insStatement:(String)->Unit = { idval ->
+                conn.prepareStatement("insert into mytable(id) values (?)").use {
+                    it.setString(1, idval)
+                    it.executeUpdate()
+                }
+            }
+            insStatement.invoke("a")
+            insStatement.invoke("b")
+            insStatement.invoke("c")
+            insStatement.invoke("d")
+            conn.prepareStatement("select * from mytable where id = any(?)").use { ps ->
+                val inparray = ps.connection.createArrayOf("text",arrayOf("a","b"));
+                ps.setArray(1, inparray)
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.next()).isFalse()
+                }
             }
         }
     }

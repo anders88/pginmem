@@ -778,7 +778,7 @@ private class MockResultSet(private val rows:List<List<Any?>>):ResultSet {
     }
 }
 
-class MockCountStatement(val numToReturn:Int):DbPreparedStatement() {
+class MockCountStatement constructor(val numToReturn:Int):DbPreparedStatement(null) {
     override fun setString(parameterIndex: Int, x: String?) {
 
     }

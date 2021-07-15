@@ -2,7 +2,7 @@ package no.anksoft.pginmem
 
 import java.sql.SQLException
 
-class DbTransaction(private val dbStore: DbStore) {
+class DbTransaction constructor(private val dbStore: DbStore) {
     private var autoCommit:Boolean = true
     private var isClosed:Boolean = false
 
@@ -71,5 +71,7 @@ class DbTransaction(private val dbStore: DbStore) {
     fun resetSequence(sequence: Sequence) = dbStore.resetSequence(sequence)
 
     fun isClosed():Boolean = isClosed
+
+
 
 }

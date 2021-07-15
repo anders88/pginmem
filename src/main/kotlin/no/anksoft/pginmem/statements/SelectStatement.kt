@@ -260,7 +260,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
 
 }
 
-class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,indexToUse: IndexToUse= IndexToUse()):StatementWithSet() {
+class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,indexToUse: IndexToUse= IndexToUse()):StatementWithSet(dbTransaction) {
     val selectAnalyze:SelectAnalyze = analyseSelect(statementAnalyzer,dbTransaction,indexToUse, emptyMap())
 
     fun registerBinding(index:Int,value: CellValue):Boolean = selectAnalyze.registerBinding(index,value)

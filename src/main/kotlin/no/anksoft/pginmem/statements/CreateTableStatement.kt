@@ -6,7 +6,7 @@ import java.sql.Timestamp
 import java.time.LocalDateTime
 
 
-class CreateTableStatement(val statementAnalyzer: StatementAnalyzer,private val dbTransaction: DbTransaction):DbPreparedStatement() {
+class CreateTableStatement(val statementAnalyzer: StatementAnalyzer,private val dbTransaction: DbTransaction):DbPreparedStatement(dbTransaction) {
 
     override fun executeUpdate(): Int {
         statementAnalyzer.addIndex(2)

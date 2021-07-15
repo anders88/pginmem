@@ -6,7 +6,7 @@ import no.anksoft.pginmem.StatementAnalyzer
 import no.anksoft.pginmem.Table
 import java.sql.SQLException
 
-class DropTableStatement(val statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction): DbPreparedStatement() {
+class DropTableStatement(val statementAnalyzer: StatementAnalyzer, private val dbTransaction: DbTransaction): DbPreparedStatement(dbTransaction) {
     override fun executeUpdate(): Int {
         statementAnalyzer.addIndex(2)
         val onlyIfExsists = if (statementAnalyzer.word() == "if" && statementAnalyzer.word(1) == "exists") {

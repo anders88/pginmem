@@ -777,7 +777,7 @@ private class ReturnOneResultSet(private val valueToReturn:String):ResultSet {
     }
 }
 
-class SelectOneValueStatement(private val valueToReturn:String):DbPreparedStatement() {
+class SelectOneValueStatement(private val valueToReturn:String):DbPreparedStatement(null) {
     private var ind = 0
 
     override fun executeQuery(): ResultSet {

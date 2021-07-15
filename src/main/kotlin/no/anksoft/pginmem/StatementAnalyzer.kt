@@ -137,12 +137,13 @@ private class ReadJsonProperty(val inputValue:ValueFromExpression,jsonPropertyTe
 
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
         val startVal:CellValue = inputValue.valuegen.invoke(it)
-        val jsonObject:JsonObject = when {
+        val jsonObject: JsonObject? = when {
             startVal is JsonCellValue -> startVal.myvalue
             startVal is StringCellValue -> JsonParser.parseToObject(startVal.myValue)
+            startVal is NullCellValue -> null
             else -> throw SQLException("Expected string as json")
         }
-        StringCellValue(jsonObject.requiredString(jsonProperty))
+        (jsonObject?.stringValue(jsonProperty)?.orElse(null))?.let { StringCellValue(it) }?:NullCellValue
     }
 
     override val column: Column? = null
@@ -155,12 +156,14 @@ private class ReadJsonObject(val inputValue:ValueFromExpression,jsonPropertyText
 
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
         val startVal:CellValue = inputValue.valuegen.invoke(it)
-        val jsonObject:JsonObject = when {
+        val jsonObject:JsonObject? = when {
             startVal is JsonCellValue -> startVal.myvalue
             startVal is StringCellValue -> JsonParser.parseToObject(startVal.myValue)
+            startVal is NullCellValue -> null
             else -> throw SQLException("Expected string as json")
         }
-        JsonCellValue(jsonObject.requiredObject(jsonProperty))
+
+        jsonObject?.let { jo -> (jo.objectValue(jsonProperty).orElse(null))?.let { JsonCellValue(it) }}?:NullCellValue
     }
 
     override val column: Column? = null
@@ -544,6 +547,17 @@ class StatementAnalyzer {
                 parentsIndex--
             }
         }
+    }
+
+    fun matchesWord(expected:List<String>):Boolean {
+        var indadd = 0
+        for (w in expected) {
+            if (word(indadd) != w) {
+                return false
+            }
+            indadd++
+        }
+        return true
     }
 }
 

@@ -2,7 +2,7 @@ package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.DbPreparedStatement
 
-class NoopStatement:DbPreparedStatement() {
+class NoopStatement:DbPreparedStatement(null) {
     override fun execute(): Boolean {
         return false
     }
