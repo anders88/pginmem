@@ -1,7 +1,9 @@
 package no.anksoft.pginmem
 
 import no.anksoft.pginmem.clauses.IndexToUse
+import no.anksoft.pginmem.statements.select.ColumnInSelect
 import no.anksoft.pginmem.statements.select.SelectResultSet
+import no.anksoft.pginmem.statements.select.TableInSelect
 import no.anksoft.pginmem.values.*
 import org.jsonbuddy.JsonObject
 import org.jsonbuddy.parse.JsonParser
@@ -94,14 +96,14 @@ private fun splitStringToWords(sqlinp:String):List<String> {
 
 interface ValueFromExpression {
     val valuegen: ((Pair<DbTransaction, Row?>) -> CellValue)
-    val column: Column?
+    val column: ColumnInSelect?
     fun registerBinding(index:Int,value: CellValue):Boolean
 }
 
 
 class BasicValueFromExpression(
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue,
-    override val column: Column?
+    override val column: ColumnInSelect?
 ) :ValueFromExpression {
     override fun registerBinding(index:Int,value: CellValue):Boolean = false
 }
@@ -275,7 +277,16 @@ class StatementAnalyzer {
     }
 
     fun extractParantesStepForward():StatementAnalyzer? {
-        var offSet = -1
+        return extractParantesStepForward(-1,true)
+
+    }
+
+    fun extractParensFromOffset(offsetStart: Int):StatementAnalyzer? {
+        return extractParantesStepForward(offsetStart-1,false)
+    }
+
+    private fun extractParantesStepForward(offsetStart:Int,adjustIndex:Boolean):StatementAnalyzer? {
+        var offSet = offsetStart
         var parensCount = 0
         do {
             offSet++
@@ -288,8 +299,10 @@ class StatementAnalyzer {
         if (word(offSet+1) == "::") {
             return null
         }
-        val newWords = words.subList(currentIndex+1,currentIndex+offSet)
-        currentIndex = currentIndex + offSet
+        val newWords = words.subList(currentIndex+offsetStart+2,currentIndex+offSet)
+        if (adjustIndex) {
+            currentIndex = currentIndex + offSet
+        }
         return StatementAnalyzer(newWords)
     }
 
@@ -343,7 +356,7 @@ class StatementAnalyzer {
     val size: Int
         get() = words.size
 
-    fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,Table>,indexToUse: IndexToUse?):ValueFromExpression {
+    fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,TableInSelect>,indexToUse: IndexToUse?):ValueFromExpression {
         val aword:String = word()?:throw SQLException("Unexpected end of statement")
         var toReturn:ValueFromExpression = when {
             (aword == "now" && word(1) == "(" && word(2) == ")") -> {
@@ -483,18 +496,18 @@ class StatementAnalyzer {
     }
 
 
-    private fun readColumnValue(tables: Map<String, Table>, aword: String):ValueFromExpression {
-        val column: Column = findColumnFromIdentifier(aword, tables)
+    private fun readColumnValue(tables: Map<String, TableInSelect>, aword: String):ValueFromExpression {
+        val column: ColumnInSelect = findColumnFromIdentifier(aword, tables)
         val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column == column }?.value?:NullCellValue }
         return BasicValueFromExpression(valuegen,column)
     }
 
     fun findColumnFromIdentifier(
         aword: String,
-        tables: Map<String, Table>
-    ): Column {
+        tables: Map<String, TableInSelect>
+    ): ColumnInSelect {
         val ind = aword.indexOf(".")
-        val column: Column = if (ind == -1) {
+        val column: ColumnInSelect = if (ind == -1) {
             tables.values.map { it.findColumn(aword) }.filterNotNull().firstOrNull()
                 ?: throw SQLException("Unknown column $aword")
         } else {
@@ -502,7 +515,7 @@ class StatementAnalyzer {
             if (tablename.startsWith("\"") && tablename.endsWith("\"")) {
                 tablename = tablename.substring(1, tablename.length - 1)
             }
-            val table: Table? = tables[tablename]
+            val table: TableInSelect? = tables[tablename]
             if (table == null) {
                 throw SQLException("Unknown table $tablename")
             }

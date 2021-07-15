@@ -1,6 +1,8 @@
 package no.anksoft.pginmem
 
 import no.anksoft.pginmem.clauses.IndexToUse
+import no.anksoft.pginmem.statements.ValueGenFromDbCell
+import no.anksoft.pginmem.statements.select.ColumnInSelect
 import no.anksoft.pginmem.values.*
 import org.jsonbuddy.JsonObject
 import org.jsonbuddy.JsonValue
@@ -85,7 +87,8 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
     }
 }
 
-class Column private constructor(val name:String,val columnType: ColumnType,val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)?,val isNotNull:Boolean) {
+class Column private constructor(val name:String,val columnType: ColumnType,override val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)?,val isNotNull:Boolean):ColumnInSelect {
+
 
 
     companion object {
@@ -151,7 +154,7 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
     )
 
 
-    fun matches(tablename: String,name:String):Boolean = ((this.name == name) && (this.tablename == tablename))
+    override fun matches(tablename: String,name:String):Boolean = ((this.name == name) && (this.tablename == tablename))
 
 
 
@@ -168,5 +171,6 @@ class Column private constructor(val name:String,val columnType: ColumnType,val 
         return "Column(name='$name', columnType=$columnType)"
     }
 
+    override val myValueFromExpression: ValueFromExpression = ValueGenFromDbCell(this)
 
 }

@@ -10,9 +10,9 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Timestamp
 
-class OrderPart(val column: Column,val ascending:Boolean,val nullsFirst:Boolean)
+class OrderPart(val column: ColumnInSelect,val ascending:Boolean,val nullsFirst:Boolean)
 
-private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Map<String,Table>):List<OrderPart> {
+private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Map<String,TableInSelect>):List<OrderPart> {
     if (statementAnalyzer.word() != "order") {
         return emptyList()
     }
@@ -29,7 +29,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
         if (setOf("group").contains(colnameText)) {
             break
         }
-        val column:Column = statementAnalyzer.findColumnFromIdentifier(colnameText,tablesUsed)
+        val column:ColumnInSelect = statementAnalyzer.findColumnFromIdentifier(colnameText,tablesUsed)
         val nextWord = statementAnalyzer.addIndex().word()
 
         var ascending:Boolean = true
@@ -69,7 +69,7 @@ class SelectAnalyze constructor(
     }
 }
 
-private class ValueGenFromDbCell(override val column: Column):ValueFromExpression {
+class ValueGenFromDbCell(override val column: Column):ValueFromExpression {
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
         it.second?.cells?.firstOrNull { it.column == column }?.value?:NullCellValue
     }
@@ -102,12 +102,18 @@ class SelectColumnValue(val selectAnalyze:SelectAnalyze):ValueFromExpression {
 
 
 
-private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,indexToUse: IndexToUse,givenTablesUsed:Map<String,Table>):SelectAnalyze {
+private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,indexToUse: IndexToUse,givenTablesUsed:Map<String,TableInSelect>):SelectAnalyze {
     val fromInd = statementAnalyzer.indexOf("from")
-    val myTablesUsed:Map<String,Table> = if (fromInd != -1) {
-        val mappingTablesUsed:MutableMap<String,Table> = mutableMapOf()
+    val myTablesUsed:Map<String,TableInSelect> = if (fromInd != -1) {
+        val mappingTablesUsed:MutableMap<String,TableInSelect> = mutableMapOf()
         var tabind = fromInd+1
         while (!setOf("where","order","group",")").contains(statementAnalyzer.wordAt(tabind)?:"where")) {
+            if (statementAnalyzer.wordAt(tabind) == "(") {
+                val extractParensFromOffset = statementAnalyzer.extractParensFromOffset(tabind)
+                if (extractParensFromOffset != null) {
+
+                }
+            }
             val table = dbTransaction.tableForRead(stripSeachName(statementAnalyzer.wordAt(tabind)?:""))
             tabind++
             val nextWord = statementAnalyzer.wordAt(tabind)
@@ -124,11 +130,11 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         mappingTablesUsed
     } else emptyMap()
 
-    val tablesUsed:Map<String,Table> = myTablesUsed + givenTablesUsed
+    val tablesUsed:Map<String,TableInSelect> = myTablesUsed + givenTablesUsed
 
     val aliasMapping:Map<String,String> = tablesUsed.mapValues { it.value.name }
 
-    val allColumns:List<Column> = tablesUsed.map { it.value.colums }.flatten()
+    val allColumns:List<ColumnInSelect> = tablesUsed.map { it.value.colums }.flatten()
     statementAnalyzer.addIndex()
 
     val distinctFlag:Boolean = if (statementAnalyzer.word() == "distinct") {
@@ -141,7 +147,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
             SelectColumnProvider(
                 colindex = index+1,
                 alias = null,
-                valueFromExpression = ValueGenFromDbCell(column),
+                valueFromExpression = column.myValueFromExpression,
                 aggregateFunction = null,
                 tableAliases = aliasMapping
             )

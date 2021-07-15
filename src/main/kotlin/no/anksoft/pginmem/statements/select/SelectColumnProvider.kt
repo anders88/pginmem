@@ -13,7 +13,7 @@ class SelectColumnProvider(
     fun isMatch(colidentifier:String):Boolean {
         if (alias != null) return (alias == colidentifier)
 
-        val column:Column = valueFromExpression.column?:return false
+        val column:ColumnInSelect = valueFromExpression.column?:return false
 
         val dotind = colidentifier.indexOf(".")
         if (dotind == -1) {

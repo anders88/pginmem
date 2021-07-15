@@ -6,6 +6,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.jsonbuddy.JsonObject
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
+import java.math.BigDecimal
 import java.sql.SQLException
 
 class AdvancedStatementsTest {
@@ -194,6 +195,43 @@ class AdvancedStatementsTest {
                     assertThat(it.next()).isTrue()
                     assertThat(it.getString("id")).isEqualTo("two")
                     assertThat(it.getString("info")).isEqualTo("twoinfo")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun selectFromSelectAsTable() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table customer(id int,name text)")
+            conn.createStatement().execute("create table sale(customerid int,amount numeric)")
+            val insertIntoCustomer:(Pair<Int,String>)->Unit = { data ->
+                conn.prepareStatement("insert into customer(id,name) values (?,?)").use { ps ->
+                    ps.setInt(1,data.first)
+                    ps.setString(2,data.second)
+                    ps.executeUpdate()
+                }
+            }
+            val insertIntoSale:(Pair<Int,BigDecimal>)->Unit = { data ->
+                conn.prepareStatement("insert into sale(customerid,amount) values (?,?)").use { ps ->
+                    ps.setInt(1,data.first)
+                    ps.setBigDecimal(2,data.second)
+                    ps.executeUpdate()
+                }
+            }
+
+            insertIntoCustomer.invoke(Pair(1,"Luke"))
+            insertIntoCustomer.invoke(Pair(2,"Darth"))
+
+            insertIntoSale.invoke(Pair(1, BigDecimal.TEN))
+            insertIntoSale.invoke(Pair(2, BigDecimal.TEN))
+            insertIntoSale.invoke(Pair(2, BigDecimal(100.0)))
+
+            conn.prepareStatement("""select c.name,s.totsale from customer c,(select customerid, sum(amount) as totsale from sale) as s where c.id = s.customerid""".trimMargin()).use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.next()).isTrue()
                     assertThat(it.next()).isFalse()
                 }
             }

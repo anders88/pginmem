@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.*
+import no.anksoft.pginmem.statements.select.TableInSelect
 import no.anksoft.pginmem.values.CellValue
 import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
@@ -10,7 +11,7 @@ abstract class BinaryClause(
     expectedIndex: IndexToUse,
     statementAnalyzer: StatementAnalyzer,
     private val dbTransaction: DbTransaction,
-    tables: Map<String, Table>
+    tables: Map<String, TableInSelect>
 ) :WhereClause {
 
     private val expectedIndex:Int?

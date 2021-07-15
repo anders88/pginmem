@@ -2,12 +2,13 @@ package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.*
 import no.anksoft.pginmem.statements.SelectStatement
+import no.anksoft.pginmem.statements.select.TableInSelect
 import no.anksoft.pginmem.values.CellValue
 import java.sql.SQLException
 
 
 
-fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,Table>,indexToUse: IndexToUse,dbTransaction: DbTransaction):WhereClause {
+fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,TableInSelect>,indexToUse: IndexToUse,dbTransaction: DbTransaction):WhereClause {
     if (statementAnalyzer.word() != "where") {
         return MatchAllClause()
     }
@@ -22,7 +23,7 @@ fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,Tab
 private fun parseWhereClause(
     nextIndexToUse: IndexToUse,
     statementAnalyzer: StatementAnalyzer,
-    tables: Map<String, Table>,
+    tables: Map<String, TableInSelect>,
     dbTransaction: DbTransaction
 ): WhereClause {
 
@@ -68,7 +69,7 @@ class IndexToUse(private var index:Int=1) {
 
 private fun readWhereClausePart(
     statementAnalyzer: StatementAnalyzer,
-    tables: Map<String, Table>,
+    tables: Map<String, TableInSelect>,
     nextIndexToUse: IndexToUse,
     dbTransaction: DbTransaction
 ): WhereClause {

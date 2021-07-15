@@ -2,6 +2,7 @@ package no.anksoft.pginmem.clauses
 
 import no.anksoft.pginmem.*
 import no.anksoft.pginmem.statements.SelectStatement
+import no.anksoft.pginmem.statements.select.TableInSelect
 import no.anksoft.pginmem.values.CellValue
 import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
@@ -17,7 +18,7 @@ class InClause(
     val leftValueFromExpression: ValueFromExpression,
     statementAnalyzer: StatementAnalyzer,
     nextIndexToUse: IndexToUse,
-    tables: Map<String, Table>
+    tables: Map<String, TableInSelect>
 ):WhereClause {
     private val inValues:List<InItem>
     private val selectStatement:SelectStatement?

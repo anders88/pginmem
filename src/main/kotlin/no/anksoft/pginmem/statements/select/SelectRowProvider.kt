@@ -18,7 +18,7 @@ interface SelectRowProvider {
     fun providerWithFixed(row:Row?):SelectRowProvider
 }
 
-private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
+private fun incIndex(indexes:MutableList<Int>,tables: List<TableInSelect>):Boolean {
     var currTable = tables.size - 1
     while (currTable >= 0) {
         if (indexes[currTable] < tables[currTable].size()-1) {
@@ -34,7 +34,7 @@ private fun incIndex(indexes:MutableList<Int>,tables: List<Table>):Boolean {
 private class TableJoinRow(val rowids:Map<String,String>,val cells:List<Cell>)
 
 class TablesSelectRowProvider constructor(
-    private val tables: List<Table>,
+    private val tables: List<TableInSelect>,
     private val whereClause: WhereClause,
     private val orderParts: List<OrderPart>,
     override val limit:Int?,

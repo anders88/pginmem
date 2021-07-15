@@ -1,11 +1,13 @@
 package no.anksoft.pginmem
 
-class Table(val name:String,defColumns:List<Column>) {
-    val colums:List<Column> = defColumns
+import no.anksoft.pginmem.statements.select.TableInSelect
+
+class Table(override val name:String,defColumns:List<Column>):TableInSelect {
+    override val colums:List<Column> = defColumns
 
     private val rows:MutableList<Row> = mutableListOf()
 
-    fun findColumn(colname:String):Column? {
+    override fun findColumn(colname:String):Column? {
         val actualName = stripSeachName(colname)
         return colums.firstOrNull { it.matches(this.name,actualName)}
     }
@@ -14,7 +16,7 @@ class Table(val name:String,defColumns:List<Column>) {
         rows.add(row)
     }
 
-    fun rowsForReading():List<Row> = rows
+    override fun rowsForReading():List<Row> = rows
 
     fun clone():Table {
         val cloned = Table(name,colums)
@@ -22,7 +24,7 @@ class Table(val name:String,defColumns:List<Column>) {
         return cloned
     }
 
-    fun size():Int = rows.size
+    override fun size():Int = rows.size
 
 
 }
