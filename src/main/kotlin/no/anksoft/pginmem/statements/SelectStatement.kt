@@ -259,7 +259,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         Pair(limit,offset)
     } else Pair(null,0)
 
-    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(myTablesUsed.values.toList(),whereClause,orderParts,limitRowsTo,offsetRows) else ImplicitOneRowSelectProvider(whereClause)
+    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(dbTransaction,myTablesUsed.values.toList(),whereClause,orderParts,limitRowsTo,offsetRows) else ImplicitOneRowSelectProvider(whereClause)
 
 
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts,distinctFlag)

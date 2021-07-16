@@ -1,9 +1,6 @@
 package no.anksoft.pginmem.statements.select
 
-import no.anksoft.pginmem.Cell
-import no.anksoft.pginmem.Column
-import no.anksoft.pginmem.Row
-import no.anksoft.pginmem.Table
+import no.anksoft.pginmem.*
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.statements.OrderPart
 import no.anksoft.pginmem.values.CellValue
@@ -34,6 +31,7 @@ private fun incIndex(indexes:MutableList<Int>,tables: List<TableInSelect>):Boole
 private class TableJoinRow(val rowids:Map<String,String>,val cells:List<Cell>)
 
 class TablesSelectRowProvider constructor(
+    private val dbTransaction: DbTransaction,
     private val tables: List<TableInSelect>,
     private val whereClause: WhereClause,
     private val orderParts: List<OrderPart>,
@@ -57,7 +55,7 @@ class TablesSelectRowProvider constructor(
                 val cellsThisRow: MutableList<Cell> = mutableListOf()
                 val rowidsThisRow:MutableMap<String,String> = mutableMapOf()
                 for (i in 0 until indexes.size) {
-                    val row:Row = tables[i].rowsForReading()[indexes[i]]
+                    val row:Row = tables[i].rowsFromSelect(dbTransaction)[indexes[i]]
                     val tc: List<Cell> = row.cells
                     cellsThisRow.addAll(tc)
                     rowidsThisRow.putAll(row.rowids)
@@ -101,6 +99,7 @@ class TablesSelectRowProvider constructor(
             return this
         }
         return TablesSelectRowProvider(
+            this.dbTransaction,
             this.tables,
             this.whereClause,
             this.orderParts,

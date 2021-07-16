@@ -1,6 +1,7 @@
 package no.anksoft.pginmem.statements.select
 
 import no.anksoft.pginmem.Column
+import no.anksoft.pginmem.DbTransaction
 import no.anksoft.pginmem.Row
 
 interface TableInSelect {
@@ -8,6 +9,6 @@ interface TableInSelect {
     val colums:List<ColumnInSelect>
 
     fun findColumn(colname:String): ColumnInSelect?
-    fun rowsForReading():List<Row>
+    fun rowsFromSelect(dbTransaction: DbTransaction):List<Row>
     fun size():Int
 }

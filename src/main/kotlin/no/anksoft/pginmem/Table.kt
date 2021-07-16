@@ -16,7 +16,9 @@ class Table(override val name:String,defColumns:List<Column>):TableInSelect {
         rows.add(row)
     }
 
-    override fun rowsForReading():List<Row> = rows
+    fun rowsForReading():List<Row> = rows
+
+    override fun rowsFromSelect(dbTransaction: DbTransaction):List<Row> = rowsForReading()
 
     fun clone():Table {
         val cloned = Table(name,colums)
