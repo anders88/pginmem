@@ -5,8 +5,8 @@ import no.anksoft.pginmem.ValueFromExpression
 class SelectColumnAsAColumn(private val scp:SelectColumnProvider,ownerTableName:String):ColumnInSelect {
 
 
-    override val tablename: String = scp.alias?:ownerTableName
-    override val name: String? = scp.valueFromExpression.column?.name
+    override val tablename: String = ownerTableName
+    override val name: String? = scp.alias?:scp.valueFromExpression.column?.name
 
     override val myValueFromExpression: ValueFromExpression = scp.valueFromExpression
 

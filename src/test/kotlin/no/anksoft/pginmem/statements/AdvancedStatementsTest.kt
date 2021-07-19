@@ -3,10 +3,12 @@ package no.anksoft.pginmem.statements
 import no.anksoft.pginmem.PgInMemDatasource
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.data.Offset
 import org.jsonbuddy.JsonObject
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import java.math.BigDecimal
+import java.sql.ResultSet
 import java.sql.SQLException
 
 class AdvancedStatementsTest {
@@ -228,13 +230,27 @@ class AdvancedStatementsTest {
             insertIntoSale.invoke(Pair(2, BigDecimal.TEN))
             insertIntoSale.invoke(Pair(2, BigDecimal(100.0)))
 
+            val res:MutableList<Pair<String,BigDecimal>> = mutableListOf()
+
+            val trans:(ResultSet)->Pair<String,BigDecimal>? = {
+                if (it.next()) {
+                    val name = it.getString("name")
+                    val sale = it.getBigDecimal("totsale")
+                    Pair(name,sale)
+                } else null
+            }
+
             conn.prepareStatement("""select c.name,s.totsale from customer c,(select customerid, sum(amount) as totsale from sale) as s where c.id = s.customerid""".trimMargin()).use { ps ->
                 ps.executeQuery().use {
-                    assertThat(it.next()).isTrue()
-                    assertThat(it.next()).isTrue()
-                    assertThat(it.next()).isFalse()
+                    while (true) {
+                        val x = trans.invoke(it) ?: break
+                        res.add(x)
+                    }
                 }
             }
+            assertThat(res).hasSize(2)
+            assertThat(res.first { it.first == "Luke" }.second).isCloseTo(BigDecimal.TEN, Offset.offset(BigDecimal(0.001)))
+            assertThat(res.first { it.first == "Darth" }.second).isCloseTo(BigDecimal(110.0), Offset.offset(BigDecimal(0.001)))
         }
     }
 
