@@ -3,6 +3,7 @@ package no.anksoft.pginmem
 import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.statements.ValueGenFromDbCell
 import no.anksoft.pginmem.statements.select.ColumnInSelect
+import no.anksoft.pginmem.statements.select.SelectColumnProvider
 import no.anksoft.pginmem.values.*
 import org.jsonbuddy.JsonObject
 import org.jsonbuddy.JsonValue
@@ -15,7 +16,7 @@ import java.time.LocalDateTime
 import java.util.*
 
 enum class ColumnType(private val altNames:Set<String> = emptySet()) {
-    TEXT, TIMESTAMP,DATE,INTEGER(setOf("int","bigint")),BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL,JSON(setOf("jsonb"));
+    TEXT, TIMESTAMP,DATE,INTEGER(setOf("int","bigint")),BOOLEAN(setOf("bool")),NUMERIC,BYTEA,SERIAL,JSON(setOf("jsonb")),UNSPECIFIED;
 
     fun validateValue(value:CellValue):CellValue {
         if (value == NullCellValue) {
@@ -43,6 +44,7 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
                 (value is StringCellValue) -> JsonCellValue(JsonParser.parseToObject(value.myValue))
                 else -> null
             }
+            UNSPECIFIED -> throw SQLException("Cannot validate unspecified")
         }
         if (returnValue == null) {
             throw SQLException("Binding value not valid for $this")
@@ -83,15 +85,26 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             BYTEA -> TODO()
             SERIAL -> TODO()
             JSON -> TODO()
+            UNSPECIFIED -> TODO()
         }
     }
 }
 
-class Column private constructor(val name:String,val columnType: ColumnType,override val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)?,val isNotNull:Boolean):ColumnInSelect {
+class Column private constructor(override val name:String,val columnType: ColumnType,override val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)?,val isNotNull:Boolean):ColumnInSelect {
 
 
 
     companion object {
+        fun create(selectColumnProvider:SelectColumnProvider,tablename: String):Column =
+            Column(
+                name = selectColumnProvider.alias?:selectColumnProvider.valueFromExpression.column?.name?:UUID.randomUUID().toString(),
+                columnType = ColumnType.UNSPECIFIED,
+                tablename = tablename,
+                defaultValue = null,
+                isNotNull = false
+            )
+
+
         fun create(tablename:String,statementAnalyzer: StatementAnalyzer,dbTransaction: DbTransaction):Column {
             val columnName:String = statementAnalyzer.word()?:throw SQLException("Expecting column name")
             val colTypeText = statementAnalyzer.addIndex().word()?:throw SQLException("Expecting column type")

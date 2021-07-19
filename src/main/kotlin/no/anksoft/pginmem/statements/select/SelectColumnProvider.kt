@@ -2,9 +2,9 @@ package no.anksoft.pginmem.statements.select
 
 import no.anksoft.pginmem.*
 
-class SelectColumnProvider(
+class SelectColumnProvider constructor(
     val colindex: Int,
-    private val alias: String?,
+    val alias: String?,
     val valueFromExpression: ValueFromExpression,
     val aggregateFunction: AggregateFunction?,
     val tableAliases: Map<String, String>

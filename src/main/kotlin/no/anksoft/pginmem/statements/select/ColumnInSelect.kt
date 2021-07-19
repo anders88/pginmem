@@ -6,4 +6,5 @@ interface ColumnInSelect {
     val myValueFromExpression:ValueFromExpression
     fun matches(tablename: String,name:String):Boolean
     val tablename:String
+    val name:String?
 }

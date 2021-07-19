@@ -9,6 +9,6 @@ interface TableInSelect {
     val colums:List<ColumnInSelect>
 
     fun findColumn(colname:String): ColumnInSelect?
-    fun rowsFromSelect(dbTransaction: DbTransaction):List<Row>
+    fun rowsFromSelect():List<Row>
     fun size():Int
 }

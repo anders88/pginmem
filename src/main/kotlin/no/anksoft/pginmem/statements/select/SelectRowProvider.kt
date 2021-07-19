@@ -3,7 +3,6 @@ package no.anksoft.pginmem.statements.select
 import no.anksoft.pginmem.*
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.statements.OrderPart
-import no.anksoft.pginmem.values.CellValue
 import java.sql.SQLException
 
 interface SelectRowProvider {
@@ -41,7 +40,7 @@ class TablesSelectRowProvider constructor(
     ):SelectRowProvider {
 
     private val values:List<TableJoinRow> by lazy {
-        if (tables.isEmpty() || tables.any { it.size() <= 0 }) {
+        if (tables.isEmpty() || tables.any { it.rowsFromSelect().isEmpty() }) {
             emptyList()
         } else {
             val indexes: MutableList<Int> = mutableListOf()
@@ -55,7 +54,7 @@ class TablesSelectRowProvider constructor(
                 val cellsThisRow: MutableList<Cell> = mutableListOf()
                 val rowidsThisRow:MutableMap<String,String> = mutableMapOf()
                 for (i in 0 until indexes.size) {
-                    val row:Row = tables[i].rowsFromSelect(dbTransaction)[indexes[i]]
+                    val row:Row = tables[i].rowsFromSelect()[indexes[i]]
                     val tc: List<Cell> = row.cells
                     cellsThisRow.addAll(tc)
                     rowidsThisRow.putAll(row.rowids)

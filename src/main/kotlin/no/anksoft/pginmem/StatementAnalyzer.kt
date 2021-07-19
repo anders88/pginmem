@@ -277,15 +277,15 @@ class StatementAnalyzer {
     }
 
     fun extractParantesStepForward():StatementAnalyzer? {
-        return extractParantesStepForward(-1,true)
+        return extractParantesStepForward(-1,true)?.first
 
     }
 
-    fun extractParensFromOffset(offsetStart: Int):StatementAnalyzer? {
+    fun extractParensFromOffset(offsetStart: Int):Pair<StatementAnalyzer,Int>? {
         return extractParantesStepForward(offsetStart-1,false)
     }
 
-    private fun extractParantesStepForward(offsetStart:Int,adjustIndex:Boolean):StatementAnalyzer? {
+    private fun extractParantesStepForward(offsetStart:Int,adjustIndex:Boolean):Pair<StatementAnalyzer,Int>? {
         var offSet = offsetStart
         var parensCount = 0
         do {
@@ -303,7 +303,7 @@ class StatementAnalyzer {
         if (adjustIndex) {
             currentIndex = currentIndex + offSet
         }
-        return StatementAnalyzer(newWords)
+        return Pair(StatementAnalyzer(newWords),offSet)
     }
 
     fun word(indexOffset:Int=0):String? {
@@ -498,7 +498,7 @@ class StatementAnalyzer {
 
     private fun readColumnValue(tables: Map<String, TableInSelect>, aword: String):ValueFromExpression {
         val column: ColumnInSelect = findColumnFromIdentifier(aword, tables)
-        val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column == column }?.value?:NullCellValue }
+        val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column.matches(column.tablename,column.name?:"") }?.value?:NullCellValue }
         return BasicValueFromExpression(valuegen,column)
     }
 

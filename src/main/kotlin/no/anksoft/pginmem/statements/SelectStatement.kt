@@ -8,7 +8,6 @@ import no.anksoft.pginmem.statements.select.*
 import no.anksoft.pginmem.values.*
 import java.sql.ResultSet
 import java.sql.SQLException
-import java.sql.Timestamp
 
 class OrderPart(val column: ColumnInSelect,val ascending:Boolean,val nullsFirst:Boolean)
 
@@ -58,8 +57,10 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
 
 class SelectAnalyze constructor(
     val selectedColumns:List<SelectColumnProvider>,
-    val selectRowProvider: SelectRowProvider,val
-    whereClause: WhereClause,val orderParts:List<OrderPart>,val distinctFlag:Boolean) {
+    val selectRowProvider: SelectRowProvider,
+    val whereClause: WhereClause,
+    val orderParts:List<OrderPart>,
+    val distinctFlag:Boolean) {
 
     fun registerBinding(index:Int,value: CellValue):Boolean {
         for (sc in selectedColumns) {
@@ -109,19 +110,29 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         var tabind = fromInd+1
         while (!setOf("where","order","group",")").contains(statementAnalyzer.wordAt(tabind)?:"where")) {
             if (statementAnalyzer.wordAt(tabind) == "(") {
-                val extractParensFromOffset = statementAnalyzer.extractParensFromOffset(tabind)
-                if (extractParensFromOffset != null) {
-
+                val extractParensFromOffset = statementAnalyzer.extractParensFromOffset(tabind)?:throw SQLException("Unknown end of select")
+                tabind = extractParensFromOffset.second+1
+                if (statementAnalyzer.wordAt(tabind) != "as") {
+                    throw SQLException("Expected as after table select")
                 }
-            }
-            val table = dbTransaction.tableForRead(stripSeachName(statementAnalyzer.wordAt(tabind)?:""))
-            tabind++
-            val nextWord = statementAnalyzer.wordAt(tabind)
-            val alias = if (nextWord != null && nextWord != "where" && nextWord != "," && nextWord != "order" && nextWord != "group" && nextWord != ")") {
                 tabind++
-                nextWord
-            } else table.name
-            mappingTablesUsed.put(alias,table)
+                val name = statementAnalyzer.wordAt(tabind)?:throw SQLException("Unexpected end after as")
+                tabind++
+
+                val analyzed = analyseSelect(extractParensFromOffset.first,dbTransaction,indexToUse,givenTablesUsed)
+                val selectAsATable = SelectAsATable(name,analyzed,dbTransaction)
+                mappingTablesUsed.put(name,selectAsATable)
+            } else {
+                val table = dbTransaction.tableForRead(stripSeachName(statementAnalyzer.wordAt(tabind) ?: ""))
+                tabind++
+                val nextWord = statementAnalyzer.wordAt(tabind)
+                val alias =
+                    if (nextWord != null && nextWord != "where" && nextWord != "," && nextWord != "order" && nextWord != "group" && nextWord != ")") {
+                        tabind++
+                        nextWord
+                    } else table.name
+                mappingTablesUsed.put(alias,table)
+            }
 
             if (statementAnalyzer.wordAt(tabind) == ",") {
                 tabind++
