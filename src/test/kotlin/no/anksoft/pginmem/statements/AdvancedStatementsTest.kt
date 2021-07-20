@@ -10,6 +10,8 @@ import org.junit.jupiter.api.fail
 import java.math.BigDecimal
 import java.sql.ResultSet
 import java.sql.SQLException
+import java.sql.Timestamp
+import java.time.LocalDateTime
 
 class AdvancedStatementsTest {
     private val datasource = PgInMemDatasource()
@@ -252,6 +254,37 @@ class AdvancedStatementsTest {
             assertThat(res.first { it.first == "Luke" }.second).isCloseTo(BigDecimal.TEN, Offset.offset(BigDecimal(0.001)))
             assertThat(res.first { it.first == "Darth" }.second).isCloseTo(BigDecimal(110.0), Offset.offset(BigDecimal(0.001)))
         }
+    }
+
+    @Test
+    fun selectInTableWhereAndSelectInOuter() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text,amount numeric,excludedat timestamp)")
+
+            val insertAction:(Triple<String,BigDecimal,LocalDateTime?>)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(id,amount,excludedat) values (?,?,?)").use { ps ->
+                    ps.setString(1,input.first)
+                    ps.setBigDecimal(2,input.second)
+                    ps.setTimestamp(3,input.third?.let { Timestamp.valueOf(it) })
+                    ps.executeUpdate()
+                }
+            }
+            insertAction.invoke(Triple("darth", BigDecimal.TEN,null))
+            insertAction.invoke(Triple("darth", BigDecimal(100.0),null))
+            insertAction.invoke(Triple("luke", BigDecimal(100.0), LocalDateTime.now()))
+
+            conn.prepareStatement("""
+                select name, amountsum from 
+                (select id as name, sum(amount) as amountsum from mytable where excludedat is null) as amounts 
+                where amountsum > 0               
+            """.trimMargin()).executeQuery().use { rs ->
+                assertThat(rs.next()).isTrue()
+                assertThat(rs.getString("name")).isEqualTo("darth")
+                assertThat(rs.getBigDecimal("amountsum")).isCloseTo(BigDecimal(110.0), Offset.offset(BigDecimal(0.0001)))
+                assertThat(rs.next()).isFalse()
+            }
+        }
+
     }
 
 }

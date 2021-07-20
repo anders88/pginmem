@@ -693,4 +693,24 @@ class SelectStatementTest {
             }
         }
     }
+
+    @Test
+    fun extractFromTest() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(name text,timeval timestamp)")
+            conn.prepareStatement("insert into mytable(name,timeval) values (?,?)").use { ps ->
+                ps.setString(1,"Luke")
+                ps.setTimestamp(2,Timestamp.valueOf(LocalDateTime.of(2021,7,20,13,15)))
+                ps.executeUpdate()
+            }
+            conn.prepareStatement("select extract(year from timeval) from mytable where name = ?").use { ps ->
+                ps.setString(1,"Luke")
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt(1)).isEqualTo(2021)
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
 }

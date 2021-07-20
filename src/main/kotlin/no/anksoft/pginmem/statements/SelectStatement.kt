@@ -242,7 +242,12 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     }
 
 
-    while (!setOf("where","order","group").contains(statementAnalyzer.word()?:"where")) {
+    var toWhereInd = 0
+    while (!setOf("where","order","group").contains(statementAnalyzer.word()?:"where") || (toWhereInd > 0 && statementAnalyzer.word() != null)) {
+        when (statementAnalyzer.word()) {
+            "(" -> toWhereInd++
+            ")" -> toWhereInd--
+        }
         statementAnalyzer.addIndex()
     }
     val whereClause:WhereClause = createWhereClause(statementAnalyzer,tablesUsed,indexToUse,dbTransaction)

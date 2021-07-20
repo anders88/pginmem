@@ -248,6 +248,22 @@ private class LowerExpression(val startValue:ValueFromExpression):ValueFromExpre
 
 }
 
+private class ExtractExpression(val startValue:ValueFromExpression):ValueFromExpression {
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        val startVal = startValue.valuegen.invoke(it)
+        when {
+            (startVal is NullCellValue) -> NullCellValue
+            (startVal is DateTimeCellValue) -> IntegerCellValue(startVal.myValue.year.toLong())
+            (startVal is DateCellValue) -> IntegerCellValue(startVal.myValue.year.toLong())
+            else -> throw SQLException("Illegal value to extract")
+        }
+
+    }
+
+    override val column: Column? = null
+    override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
+}
+
 class StatementAnalyzer {
     private val words:List<String>
     private var currentIndex:Int = 0
@@ -462,6 +478,17 @@ class StatementAnalyzer {
                     throw SQLException("Expected ) after lower")
                 }
                 LowerExpression(fromExpression)
+            }
+            aword == "extract" -> {
+                if (!matchesWord(listOf("extract","(","year","from"))) {
+                    throw SQLException("expected (year from after extract")
+                }
+                addIndex(4)
+                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables,indexToUse)
+                if (addIndex().word() != ")") {
+                    throw SQLException("Expect ) ending extract")
+                }
+                ExtractExpression(fromExpression)
             }
             aword == "?" ->
                 BindingValueFromExpression(indexToUse)
