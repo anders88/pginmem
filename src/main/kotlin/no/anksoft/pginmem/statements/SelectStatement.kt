@@ -105,6 +105,7 @@ class SelectColumnValue(val selectAnalyze:SelectAnalyze):ValueFromExpression {
 
 private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: DbTransaction,indexToUse: IndexToUse,givenTablesUsed:Map<String,TableInSelect>):SelectAnalyze {
     val fromInd = statementAnalyzer.indexOf("from")
+    val leftOuterJoins:MutableList<LeftOuterJoin> = mutableListOf()
     val myTablesUsed:Map<String,TableInSelect> = if (fromInd != -1) {
         val mappingTablesUsed:MutableMap<String,TableInSelect> = mutableMapOf()
         var tabind = fromInd+1
@@ -132,7 +133,37 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                         nextWord
                     } else table.name
                 mappingTablesUsed.put(alias,table)
+
+                if (statementAnalyzer.wordAt(tabind) == "left") {
+                    if (statementAnalyzer.wordAt(tabind+1) != "outer" || statementAnalyzer.wordAt(tabind+2) != "join") {
+                        throw SQLException("Expecting left outer join")
+                    }
+                    tabind+=3
+                    val jointable = dbTransaction.tableForRead(stripSeachName(statementAnalyzer.wordAt(tabind) ?: ""))
+                    tabind++
+                    val jointablealias = if (statementAnalyzer.wordAt(tabind) == "on") jointable.name else {
+                        tabind++
+                        statementAnalyzer.wordAt(tabind-1)!!
+                    }
+                    if (statementAnalyzer.wordAt(tabind) != "on") {
+                        throw SQLException("Expected on in left outer join")
+                    }
+                    tabind++
+                    val leftcol = table.findColumn(statementAnalyzer.wordAt(tabind) ?: "")
+                        ?: throw SQLException("Unknown column ${statementAnalyzer.wordAt(tabind)}")
+                    tabind++
+                    if (statementAnalyzer.wordAt(tabind) != "=") {
+                        throw SQLException("Expected = in left outer join")
+                    }
+                    tabind++
+                    val rightCol = jointable.findColumn(statementAnalyzer.wordAt(tabind)?:"")?: throw SQLException("Unknown column ${statementAnalyzer.wordAt(tabind)}")
+                    leftOuterJoins.add(LeftOuterJoin(table,jointable,leftcol,rightCol))
+                    mappingTablesUsed.put(jointablealias,jointable)
+                    tabind++
+                }
             }
+
+
 
             if (statementAnalyzer.wordAt(tabind) == ",") {
                 tabind++
@@ -275,7 +306,10 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         Pair(limit,offset)
     } else Pair(null,0)
 
-    val selectRowProvider:SelectRowProvider = if (fromInd != -1) TablesSelectRowProvider(dbTransaction,myTablesUsed.values.toList(),whereClause,orderParts,limitRowsTo,offsetRows) else ImplicitOneRowSelectProvider(whereClause)
+    val selectRowProvider:SelectRowProvider = if (fromInd != -1)
+            TablesSelectRowProvider(dbTransaction,myTablesUsed.values.toList(),whereClause,orderParts,limitRowsTo,offsetRows,
+                emptyList(),leftOuterJoins)
+        else ImplicitOneRowSelectProvider(whereClause)
 
 
     return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts,distinctFlag)

@@ -3,7 +3,9 @@ package no.anksoft.pginmem.statements.select
 import no.anksoft.pginmem.*
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.statements.OrderPart
+import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
+import java.util.*
 
 interface SelectRowProvider {
     fun size():Int
@@ -27,19 +29,183 @@ private fun incIndex(indexes:MutableList<Int>,tables: List<TableInSelect>):Boole
     return false
 }
 
-private class TableJoinRow(val rowids:Map<String,String>,val cells:List<Cell>)
+private class TableJoinRow(val rowids:Map<String,String>,val cells:List<Cell>) {
+    override fun equals(other: Any?): Boolean {
+        if (other !is TableJoinRow) {
+            return false
+        }
+        return ((cells == other.cells) && (rowids == other.rowids))
+    }
+
+    override fun hashCode(): Int = 1
+}
+
+class LeftOuterJoin(val leftTable:Table, val rightTable:Table, val leftcol:Column, val rightcol:Column)
+
+private interface RowForSelect {
+    fun reset()
+    fun next():Row?
+
+    fun isEmpty():Boolean
+}
+
+private class SimpleRowForSelect(tableInSelect:TableInSelect):RowForSelect {
+    private val myrows = tableInSelect.rowsFromSelect()
+    private var index = -1
+    override fun reset() {
+        index = -1
+    }
+
+    override fun next(): Row? {
+        index++
+        return if (index < myrows.size) myrows[index] else null
+    }
+
+
+    override fun isEmpty(): Boolean = myrows.isEmpty()
+}
+
+private class LeftOuterJoinRowForSelect(private val leftOuterJoin: LeftOuterJoin):RowForSelect {
+    private val leftSelect:RowForSelect = SimpleRowForSelect(leftOuterJoin.leftTable)
+    private val rigtSelect:RowForSelect = SimpleRowForSelect(leftOuterJoin.rightTable)
+    private var currentLeftRow:Row? = null
+    private var hasDeliveredFromCurrentLeft:Boolean = false
+
+    override fun reset() {
+        leftSelect.reset()
+        rigtSelect.reset()
+        currentLeftRow = null
+        hasDeliveredFromCurrentLeft = false
+    }
+
+    override fun next(): Row? {
+        if (currentLeftRow == null) {
+            currentLeftRow = leftSelect.next()?:return null
+        }
+        while (true) {
+            val rightRow:Row? = rigtSelect.next()
+            if (rightRow == null) {
+                if (hasDeliveredFromCurrentLeft) {
+                    currentLeftRow = leftSelect.next()?:return null
+                    rigtSelect.reset()
+                    hasDeliveredFromCurrentLeft = false
+                    continue
+                }
+                val resCells:MutableList<Cell> = mutableListOf()
+                resCells.addAll(currentLeftRow!!.cells)
+                for (column in leftOuterJoin.rightTable.colums) {
+                    resCells.add(Cell(column,NullCellValue))
+                }
+                val rowIds:MutableMap<String,String> = mutableMapOf()
+                rowIds.putAll(currentLeftRow!!.rowids)
+                rowIds.put(leftOuterJoin.rightTable.name,UUID.randomUUID().toString())
+                currentLeftRow = null
+                return Row(resCells,rowIds)
+            }
+            val leftValue = currentLeftRow!!.cells.first { it.column.matches(leftOuterJoin.leftcol.tablename,leftOuterJoin.leftcol.name) }.value
+            val rightValue = rightRow.cells.first { it.column.matches(leftOuterJoin.rightcol.tablename,leftOuterJoin.rightcol.name) }.value
+
+            if (leftValue != rightValue) {
+                continue
+            }
+
+            hasDeliveredFromCurrentLeft = true
+            val resRow = Row(currentLeftRow!!.cells + rightRow.cells,currentLeftRow!!.rowids + rightRow.rowids)
+            return resRow
+        }
+
+    }
+
+    override fun isEmpty(): Boolean = leftSelect.isEmpty()
+
+}
+
+
 
 class TablesSelectRowProvider constructor(
     private val dbTransaction: DbTransaction,
-    private val tables: List<TableInSelect>,
+    private val tablesPicked: List<TableInSelect>,
     private val whereClause: WhereClause,
     private val orderParts: List<OrderPart>,
     override val limit:Int?,
     override val offset: Int,
-    private val injectCells:List<Cell> = emptyList()
+    private val injectCells:List<Cell> = emptyList(),
+    private val leftOuterJoins:List<LeftOuterJoin> = emptyList()
     ):SelectRowProvider {
 
     private val values:List<TableJoinRow> by lazy {
+        val a = valuesnew
+        val b = valuesold
+        val eq = (a == b)
+        a
+    }
+
+    private val valuesnew:List<TableJoinRow> by lazy {
+        val tablesToParse:List<RowForSelect> = tablesPicked.map { t ->
+            val leftJoin:LeftOuterJoin? = leftOuterJoins.firstOrNull { it.leftTable.name == t.name }
+            val rightJoin:LeftOuterJoin? = leftOuterJoins.firstOrNull { it.rightTable.name == t.name }
+
+            when {
+                leftJoin != null -> LeftOuterJoinRowForSelect(leftJoin)
+                rightJoin != null -> null
+                else -> SimpleRowForSelect(t)
+            }
+        }.filterNotNull()
+
+        if (tablesToParse.isEmpty() || tablesToParse.any { it.isEmpty() }) {
+            emptyList()
+        } else {
+            val currentRowPicks:MutableList<Row?> = mutableListOf()
+            for (i in 0 until tablesToParse.size-1) {
+                currentRowPicks.add(tablesToParse[i].next())
+            }
+            currentRowPicks.add(null)
+
+            val resultRows:MutableList<TableJoinRow> = mutableListOf()
+            while (true) {
+                var didInc = false
+                var pos = tablesToParse.size-1
+                while (pos >= 0) {
+                    val r:Row? = tablesToParse[pos].next()
+                    currentRowPicks[pos] = r
+                    if (r != null) {
+                        didInc = true
+                        break
+                    }
+                    pos--
+                }
+                if (!didInc) {
+                    break
+                }
+                for (resetpos in pos+1 until tablesToParse.size) {
+                    tablesToParse[resetpos].reset()
+                    val next = tablesToParse[resetpos].next()
+                    currentRowPicks[resetpos] = next
+                }
+                val cellsThisRow: MutableList<Cell> = mutableListOf()
+                val rowidsThisRow:MutableMap<String,String> = mutableMapOf()
+
+                for (row in currentRowPicks) {
+                    cellsThisRow.addAll(row!!.cells)
+                    rowidsThisRow.putAll(row.rowids)
+                }
+                cellsThisRow.addAll(injectCells)
+
+                if (whereClause.isMatch(cellsThisRow)) {
+                    resultRows.add(TableJoinRow(rowidsThisRow,cellsThisRow))
+                }
+
+            }
+            if (orderParts.isNotEmpty()) {
+                resultRows.sortWith { a, b -> compareRows(a.cells,b.cells) }
+            }
+            resultRows
+        }
+    }
+
+    private val valuesold:List<TableJoinRow> by lazy {
+        val outerJoinMap:Map<String,LeftOuterJoin> = leftOuterJoins.map { it.leftTable.name to it }.toMap()
+        val tables:List<TableInSelect> = tablesPicked.filterNot { outerJoinMap.containsKey(it.name) }
         if (tables.isEmpty() || tables.any { it.rowsFromSelect().isEmpty() }) {
             emptyList()
         } else {
@@ -54,10 +220,15 @@ class TablesSelectRowProvider constructor(
                 val cellsThisRow: MutableList<Cell> = mutableListOf()
                 val rowidsThisRow:MutableMap<String,String> = mutableMapOf()
                 for (i in 0 until indexes.size) {
-                    val row:Row = tables[i].rowsFromSelect()[indexes[i]]
+                    val currentTable = tables[i]
+                    val row:Row = currentTable.rowsFromSelect()[indexes[i]]
+
                     val tc: List<Cell> = row.cells
                     cellsThisRow.addAll(tc)
                     rowidsThisRow.putAll(row.rowids)
+
+
+
                 }
                 cellsThisRow.addAll(injectCells)
                 if (whereClause.isMatch(cellsThisRow)) {
@@ -99,12 +270,13 @@ class TablesSelectRowProvider constructor(
         }
         return TablesSelectRowProvider(
             this.dbTransaction,
-            this.tables,
+            this.tablesPicked,
             this.whereClause,
             this.orderParts,
             this.limit,
             this.offset,
-            row.cells
+            row.cells,
+            this.leftOuterJoins
         )
     }
 }

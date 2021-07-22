@@ -1,7 +1,6 @@
 package no.anksoft.pginmem.statements
 
 import no.anksoft.pginmem.PgInMemDatasource
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.data.Offset
 import org.junit.jupiter.api.Test
@@ -9,7 +8,6 @@ import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import java.util.function.Consumer
 
 class SelectStatementTest {
     private val datasource = PgInMemDatasource()
@@ -711,6 +709,36 @@ class SelectStatementTest {
                     assertThat(it.next()).isFalse()
                 }
             }
+        }
+    }
+
+    @Test
+    fun leftOuterJoin() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table customer(id int,name text)")
+            conn.createStatement().execute("create table sale(customerid int, amount numeric)")
+            conn.prepareStatement("insert into customer(id,name) values (?,?)").use {
+                it.setInt(1,1)
+                it.setString(2,"Luke")
+                it.executeUpdate()
+            }
+            val checkRes:(List<Pair<String,BigDecimal?>>)->Unit = { expectations ->
+                conn.prepareStatement("select c.name,s.amount from customer c left outer join sale s on c.id = s.customerid").use { ps ->
+                    ps.executeQuery().use { rs ->
+                        for (expval in expectations) {
+                            assertThat(rs.next()).isTrue()
+                            assertThat(rs.getString("name")).isEqualTo(expval.first)
+                            if (expval.second == null) {
+                                assertThat(rs.getBigDecimal("amount")).isNull()
+                            } else {
+                                assertThat(rs.getBigDecimal("amount")).isCloseTo(expval.second, Offset.offset(BigDecimal.valueOf(0.001)))
+                            }
+                        }
+                        assertThat(rs.next()).isFalse()
+                    }
+                }
+            }
+            checkRes.invoke(listOf(Pair("Luke",null)))
         }
     }
 }
