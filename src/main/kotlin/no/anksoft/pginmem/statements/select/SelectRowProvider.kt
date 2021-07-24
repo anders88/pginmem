@@ -16,18 +16,6 @@ interface SelectRowProvider {
     fun providerWithFixed(row:Row?):SelectRowProvider
 }
 
-private fun incIndex(indexes:MutableList<Int>,tables: List<TableInSelect>):Boolean {
-    var currTable = tables.size - 1
-    while (currTable >= 0) {
-        if (indexes[currTable] < tables[currTable].size()-1) {
-            indexes[currTable] = indexes[currTable]+1
-            return true
-        }
-        indexes[currTable] = 0
-        currTable--
-    }
-    return false
-}
 
 private class TableJoinRow(val rowids:Map<String,String>,val cells:List<Cell>) {
     override fun equals(other: Any?): Boolean {
@@ -60,7 +48,6 @@ private class SimpleRowForSelect(tableInSelect:TableInSelect):RowForSelect {
         index++
         return if (index < myrows.size) myrows[index] else null
     }
-
 
     override fun isEmpty(): Boolean = myrows.isEmpty()
 }
@@ -133,14 +120,8 @@ class TablesSelectRowProvider constructor(
     private val leftOuterJoins:List<LeftOuterJoin> = emptyList()
     ):SelectRowProvider {
 
-    private val values:List<TableJoinRow> by lazy {
-        val a = valuesnew
-        val b = valuesold
-        val eq = (a == b)
-        a
-    }
 
-    private val valuesnew:List<TableJoinRow> by lazy {
+    private val values:List<TableJoinRow> by lazy {
         val tablesToParse:List<RowForSelect> = tablesPicked.map { t ->
             val leftJoin:LeftOuterJoin? = leftOuterJoins.firstOrNull { it.leftTable.name == t.name }
             val rightJoin:LeftOuterJoin? = leftOuterJoins.firstOrNull { it.rightTable.name == t.name }
@@ -203,46 +184,6 @@ class TablesSelectRowProvider constructor(
         }
     }
 
-    private val valuesold:List<TableJoinRow> by lazy {
-        val outerJoinMap:Map<String,LeftOuterJoin> = leftOuterJoins.map { it.leftTable.name to it }.toMap()
-        val tables:List<TableInSelect> = tablesPicked.filterNot { outerJoinMap.containsKey(it.name) }
-        if (tables.isEmpty() || tables.any { it.rowsFromSelect().isEmpty() }) {
-            emptyList()
-        } else {
-            val indexes: MutableList<Int> = mutableListOf()
-            for (i in 1..tables.size) {
-                indexes.add(0)
-            }
-
-            val genrows: MutableList<TableJoinRow> = mutableListOf()
-
-            do {
-                val cellsThisRow: MutableList<Cell> = mutableListOf()
-                val rowidsThisRow:MutableMap<String,String> = mutableMapOf()
-                for (i in 0 until indexes.size) {
-                    val currentTable = tables[i]
-                    val row:Row = currentTable.rowsFromSelect()[indexes[i]]
-
-                    val tc: List<Cell> = row.cells
-                    cellsThisRow.addAll(tc)
-                    rowidsThisRow.putAll(row.rowids)
-
-
-
-                }
-                cellsThisRow.addAll(injectCells)
-                if (whereClause.isMatch(cellsThisRow)) {
-                    genrows.add(TableJoinRow(rowidsThisRow,cellsThisRow))
-                }
-                val isMore = incIndex(indexes, tables)
-            } while (isMore)
-
-            if (orderParts.isNotEmpty()) {
-                genrows.sortWith { a, b -> compareRows(a.cells,b.cells) }
-            }
-            genrows
-        }
-    }
 
     private fun compareRows(a:List<Cell>,b:List<Cell>):Int {
         for (orderPart in orderParts) {

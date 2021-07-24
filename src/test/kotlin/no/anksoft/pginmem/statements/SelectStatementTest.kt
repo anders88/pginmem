@@ -741,4 +741,26 @@ class SelectStatementTest {
             checkRes.invoke(listOf(Pair("Luke",null)))
         }
     }
+
+    @Test
+    fun selectCountDistinct() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(name text)")
+            val insertAct:(String)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(name) values (?)").use {
+                    it.setString(1,input)
+                    it.executeUpdate()
+                }
+            }
+            insertAct.invoke("Luke")
+            insertAct.invoke("Luke")
+            insertAct.invoke("Darth")
+            conn.prepareStatement("select count(distinct name) from mytable").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt(1)).isEqualTo(2)
+                }
+            }
+        }
+    }
 }
