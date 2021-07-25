@@ -202,14 +202,18 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                 "max" -> MaxAggregateFunction()
                 "min" -> MinAggregateFunction()
                 "sum" -> SumAggregateFunction()
-                "count" -> CountAggregateFunction()
+                "count" -> when {
+                    statementAnalyzer.word(2) == "*" -> CountAggregateFunction()
+                    statementAnalyzer.word(2) == "distinct" -> CountDistinctAggregateFunction()
+                    else -> throw SQLException("Expected * or distinct in count")
+                }
                 else -> null
             }
             if (aggregateFunction != null) {
                 if (statementAnalyzer.addIndex().word() != "(") {
                     throw SQLException("Expected ( after aggregate")
                 }
-                statementAnalyzer.addIndex()
+                statementAnalyzer.addIndex(if (aggregateFunction is CountDistinctAggregateFunction) 2 else 1)
             }
             val selword = statementAnalyzer.word()
             if (selword != "*" && selword?.endsWith("*") == true) {

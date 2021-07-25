@@ -3,6 +3,7 @@ package no.anksoft.pginmem.statements.select
 import no.anksoft.pginmem.values.CellValue
 import no.anksoft.pginmem.values.IntegerCellValue
 import no.anksoft.pginmem.values.NullCellValue
+import no.anksoft.pginmem.values.NumericCellValue
 
 interface AggregateFunction {
     fun newInstanse():AggregateFunction
@@ -64,6 +65,19 @@ open class SumAggregateFunction:SimpleAggregateFunction() {
 class CountAggregateFunction:SumAggregateFunction() {
     override fun emptyResultValue(): CellValue = IntegerCellValue(0)
     override fun newInstanse(): AggregateFunction = CountAggregateFunction()
+}
+
+class CountDistinctAggregateFunction:AggregateFunction {
+    private val valuesAdded:MutableSet<CellValue> = mutableSetOf()
+
+    override fun newInstanse(): AggregateFunction = CountDistinctAggregateFunction()
+
+    override fun emptyResultValue(): CellValue = IntegerCellValue(0L)
+
+    override fun addValue(addedValue: CellValue): CellValue {
+        valuesAdded.add(addedValue)
+        return IntegerCellValue(valuesAdded.size.toLong())
+    }
 }
 
 
