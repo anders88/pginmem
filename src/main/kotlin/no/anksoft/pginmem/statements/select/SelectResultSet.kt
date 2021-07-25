@@ -52,9 +52,9 @@ private fun computeSelectSet(
     if (colums.none { it.aggregateFunction != null }) {
         return res
     }
-    val resArr:ArrayList<List<CellValue>> = ArrayList()
+    val resArr:ArrayList<List<Pair<CellValue,AggregateFunction?>>> = ArrayList()
 
-    for (genrow in res) {
+    for (genrow:List<CellValue> in res) {
         var matchRow:Int? = null
         for (index in 0 until resArr.size) {
             val alreadyFound = resArr[index]
@@ -63,7 +63,7 @@ private fun computeSelectSet(
                 if (colums[i].aggregateFunction != null) {
                     continue
                 }
-                if (genrow[i] != alreadyFound[i]) {
+                if (genrow[i] != alreadyFound[i].first) {
                     isMatch = false
                     break
                 }
@@ -74,15 +74,20 @@ private fun computeSelectSet(
             }
         }
         if (matchRow == null) {
-            resArr.add(genrow)
+            val currentNew:List<Pair<CellValue,AggregateFunction?>> = genrow.mapIndexed { myindex,acell ->
+                Pair(acell,colums[myindex].aggregateFunction)
+            }
+            resArr.add(currentNew)
             continue
         }
-        val currentMatch = resArr[matchRow]
-        val combinedRow:List<CellValue> = colums.mapIndexed { myindex,acol ->
-            if (acol.aggregateFunction == null) {
-                currentMatch[myindex]
+        val currentMatch:List<Pair<CellValue,AggregateFunction?>> = resArr[matchRow]
+        
+        val combinedRow:List<Pair<CellValue,AggregateFunction?>> = currentMatch.mapIndexed { myindex:Int,pair:Pair<CellValue,AggregateFunction?> ->
+            val af:AggregateFunction? = pair.second
+            if (af == null) {
+                pair
             } else {
-                acol.aggregateFunction.aggregate(currentMatch[myindex],genrow[myindex])
+                Pair(af.aggregate(pair.first,genrow[myindex]),af)
             }
         }
         resArr.set(matchRow,combinedRow)
@@ -93,14 +98,18 @@ private fun computeSelectSet(
 
         for (column in colums) {
             if (column.aggregateFunction == null) {
-                return resArr
+                return emptyList()
             }
             cellValues.add(column.aggregateFunction.emptyResultValue())
         }
-        resArr.add(cellValues)
+        return listOf(cellValues)
     }
 
-    return resArr
+    val returnValue = resArr.map { item ->
+        item.map { it.first }
+    }
+
+    return returnValue
 }
 
 
