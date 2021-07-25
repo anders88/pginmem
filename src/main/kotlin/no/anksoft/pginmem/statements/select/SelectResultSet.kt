@@ -75,19 +75,21 @@ private fun computeSelectSet(
         }
         if (matchRow == null) {
             val currentNew:List<Pair<CellValue,AggregateFunction?>> = genrow.mapIndexed { myindex,acell ->
-                Pair(acell,colums[myindex].aggregateFunction)
+                val af:AggregateFunction? = colums[myindex].aggregateFunction?.newInstanse()
+                af?.addValue(acell)
+                Pair(acell,af)
             }
             resArr.add(currentNew)
             continue
         }
         val currentMatch:List<Pair<CellValue,AggregateFunction?>> = resArr[matchRow]
-        
+
         val combinedRow:List<Pair<CellValue,AggregateFunction?>> = currentMatch.mapIndexed { myindex:Int,pair:Pair<CellValue,AggregateFunction?> ->
             val af:AggregateFunction? = pair.second
             if (af == null) {
                 pair
             } else {
-                Pair(af.aggregate(pair.first,genrow[myindex]),af)
+                Pair(af.addValue(genrow[myindex]),af)
             }
         }
         resArr.set(matchRow,combinedRow)
