@@ -184,98 +184,101 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         true
     } else false
 
-    val selectedColumns:List<SelectColumnProvider> = if (statementAnalyzer.word() == "*") {
-        allColumns.mapIndexed { index, column ->
-            SelectColumnProvider(
-                colindex = index+1,
-                alias = null,
-                valueFromExpression = column.myValueFromExpression,
-                aggregateFunction = null,
-                tableAliases = aliasMapping
-            )
+
+
+    val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
+    var selectcolindex = 0
+    while (!setOf("from","where").contains(statementAnalyzer.word()?:"from")) {
+        val aggregateFunction:AggregateFunction? = when (statementAnalyzer.word()) {
+            "max" -> MaxAggregateFunction()
+            "min" -> MinAggregateFunction()
+            "sum" -> SumAggregateFunction()
+            "count" -> when {
+                statementAnalyzer.word(2) == "*" -> CountAggregateFunction()
+                statementAnalyzer.word(2) == "distinct" -> CountDistinctAggregateFunction()
+                else -> throw SQLException("Expected * or distinct in count")
+            }
+            else -> null
         }
-    } else {
-        val addedSelected:MutableList<SelectColumnProvider> = mutableListOf()
-        var selectcolindex = 0
-        while (!setOf("from","where").contains(statementAnalyzer.word()?:"from")) {
-            val aggregateFunction:AggregateFunction? = when (statementAnalyzer.word()) {
-                "max" -> MaxAggregateFunction()
-                "min" -> MinAggregateFunction()
-                "sum" -> SumAggregateFunction()
-                "count" -> when {
-                    statementAnalyzer.word(2) == "*" -> CountAggregateFunction()
-                    statementAnalyzer.word(2) == "distinct" -> CountDistinctAggregateFunction()
-                    else -> throw SQLException("Expected * or distinct in count")
-                }
-                else -> null
+        if (aggregateFunction != null) {
+            if (statementAnalyzer.addIndex().word() != "(") {
+                throw SQLException("Expected ( after aggregate")
             }
-            if (aggregateFunction != null) {
-                if (statementAnalyzer.addIndex().word() != "(") {
-                    throw SQLException("Expected ( after aggregate")
-                }
-                statementAnalyzer.addIndex(if (aggregateFunction is CountDistinctAggregateFunction) 2 else 1)
-            }
-            val selword = statementAnalyzer.word()
-            if (selword != "*" && selword?.endsWith("*") == true) {
-                val aliasind = selword.indexOf(".")
-                if (aliasind != selword.length-2) {
-                    throw SQLException("Expected . before *")
-                }
-                val table:Table = dbTransaction.tableForRead(aliasMapping[selword.substring(0,aliasind)]?:throw SQLException("unknown columns $selword"))
-                for (columnToSelect in table.colums) {
-                    val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column == columnToSelect }?.value?:NullCellValue }
-                    val valueFromExpression = BasicValueFromExpression(valuegen,columnToSelect)
-                    selectcolindex++
-                    addedSelected.add(SelectColumnProvider(
-                        colindex = selectcolindex,
-                        alias = null,
-                        valueFromExpression = valueFromExpression,
-                        aggregateFunction = null,
-                        tableAliases = aliasMapping
-                    ))
-                }
-                statementAnalyzer.addIndex()
-            } else {
-                val valueFromExpression: ValueFromExpression = if (aggregateFunction is CountAggregateFunction) {
-                    if (statementAnalyzer.word() != "*") {
-                        throw SQLException("Only support count(*)")
-                    }
-                    BasicValueFromExpression({ IntegerCellValue(1) }, null)
-                } else if (statementAnalyzer.word() == "(" && !statementAnalyzer.matchesWord(listOf("(","case","when"))) {
-                    val parantes = statementAnalyzer.extractParantesStepForward()
-                        ?: throw SQLException("Could not read subquery in select")
-                    val innerSelect = analyseSelect(parantes, dbTransaction, indexToUse, tablesUsed)
-                    SelectColumnValue(innerSelect)
-                } else statementAnalyzer.readValueFromExpression(dbTransaction, tablesUsed,indexToUse)
-
-                if (aggregateFunction != null) {
-                    if (statementAnalyzer.addIndex().word() != ")") {
-                        throw SQLException("Expected ) after aggregate")
-                    }
-                }
-
-                selectcolindex++
-                statementAnalyzer.addIndex()
-                val possibleAlias: String? = if (statementAnalyzer.word() == "as") {
-                    val a = statementAnalyzer.addIndex().word() ?: throw SQLException("Expeted alias after as")
-                    statementAnalyzer.addIndex()
-                    a
-                } else null
-                val columnProvider = SelectColumnProvider(
-                    colindex = selectcolindex,
-                    alias = possibleAlias,
-                    valueFromExpression = valueFromExpression,
-                    aggregateFunction = aggregateFunction,
+            statementAnalyzer.addIndex(if (aggregateFunction is CountDistinctAggregateFunction) 2 else 1)
+        }
+        val selword = statementAnalyzer.word()
+        if (selword == "*" && (aggregateFunction == null)) {
+            val allcol = allColumns.mapIndexed { index, column ->
+                SelectColumnProvider(
+                    colindex = index+1,
+                    alias = null,
+                    valueFromExpression = column.myValueFromExpression,
+                    aggregateFunction = null,
                     tableAliases = aliasMapping
                 )
-                addedSelected.add(columnProvider)
             }
-            if (statementAnalyzer.word() == ",") {
+            addedSelected.addAll(allcol)
+            statementAnalyzer.addIndex()
+            selectcolindex+=allColumns.size
+        } else if (selword != "*" && selword?.endsWith("*") == true) {
+            val aliasind = selword.indexOf(".")
+            if (aliasind != selword.length-2) {
+                throw SQLException("Expected . before *")
+            }
+            val table:Table = dbTransaction.tableForRead(aliasMapping[selword.substring(0,aliasind)]?:throw SQLException("unknown columns $selword"))
+            for (columnToSelect in table.colums) {
+                val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column == columnToSelect }?.value?:NullCellValue }
+                val valueFromExpression = BasicValueFromExpression(valuegen,columnToSelect)
+                selectcolindex++
+                addedSelected.add(SelectColumnProvider(
+                    colindex = selectcolindex,
+                    alias = null,
+                    valueFromExpression = valueFromExpression,
+                    aggregateFunction = null,
+                    tableAliases = aliasMapping
+                ))
+            }
+            statementAnalyzer.addIndex()
+        } else {
+            val valueFromExpression: ValueFromExpression = if (aggregateFunction is CountAggregateFunction) {
+                if (statementAnalyzer.word() != "*") {
+                    throw SQLException("Only support count(*)")
+                }
+                BasicValueFromExpression({ IntegerCellValue(1) }, null)
+            } else if (statementAnalyzer.word() == "(" && !statementAnalyzer.matchesWord(listOf("(","case","when"))) {
+                val parantes = statementAnalyzer.extractParantesStepForward()
+                    ?: throw SQLException("Could not read subquery in select")
+                val innerSelect = analyseSelect(parantes, dbTransaction, indexToUse, tablesUsed)
+                SelectColumnValue(innerSelect)
+            } else statementAnalyzer.readValueFromExpression(dbTransaction, tablesUsed,indexToUse)
+
+            if (aggregateFunction != null) {
+                if (statementAnalyzer.addIndex().word() != ")") {
+                    throw SQLException("Expected ) after aggregate")
+                }
+            }
+
+            selectcolindex++
+            statementAnalyzer.addIndex()
+            val possibleAlias: String? = if (statementAnalyzer.word() == "as") {
+                val a = statementAnalyzer.addIndex().word() ?: throw SQLException("Expeted alias after as")
                 statementAnalyzer.addIndex()
-            }
+                a
+            } else null
+            val columnProvider = SelectColumnProvider(
+                colindex = selectcolindex,
+                alias = possibleAlias,
+                valueFromExpression = valueFromExpression,
+                aggregateFunction = aggregateFunction,
+                tableAliases = aliasMapping
+            )
+            addedSelected.add(columnProvider)
         }
-        addedSelected
+        if (statementAnalyzer.word() == ",") {
+            statementAnalyzer.addIndex()
+        }
     }
+    val selectedColumns:List<SelectColumnProvider> = addedSelected
 
 
     var toWhereInd = 0
