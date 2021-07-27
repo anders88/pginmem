@@ -241,9 +241,10 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                         throw SQLException("Only support count(*)")
                     }
                     BasicValueFromExpression({ IntegerCellValue(1) }, null)
-                } else if (statementAnalyzer.word() == "(") {
-                    val parantes = statementAnalyzer.extractParantesStepForward()?:throw SQLException("Could not read subquery in select")
-                    val innerSelect = analyseSelect(parantes,dbTransaction,indexToUse,tablesUsed)
+                } else if (statementAnalyzer.word() == "(" && !statementAnalyzer.matchesWord(listOf("(","case","when"))) {
+                    val parantes = statementAnalyzer.extractParantesStepForward()
+                        ?: throw SQLException("Could not read subquery in select")
+                    val innerSelect = analyseSelect(parantes, dbTransaction, indexToUse, tablesUsed)
                     SelectColumnValue(innerSelect)
                 } else statementAnalyzer.readValueFromExpression(dbTransaction, tablesUsed,indexToUse)
 

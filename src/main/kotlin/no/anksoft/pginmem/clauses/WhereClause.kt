@@ -9,7 +9,7 @@ import java.sql.SQLException
 
 
 fun createWhereClause(statementAnalyzer: StatementAnalyzer,tables:Map<String,TableInSelect>,indexToUse: IndexToUse,dbTransaction: DbTransaction):WhereClause {
-    if (statementAnalyzer.word() != "where") {
+    if (!setOf("where","when").contains(statementAnalyzer.word())) {
         return MatchAllClause()
     }
     statementAnalyzer.addIndex()

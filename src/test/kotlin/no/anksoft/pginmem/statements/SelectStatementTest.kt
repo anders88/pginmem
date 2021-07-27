@@ -763,4 +763,30 @@ class SelectStatementTest {
             }
         }
     }
+
+    @Test
+    fun selectWithCase() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(myvalue int)")
+            val insact:(Int)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(myvalue) values (?)").use {
+                    it.setInt(1,input)
+                    it.executeUpdate()
+                }
+            }
+            insact.invoke(10)
+            insact.invoke(40)
+            insact.invoke(80)
+
+            conn.prepareStatement("select *, (case when myvalue < 20 then 'small' else 'large' end) as size from mytable").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("myvalue")).isEqualTo(10)
+                    assertThat(it.getString("size")).isEqualTo("small")
+                }
+
+            }
+
+        }
+    }
 }

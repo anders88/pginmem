@@ -1,6 +1,8 @@
 package no.anksoft.pginmem
 
 import no.anksoft.pginmem.clauses.IndexToUse
+import no.anksoft.pginmem.clauses.WhereClause
+import no.anksoft.pginmem.clauses.createWhereClause
 import no.anksoft.pginmem.statements.select.ColumnInSelect
 import no.anksoft.pginmem.statements.select.SelectResultSet
 import no.anksoft.pginmem.statements.select.TableInSelect
@@ -151,6 +153,63 @@ private class ReadJsonProperty(val inputValue:ValueFromExpression,jsonPropertyTe
     override val column: Column? = null
 
     override fun registerBinding(index:Int,value: CellValue):Boolean = false
+}
+
+private class CaseValueFromExpression(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction, indexToUse: IndexToUse, tables:Map<String,TableInSelect>):ValueFromExpression {
+    private val conditions:List<Pair<WhereClause,ValueFromExpression>>
+    private val elseCond:ValueFromExpression
+
+    init {
+        val conds:MutableList<Pair<WhereClause,ValueFromExpression>> = mutableListOf()
+        while (statementAnalyzer.word() == "when") {
+            val whereClause:WhereClause = createWhereClause(statementAnalyzer,tables,indexToUse,dbTransaction)
+            if (statementAnalyzer.word() != "then") {
+                throw SQLException("Expected then in case statement")
+            }
+            statementAnalyzer.addIndex()
+            val valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables,indexToUse)
+            statementAnalyzer.addIndex()
+            conds.add(Pair(whereClause,valueFromExpression))
+        }
+        conditions = conds
+
+        elseCond = if (statementAnalyzer.word() == "else") {
+            statementAnalyzer.addIndex()
+            val x = statementAnalyzer.readValueFromExpression(dbTransaction,tables,indexToUse)
+            statementAnalyzer.addIndex()
+            x
+        } else {
+            BasicValueFromExpression({ NullCellValue }, null)
+        }
+        if (statementAnalyzer.word() != "end") {
+            throw SQLException("Expected end in case statement")
+        }
+        if (statementAnalyzer.word(1) == ")") {
+            statementAnalyzer.addIndex(1)
+        }
+    }
+
+    private fun generate(inputpair:Pair<DbTransaction, Row?>):CellValue {
+        val row:Row? = inputpair.second
+        for (casebranch in conditions) {
+            if (casebranch.first.isMatch(row?.cells?: emptyList())) {
+                val res = casebranch.second.valuegen(inputpair)
+                return res
+            }
+        }
+        val elseval = elseCond.valuegen(inputpair)
+        return elseval
+    }
+
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = { inputpair ->
+        generate(inputpair)
+    }
+
+    override val column: ColumnInSelect? = null
+
+    override fun registerBinding(index: Int, value: CellValue): Boolean {
+        TODO("Not yet implemented")
+    }
 }
 
 private class ReadJsonObject(val inputValue:ValueFromExpression,jsonPropertyText:String?):ValueFromExpression {
@@ -375,7 +434,12 @@ class StatementAnalyzer {
     fun readValueFromExpression(dbTransaction: DbTransaction,tables: Map<String,TableInSelect>,indexToUse: IndexToUse?):ValueFromExpression {
         val aword:String = word()?:throw SQLException("Unexpected end of statement")
         var toReturn:ValueFromExpression = when {
-            (aword == "now" && word(1) == "(" && word(2) == ")") -> {
+                matchesWord(listOf("(","case","when")) -> {
+                    addIndex(2)
+                    CaseValueFromExpression(this,dbTransaction,indexToUse?: IndexToUse(),tables)
+                }
+
+                (aword == "now" && word(1) == "(" && word(2) == ")") -> {
                     addIndex(3)
                     BasicValueFromExpression({ DateTimeCellValue(LocalDateTime.now()) },null)
                 }
