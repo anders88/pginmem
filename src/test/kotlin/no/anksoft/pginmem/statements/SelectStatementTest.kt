@@ -786,7 +786,42 @@ class SelectStatementTest {
                 }
 
             }
+        }
+    }
 
+    @Test
+    fun toNumber() {
+        connection.use { conn ->
+            conn.prepareStatement("select to_number('42','99999')").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt(1)).isEqualTo(42)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun orderByComputetCol() {
+        connection.use { conn->
+            conn.createStatement().execute("create table mytable(myvalue text)")
+            val insact:(String)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(myvalue) values (?)").use {
+                    it.setString(1,input)
+                    it.executeUpdate()
+                }
+            }
+            insact.invoke("42")
+            insact.invoke("32")
+            conn.prepareStatement("select to_number(myvalue,'99999') as compvalue from mytable order by compvalue").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt(1)).isEqualTo(32)
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt(1)).isEqualTo(42)
+                    assertThat(it.next()).isFalse()
+                }
+            }
         }
     }
 }
