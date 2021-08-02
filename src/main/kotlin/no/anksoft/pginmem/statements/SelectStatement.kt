@@ -11,7 +11,7 @@ import java.sql.SQLException
 
 class OrderPart(val column: ColumnInSelect,val ascending:Boolean,val nullsFirst:Boolean)
 
-private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Map<String,TableInSelect>):List<OrderPart> {
+private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Map<String,TableInSelect>,selectedColumns:List<SelectColumnProvider>):List<OrderPart> {
     if (statementAnalyzer.word() != "order") {
         return emptyList()
     }
@@ -28,7 +28,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
         if (setOf("group").contains(colnameText)) {
             break
         }
-        val column:ColumnInSelect = statementAnalyzer.findColumnFromIdentifier(colnameText,tablesUsed)
+        val column:ColumnInSelect = statementAnalyzer.findColumnFromIdentifier(colnameText,tablesUsed,selectedColumns)
         val nextWord = statementAnalyzer.addIndex().word()
 
         var ascending:Boolean = true
@@ -48,7 +48,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
             res
         } else true
         orderPats.add(OrderPart(column,ascending,nullsFirst))
-        if (setOf("fetch","limit").contains(statementAnalyzer.word())) {
+        if (setOf("fetch","limit").contains(statementAnalyzer.word()?:"fetch")) {
             break
         }
     }
@@ -294,7 +294,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     while (statementAnalyzer.word()?:"order" != "order") {
         statementAnalyzer.addIndex()
     }
-    val orderParts:List<OrderPart> = computeOrderParts(statementAnalyzer, tablesUsed)
+    val orderParts:List<OrderPart> = computeOrderParts(statementAnalyzer, tablesUsed,selectedColumns)
 
     val (limitRowsTo:Int?,offsetRows:Int) = if (setOf("fetch","limit").contains(statementAnalyzer.word())) {
         val isFetch = (statementAnalyzer.word() == "fetch")

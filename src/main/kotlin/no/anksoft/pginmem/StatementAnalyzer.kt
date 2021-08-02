@@ -3,9 +3,7 @@ package no.anksoft.pginmem
 import no.anksoft.pginmem.clauses.IndexToUse
 import no.anksoft.pginmem.clauses.WhereClause
 import no.anksoft.pginmem.clauses.createWhereClause
-import no.anksoft.pginmem.statements.select.ColumnInSelect
-import no.anksoft.pginmem.statements.select.SelectResultSet
-import no.anksoft.pginmem.statements.select.TableInSelect
+import no.anksoft.pginmem.statements.select.*
 import no.anksoft.pginmem.values.*
 import org.jsonbuddy.JsonObject
 import org.jsonbuddy.parse.JsonParser
@@ -296,6 +294,20 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
     override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
 }
 
+private class ToNumberValue(val startValue:ValueFromExpression):ValueFromExpression {
+    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
+        val toConvert:CellValue = startValue.valuegen.invoke(it)
+        if (toConvert == NullCellValue) {
+            NullCellValue
+        } else {
+            toConvert.valueAsInteger()
+        }
+    }
+
+    override val column: Column? = null
+    override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
+}
+
 private class LowerExpression(val startValue:ValueFromExpression):ValueFromExpression {
     override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
         val startVal = startValue.valuegen.invoke(it)
@@ -532,6 +544,23 @@ class StatementAnalyzer {
                 }
                 ToDateValue(fromExpression,dateformat.substring(1,dateformat.length-1))
             }
+            aword == "to_number" -> {
+                if (addIndex().word() != "(") {
+                    throw SQLException("Expected ( after to_date")
+                }
+                addIndex()
+                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables,indexToUse)
+                if (addIndex().word() != ",") {
+                    throw SQLException("Expected , after to_date")
+                }
+                while (word() != null && word() != ")") {
+                    addIndex()
+                }
+                if (word() != ")") {
+                    throw SQLException("Expecting ) after to_number")
+                }
+                ToNumberValue(fromExpression)
+            }
             aword == "lower" -> {
                 if (addIndex().word() != "(") {
                     throw SQLException("Expected ( after lower")
@@ -588,19 +617,28 @@ class StatementAnalyzer {
 
 
     private fun readColumnValue(tables: Map<String, TableInSelect>, aword: String):ValueFromExpression {
-        val column: ColumnInSelect = findColumnFromIdentifier(aword, tables)
+        val column: ColumnInSelect = findColumnFromIdentifier(aword, tables, emptyList())
         val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column.matches(column.tablename,column.name?:"") }?.value?:NullCellValue }
         return BasicValueFromExpression(valuegen,column)
     }
 
     fun findColumnFromIdentifier(
         aword: String,
-        tables: Map<String, TableInSelect>
+        tables: Map<String, TableInSelect>,
+        selectedColumns:List<SelectColumnProvider>
     ): ColumnInSelect {
         val ind = aword.indexOf(".")
         val column: ColumnInSelect = if (ind == -1) {
-            tables.values.map { it.findColumn(aword) }.filterNotNull().firstOrNull()
-                ?: throw SQLException("Unknown column $aword")
+            val colinsel:ColumnInSelect? = tables.values.map { it.findColumn(aword) }.filterNotNull().firstOrNull()
+            if (colinsel == null) {
+                val selectColumnProvider = selectedColumns.firstOrNull { it.alias == aword } ?: throw SQLException("Unknown order by $aword")
+                SelectColumnAsAColumn(
+                    selectColumnProvider,
+                    ""
+                )
+            } else {
+                colinsel
+            }
         } else {
             var tablename = aword.substring(0, ind)
             if (tablename.startsWith("\"") && tablename.endsWith("\"")) {

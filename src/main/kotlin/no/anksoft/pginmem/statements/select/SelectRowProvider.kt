@@ -12,6 +12,7 @@ interface SelectRowProvider {
     fun readRow(rowno: Int):Row
     val limit:Int?
     val offset:Int
+    val orderParts: List<OrderPart>
 
     fun providerWithFixed(row:Row?):SelectRowProvider
 }
@@ -113,7 +114,7 @@ class TablesSelectRowProvider constructor(
     private val dbTransaction: DbTransaction,
     private val tablesPicked: List<TableInSelect>,
     private val whereClause: WhereClause,
-    private val orderParts: List<OrderPart>,
+    override val orderParts: List<OrderPart>,
     override val limit:Int?,
     override val offset: Int,
     private val injectCells:List<Cell> = emptyList(),
@@ -177,9 +178,10 @@ class TablesSelectRowProvider constructor(
                 }
 
             }
-            if (orderParts.isNotEmpty()) {
+            /*
+            if (orderParts.isNotEmpty()) {x
                 resultRows.sortWith { a, b -> compareRows(a.cells,b.cells) }
-            }
+            }*/
             resultRows
         }
     }
@@ -237,6 +239,9 @@ class ImplicitOneRowSelectProvider(val whereClause: WhereClause,val injectedRow:
 
     override val limit: Int? = null
     override val offset: Int = 0
+    override val orderParts: List<OrderPart> = emptyList()
+
+
     override fun providerWithFixed(row: Row?): SelectRowProvider = ImplicitOneRowSelectProvider(whereClause,row)
 
 }

@@ -2,6 +2,7 @@ package no.anksoft.pginmem.statements.select
 
 import no.anksoft.pginmem.DbTransaction
 import no.anksoft.pginmem.Row
+import no.anksoft.pginmem.statements.OrderPart
 import no.anksoft.pginmem.values.ByteArrayCellValue
 import no.anksoft.pginmem.values.CellValue
 import no.anksoft.pginmem.values.NullCellValue
@@ -22,7 +23,7 @@ private fun computeSelectSet(
     dbTransaction: DbTransaction,
     disinctFlag: Boolean
 ):List<List<CellValue>> {
-    val res:MutableList<List<CellValue>> = mutableListOf()
+    val res:MutableList<Pair<List<CellValue>,Row>> = mutableListOf()
     for (i in 0 until selectRowProvider.size()) {
         val row:Row = selectRowProvider.readRow(i)
         val valuesThisRow:List<CellValue> = colums.map { colProvider ->
@@ -30,10 +31,10 @@ private fun computeSelectSet(
         }
         if (disinctFlag) {
             var isDistinct=true
-            for (exsisting in res) {
+            for (exsisting:Pair<List<CellValue>,Row> in res) {
                 var disinctThisRow = false
-                for (j in exsisting.indices) {
-                    if (exsisting[j] != valuesThisRow[j]) {
+                for (j in exsisting.first.indices) {
+                    if (exsisting.first[j] != valuesThisRow[j]) {
                         disinctThisRow = true
                         break
                     }
@@ -47,14 +48,20 @@ private fun computeSelectSet(
                 continue
             }
         }
-        res.add(valuesThisRow)
+        res.add(Pair(valuesThisRow,row))
     }
+
+    if (selectRowProvider.orderParts.isNotEmpty()) {
+        res.sortWith { a, b -> compareRowsForSelect(a,b,selectRowProvider.orderParts,colums) }
+    }
+
     if (colums.none { it.aggregateFunction != null }) {
-        return res
+        return res.map { it.first }
     }
     val resArr:ArrayList<List<Pair<CellValue,AggregateFunction?>>> = ArrayList()
 
-    for (genrow:List<CellValue> in res) {
+    for (pair in res) {
+        val genrow:List<CellValue> = pair.first
         var matchRow:Int? = null
         for (index in 0 until resArr.size) {
             val alreadyFound = resArr[index]
@@ -112,6 +119,33 @@ private fun computeSelectSet(
     }
 
     return returnValue
+}
+
+private fun compareRowsForSelect(a: Pair<List<CellValue>,Row>, b: Pair<List<CellValue>,Row>, orderParts: List<OrderPart>,colums: List<SelectColumnProvider>):Int {
+    for (orderPart in orderParts) {
+        val index = colums.indexOfFirst {
+            if (it.alias != null) {
+                orderPart.column.matches("",it.alias)
+            } else {
+                it.isMatch(orderPart.column.tablename + "." + orderPart.column.name)
+            }
+        }
+        val (aVal:CellValue,bVal:CellValue) = if (index != -1) {
+            Pair(a.first[index],b.first[index])
+        } else {
+            val colind =
+                a.second.cells.indexOfFirst { orderPart.column.matches(it.column.tablename, it.column.name) }
+            Pair(a.second.cells[colind].value,b.second.cells[colind].value)
+        }
+
+        //val aVal = a[index]
+        //val bVal = b[index]
+        if (aVal == bVal) {
+            continue
+        }
+        return if (orderPart.ascending) aVal.compareMeTo(bVal,orderPart.nullsFirst) else bVal.compareMeTo(aVal,orderPart.nullsFirst)
+    }
+    return 0
 }
 
 
