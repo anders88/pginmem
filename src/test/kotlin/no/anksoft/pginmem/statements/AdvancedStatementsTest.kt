@@ -287,4 +287,32 @@ class AdvancedStatementsTest {
 
     }
 
+    @Test
+    fun selectWithNameFromInnerSelect() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(name text, amount numeric)")
+            val insact:(Pair<String,BigDecimal>)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(name,amount) values (?,?)").use { ps ->
+                    ps.setString(1,input.first)
+                    ps.setBigDecimal(2,input.second)
+                    ps.executeUpdate()
+                }
+            }
+            insact.invoke(Pair("luke", BigDecimal(10.0)))
+            insact.invoke(Pair("luke",BigDecimal(32.0)))
+            insact.invoke(Pair("darth",BigDecimal(100.0)))
+            //conn.prepareStatement("select name,sum(amount) as sumam from mytable group by name").use { ps ->
+            conn.prepareStatement("select * from (select name,sum(amount) as sumam from mytable group by name) as usedtable").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString(1)).isEqualTo("luke")
+                    assertThat(it.getBigDecimal(2)).isCloseTo(BigDecimal(42.0), Offset.offset(BigDecimal(0.001)))
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.next()).isFalse()
+                }
+            }
+
+        }
+    }
+
 }

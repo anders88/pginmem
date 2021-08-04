@@ -625,11 +625,11 @@ class SelectStatementTest {
                     assertThat(it.next()).isTrue()
                 }
             }
-            conn.prepareStatement("select (select a.id from mytable a where a.id = ?) from mytable b").use { ps ->
+            conn.prepareStatement("select (select a.id from mytable a where a.id = ?) as compval from mytable b").use { ps ->
                 ps.setString(1,"b")
                 ps.executeQuery().use {
                     assertThat(it.next()).isTrue()
-                    assertThat(it.getString(1)).isEqualTo("b")
+                    assertThat(it.getString("compval")).isEqualTo("b")
                     assertThat(it.next()).isTrue()
                     assertThat(it.getString(1)).isEqualTo("b")
                     assertThat(it.next()).isFalse()

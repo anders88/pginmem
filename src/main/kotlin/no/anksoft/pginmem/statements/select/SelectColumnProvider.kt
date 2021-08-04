@@ -25,4 +25,10 @@ class SelectColumnProvider constructor(
         return column.matches(tablename,givenColname)
 
     }
+
+    override fun toString(): String {
+        return "SelectColumnProvider(colindex=$colindex, alias=$alias)"
+    }
+
+
 }

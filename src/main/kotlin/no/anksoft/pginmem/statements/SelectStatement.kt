@@ -48,7 +48,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
             res
         } else true
         orderPats.add(OrderPart(column,ascending,nullsFirst))
-        if (setOf("fetch","limit").contains(statementAnalyzer.word()?:"fetch")) {
+        if (setOf("fetch","limit","offset").contains(statementAnalyzer.word()?:"fetch")) {
             break
         }
     }
@@ -211,7 +211,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
             val allcol = allColumns.mapIndexed { index, column ->
                 SelectColumnProvider(
                     colindex = index+1,
-                    alias = null,
+                    alias = column.name,
                     valueFromExpression = column.myValueFromExpression,
                     aggregateFunction = null,
                     tableAliases = aliasMapping

@@ -615,10 +615,22 @@ class StatementAnalyzer {
         return toReturn
     }
 
+    private fun myValuegen(column: ColumnInSelect,cells:List<Cell>?,tables: Map<String, TableInSelect>):CellValue {
+        val matches = (cells?: emptyList()).filter{ it.column.name == column.name}
+        if (matches.isEmpty()) {
+            return NullCellValue
+        }
+        if (matches.size == 1) {
+            return matches[0].value
+        }
+        val res:CellValue? = cells?.firstOrNull { it.column.matches(column.tablename,column.name?:"") }?.value
+        return res?:NullCellValue
+    }
 
     private fun readColumnValue(tables: Map<String, TableInSelect>, aword: String):ValueFromExpression {
         val column: ColumnInSelect = findColumnFromIdentifier(aword, tables, emptyList())
-        val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column.matches(column.tablename,column.name?:"") }?.value?:NullCellValue }
+        //val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column.matches(column.tablename,column.name?:"") }?.value?:NullCellValue }
+        val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { myValuegen(column,it.second?.cells,tables)}
         return BasicValueFromExpression(valuegen,column)
     }
 
