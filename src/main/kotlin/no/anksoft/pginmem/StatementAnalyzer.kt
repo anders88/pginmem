@@ -95,25 +95,21 @@ private fun splitStringToWords(sqlinp:String):List<String> {
 }
 
 interface ValueFromExpression {
-    val valuegen: ((Pair<DbTransaction, Row?>) -> CellValue)
+    fun genereateValue(dbTransaction: DbTransaction,row: Row?):CellValue
     val column: ColumnInSelect?
     fun registerBinding(index:Int,value: CellValue):Boolean
 }
 
 
-class BasicValueFromExpression(
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue,
-    override val column: ColumnInSelect?
-) :ValueFromExpression {
-    override fun registerBinding(index:Int,value: CellValue):Boolean = false
-}
 
 class BindingValueFromExpression(indexToUse: IndexToUse?):ValueFromExpression {
     private val expectedIndex:Int = indexToUse?.takeInd()?:throw SQLException("Cannot use binding here")
     private var cellValue:CellValue? = null
 
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        cellValue?:throw SQLException("Binding not set for binding $expectedIndex")
+
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        return cellValue?:throw SQLException("Binding not set for binding $expectedIndex")
     }
 
     override val column: Column? = null
@@ -137,20 +133,28 @@ private fun readJsonProperty(input:String?):String {
 private class ReadJsonProperty(val inputValue:ValueFromExpression,jsonPropertyText:String?):ValueFromExpression {
     private val jsonProperty:String = readJsonProperty(jsonPropertyText)
 
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val startVal:CellValue = inputValue.valuegen.invoke(it)
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val startVal:CellValue = inputValue.genereateValue(dbTransaction,row)
         val jsonObject: JsonObject? = when {
             startVal is JsonCellValue -> startVal.myvalue
             startVal is StringCellValue -> JsonParser.parseToObject(startVal.myValue)
             startVal is NullCellValue -> null
             else -> throw SQLException("Expected string as json")
         }
-        (jsonObject?.stringValue(jsonProperty)?.orElse(null))?.let { StringCellValue(it) }?:NullCellValue
+        return (jsonObject?.stringValue(jsonProperty)?.orElse(null))?.let { StringCellValue(it) }?:NullCellValue
     }
 
     override val column: Column? = null
 
     override fun registerBinding(index:Int,value: CellValue):Boolean = false
+}
+
+class FixedValueFromExpression(private val fixedValue:CellValue):ValueFromExpression {
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue = fixedValue
+    override val column: ColumnInSelect? = null
+    override fun registerBinding(index: Int, value: CellValue): Boolean = false
+
 }
 
 private class CaseValueFromExpression(statementAnalyzer: StatementAnalyzer, dbTransaction: DbTransaction, indexToUse: IndexToUse, tables:Map<String,TableInSelect>):ValueFromExpression {
@@ -177,7 +181,7 @@ private class CaseValueFromExpression(statementAnalyzer: StatementAnalyzer, dbTr
             statementAnalyzer.addIndex()
             x
         } else {
-            BasicValueFromExpression({ NullCellValue }, null)
+            FixedValueFromExpression(NullCellValue)
         }
         if (statementAnalyzer.word() != "end") {
             throw SQLException("Expected end in case statement")
@@ -187,21 +191,19 @@ private class CaseValueFromExpression(statementAnalyzer: StatementAnalyzer, dbTr
         }
     }
 
-    private fun generate(inputpair:Pair<DbTransaction, Row?>):CellValue {
-        val row:Row? = inputpair.second
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+
         for (casebranch in conditions) {
             if (casebranch.first.isMatch(row?.cells?: emptyList())) {
-                val res = casebranch.second.valuegen(inputpair)
+                val res = casebranch.second.genereateValue(dbTransaction,row)
                 return res
             }
         }
-        val elseval = elseCond.valuegen(inputpair)
+        val elseval = elseCond.genereateValue(dbTransaction,row)
         return elseval
     }
 
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = { inputpair ->
-        generate(inputpair)
-    }
+
 
     override val column: ColumnInSelect? = null
 
@@ -213,8 +215,9 @@ private class CaseValueFromExpression(statementAnalyzer: StatementAnalyzer, dbTr
 private class ReadJsonObject(val inputValue:ValueFromExpression,jsonPropertyText:String?):ValueFromExpression {
     private val jsonProperty:String = readJsonProperty(jsonPropertyText)
 
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val startVal:CellValue = inputValue.valuegen.invoke(it)
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val startVal:CellValue = inputValue.genereateValue(dbTransaction,row)
         val jsonObject:JsonObject? = when {
             startVal is JsonCellValue -> startVal.myvalue
             startVal is StringCellValue -> JsonParser.parseToObject(startVal.myValue)
@@ -222,7 +225,7 @@ private class ReadJsonObject(val inputValue:ValueFromExpression,jsonPropertyText
             else -> throw SQLException("Expected string as json")
         }
 
-        jsonObject?.let { jo -> (jo.objectValue(jsonProperty).orElse(null))?.let { JsonCellValue(it) }}?:NullCellValue
+        return jsonObject?.let { jo -> (jo.objectValue(jsonProperty).orElse(null))?.let { JsonCellValue(it) }}?:NullCellValue
     }
 
     override val column: Column? = null
@@ -231,10 +234,11 @@ private class ReadJsonObject(val inputValue:ValueFromExpression,jsonPropertyText
 }
 
 private class ConvertToColtype(val inputValue: ValueFromExpression,val columnType: ColumnType):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val startvalue:CellValue = inputValue.valuegen.invoke(it)
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val startvalue:CellValue = inputValue.genereateValue(dbTransaction,row)
         val res = columnType.convertToMe(startvalue)
-        res
+        return res
     }
 
     override val column: Column? = null
@@ -242,16 +246,16 @@ private class ConvertToColtype(val inputValue: ValueFromExpression,val columnTyp
 }
 
 private class CoalesceValue(val coalvalues:List<ValueFromExpression>):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        var genvalue:CellValue = NullCellValue
+
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
         for (valueFromExp in coalvalues) {
-            val valFromEx = valueFromExp.valuegen.invoke(it)
+            val valFromEx = valueFromExp.genereateValue(dbTransaction,row)
             if (valFromEx != NullCellValue) {
-                genvalue = valFromEx
-                break
+                return valFromEx
             }
         }
-        genvalue
+        return NullCellValue
     }
 
     override val column: Column? = null
@@ -281,9 +285,10 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
 
     private val dateTimeFormatter:DateTimeFormatter = convertToJavaDateFormat(dateformat)
 
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val toConvert:CellValue = startValue.valuegen.invoke(it)
-        if (toConvert == NullCellValue) {
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val toConvert:CellValue = startValue.genereateValue(dbTransaction,row)
+        return if (toConvert == NullCellValue) {
             NullCellValue
         } else {
             toConvert.valueAsDate()
@@ -295,13 +300,15 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
 }
 
 private class ToNumberValue(val startValue:ValueFromExpression):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val toConvert:CellValue = startValue.valuegen.invoke(it)
-        if (toConvert == NullCellValue) {
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val toConvert:CellValue = startValue.genereateValue(dbTransaction,row)
+        return if (toConvert == NullCellValue) {
             NullCellValue
         } else {
             toConvert.valueAsInteger()
         }
+
     }
 
     override val column: Column? = null
@@ -309,9 +316,11 @@ private class ToNumberValue(val startValue:ValueFromExpression):ValueFromExpress
 }
 
 private class LowerExpression(val startValue:ValueFromExpression):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val startVal = startValue.valuegen.invoke(it)
-        if (startVal is StringCellValue) StringCellValue(startVal.myValue.toLowerCase()) else startVal
+
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val startVal = startValue.genereateValue(dbTransaction,row)
+        return if (startVal is StringCellValue) StringCellValue(startVal.myValue.toLowerCase()) else startVal
     }
 
     override val column: Column? = null
@@ -319,20 +328,54 @@ private class LowerExpression(val startValue:ValueFromExpression):ValueFromExpre
 
 }
 
+private class CurrentTimeValueFromExpression:ValueFromExpression {
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue = DateTimeCellValue(LocalDateTime.now())
+
+    override val column: ColumnInSelect? = null
+
+    override fun registerBinding(index: Int, value: CellValue): Boolean = false
+}
+
+class SequenceValueFromExpression(private val sequenceName:String):ValueFromExpression {
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        return dbTransaction.sequence(sequenceName).nextVal()
+    }
+
+    override val column: ColumnInSelect? = null
+    override fun registerBinding(index: Int, value: CellValue): Boolean = false
+}
+
 private class ExtractExpression(val startValue:ValueFromExpression):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val startVal = startValue.valuegen.invoke(it)
-        when {
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val startVal = startValue.genereateValue(dbTransaction,row)
+        return when {
             (startVal is NullCellValue) -> NullCellValue
             (startVal is DateTimeCellValue) -> IntegerCellValue(startVal.myValue.year.toLong())
             (startVal is DateCellValue) -> IntegerCellValue(startVal.myValue.year.toLong())
             else -> throw SQLException("Illegal value to extract")
         }
-
     }
 
     override val column: Column? = null
     override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
+}
+
+class ColumnValueFromExpression constructor(override val column: ColumnInSelect):ValueFromExpression {
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val matches = (row?.cells?: emptyList()).filter{ it.column.name == column.name}
+        if (matches.isEmpty()) {
+            return NullCellValue
+        }
+        if (matches.size == 1) {
+            return matches[0].value
+        }
+        val res:CellValue? = row?.cells?.firstOrNull { it.column.matches(column.tablename,column.name?:"") }?.value
+        return res?:NullCellValue
+    }
+
+
+    override fun registerBinding(index: Int, value: CellValue): Boolean = false
 }
 
 class StatementAnalyzer {
@@ -453,10 +496,10 @@ class StatementAnalyzer {
 
                 (aword == "now" && word(1) == "(" && word(2) == ")") -> {
                     addIndex(3)
-                    BasicValueFromExpression({ DateTimeCellValue(LocalDateTime.now()) },null)
+                    CurrentTimeValueFromExpression()
                 }
             (aword == "current_timestamp") ->
-                BasicValueFromExpression({ DateTimeCellValue(LocalDateTime.now()) },null)
+                CurrentTimeValueFromExpression()
 
             (aword == "uuid_in" && word(1) == "(") -> {
                 var parind = 0
@@ -470,7 +513,7 @@ class StatementAnalyzer {
                     }
                 } while (parind > 0)
                 addIndex()
-                BasicValueFromExpression({ StringCellValue(UUID.randomUUID().toString()) },null)
+                FixedValueFromExpression(StringCellValue(UUID.randomUUID().toString()))
             }
             (aword == "nextval" && word(1) == "(" && word(3) == ")") -> {
                 val seqnamestr = word(2)
@@ -480,21 +523,21 @@ class StatementAnalyzer {
                 addIndex(4)
                 val seqname = seqnamestr.substring(1,seqnamestr.length-1).toLowerCase()
                 dbTransaction.sequence(seqname)
-                BasicValueFromExpression({ it.first.sequence(seqname).nextVal() },null)
+                SequenceValueFromExpression(seqname)
             }
-            ("true" == aword) -> BasicValueFromExpression({ BooleanCellValue(true) },null)
-            ("false" == aword) -> BasicValueFromExpression({ BooleanCellValue(false) },null)
-            ("null" == aword) -> BasicValueFromExpression({ NullCellValue },null)
+            ("true" == aword) -> FixedValueFromExpression(BooleanCellValue(true))
+            ("false" == aword) -> FixedValueFromExpression(BooleanCellValue(false))
+            ("null" == aword) -> FixedValueFromExpression(NullCellValue)
 
-            (aword.toLongOrNull() != null) -> BasicValueFromExpression({ IntegerCellValue(aword.toLong())},null)
-            (aword.toBigDecimalOrNull() != null) -> BasicValueFromExpression({ NumericCellValue(aword.toBigDecimal()) },null)
+            (aword.toLongOrNull() != null) -> FixedValueFromExpression(IntegerCellValue(aword.toLong()))
+            (aword.toBigDecimalOrNull() != null) -> FixedValueFromExpression(NumericCellValue(aword.toBigDecimal()))
             aword.startsWith("'") -> {
                 val end = aword.indexOf("'",1)
                 if (end == -1) {
                     throw SQLException("Illegal text $aword")
                 }
                 val text = aword.substring(1,end)
-                BasicValueFromExpression({ StringCellValue(text) },null)
+                FixedValueFromExpression(StringCellValue(text))
             }
             (aword == "(") -> {
                 var toAdd:Int = -1
@@ -629,9 +672,7 @@ class StatementAnalyzer {
 
     private fun readColumnValue(tables: Map<String, TableInSelect>, aword: String):ValueFromExpression {
         val column: ColumnInSelect = findColumnFromIdentifier(aword, tables, emptyList())
-        //val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column.matches(column.tablename,column.name?:"") }?.value?:NullCellValue }
-        val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { myValuegen(column,it.second?.cells,tables)}
-        return BasicValueFromExpression(valuegen,column)
+        return ColumnValueFromExpression(column)
     }
 
     fun findColumnFromIdentifier(

@@ -93,7 +93,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         if (statementAnalyzer.word() == "set" && statementAnalyzer.word(1) == "default") {
             statementAnalyzer.addIndex(2)
             val readValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap(),null)
-            val newCol = column.setDefault(readValueFromExpression.valuegen)
+            val newCol = column.setDefault(readValueFromExpression)
             return replaceCol(table,column,newCol,null)
         }
         if (statementAnalyzer.word() == "set" && (statementAnalyzer.word(1) == "null" || (statementAnalyzer.word(1) == "not" && statementAnalyzer.word(2) == "null"))) {
@@ -110,7 +110,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         for (row in table.rowsForReading()) {
             val newCells = row.cells.map {
                 if (it.column == oldcol)
-                    Cell(newColumn,if (valueTransformation !=null) valueTransformation.valuegen.invoke(Pair(dbTransaction,row)) else it.value)
+                    Cell(newColumn,if (valueTransformation !=null) valueTransformation.genereateValue(dbTransaction,row) else it.value)
                 else it
             }
             newTable.addRow(Row(newCells,row.rowids))
@@ -204,7 +204,7 @@ class AlterTableStatement(private val statementAnalyzer: StatementAnalyzer, priv
         val newTable = Table(table.name, adjustedColumns)
         for (row in table.rowsForReading()) {
             val adjustedCells = row.cells.toMutableList()
-            val newCell = Cell(newColumn, newColumn.defaultValue?.invoke(Pair(dbTransaction,row))?:NullCellValue)
+            val newCell = Cell(newColumn, newColumn.defaultValue?.genereateValue(dbTransaction,row)?:NullCellValue)
             adjustedCells.add(newCell)
             newTable.addRow(Row(adjustedCells,row.rowids))
         }

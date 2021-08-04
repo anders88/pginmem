@@ -59,7 +59,7 @@ class InClause(
         if (inValues.any { it.index != null && it.givenValue == null }) {
             throw SQLException("Binding not registered")
         }
-        val value:CellValue = leftValueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
+        val value:CellValue = leftValueFromExpression.genereateValue(dbTransaction,Row(cells))
         if (selectStatement != null) {
             val queryRes = selectStatement.internalExecuteQuery()
             for (rowindex in 0 until queryRes.numberOfRows) {
@@ -71,7 +71,7 @@ class InClause(
         }
         for (initem in inValues) {
             val invalue:CellValue = initem.givenValue?:
-                initem.valueFromExpression?.valuegen?.invoke(Pair(dbTransaction,Row(cells)))?:
+                initem.valueFromExpression?.genereateValue(dbTransaction,Row(cells))?:
                 NullCellValue
             if (invalue == value) {
                 return true

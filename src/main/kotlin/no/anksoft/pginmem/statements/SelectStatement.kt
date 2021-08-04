@@ -70,9 +70,10 @@ class SelectAnalyze constructor(
     }
 }
 
-class ValueGenFromDbCell(override val column: Column):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        it.second?.cells?.firstOrNull { it.column == column }?.value?:NullCellValue
+class ValueGenFromDbCell constructor(override val column: Column):ValueFromExpression {
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        return row?.cells?.firstOrNull { it.column == column }?.value?:NullCellValue
     }
 
     override fun registerBinding(index:Int,value: CellValue):Boolean = false
@@ -80,15 +81,16 @@ class ValueGenFromDbCell(override val column: Column):ValueFromExpression {
 
 
 class SelectColumnValue(val selectAnalyze:SelectAnalyze):ValueFromExpression {
-    override val valuegen: (Pair<DbTransaction, Row?>) -> CellValue = {
-        val rowProvider = selectAnalyze.selectRowProvider.providerWithFixed(it.second)
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val rowProvider = selectAnalyze.selectRowProvider.providerWithFixed(row)
         val selectResultSet = SelectResultSet(
             selectAnalyze.selectedColumns,
             rowProvider,
-            it.first,
+            dbTransaction,
             selectAnalyze.distinctFlag
         )
-        if (selectResultSet.numberOfRows < 1) {
+        return if (selectResultSet.numberOfRows < 1) {
             NullCellValue
         } else {
             selectResultSet.valueAt(1,0)
@@ -227,8 +229,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
             }
             val table:Table = dbTransaction.tableForRead(aliasMapping[selword.substring(0,aliasind)]?:throw SQLException("unknown columns $selword"))
             for (columnToSelect in table.colums) {
-                val valuegen:((Pair<DbTransaction,Row?>)->CellValue) = { it.second?.cells?.firstOrNull { it.column == columnToSelect }?.value?:NullCellValue }
-                val valueFromExpression = BasicValueFromExpression(valuegen,columnToSelect)
+                val valueFromExpression = ColumnValueFromExpression(columnToSelect)
                 selectcolindex++
                 addedSelected.add(SelectColumnProvider(
                     colindex = selectcolindex,
@@ -244,7 +245,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                 if (statementAnalyzer.word() != "*") {
                     throw SQLException("Only support count(*)")
                 }
-                BasicValueFromExpression({ IntegerCellValue(1) }, null)
+                FixedValueFromExpression(IntegerCellValue(1))
             } else if (statementAnalyzer.word() == "(" && !statementAnalyzer.matchesWord(listOf("(","case","when"))) {
                 val parantes = statementAnalyzer.extractParantesStepForward()
                     ?: throw SQLException("Could not read subquery in select")

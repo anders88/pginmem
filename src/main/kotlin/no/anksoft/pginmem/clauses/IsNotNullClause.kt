@@ -6,7 +6,7 @@ import no.anksoft.pginmem.values.NullCellValue
 
 class IsNotNullClause(val dbTransaction: DbTransaction, val leftValueFromExpression: ValueFromExpression):WhereClause {
     override fun isMatch(cells: List<Cell>): Boolean {
-        val value = leftValueFromExpression.valuegen.invoke(Pair(dbTransaction, Row(cells)))
+        val value = leftValueFromExpression.genereateValue(dbTransaction, Row(cells))
         return (value != NullCellValue)
     }
 

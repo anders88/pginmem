@@ -14,7 +14,7 @@ class AnyClause(
     private var expectedValue:ArrayCellValue? = null
 
     override fun isMatch(cells: List<Cell>): Boolean {
-        val leftValue = leftValueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
+        val leftValue = leftValueFromExpression.genereateValue(dbTransaction,Row(cells))
         val expected = expectedValue?:throw SQLException("No binding set in any")
         val res = expected.myValues.any { it == leftValue }
         return res

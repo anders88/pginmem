@@ -11,7 +11,10 @@ class SelectColumnProvider constructor(
 ) {
 
     fun isMatch(colidentifier:String):Boolean {
-        if (alias != null) return (alias == colidentifier)
+        //if (alias != null) return (alias == colidentifier)
+        if (alias == colidentifier) {
+            return true
+        }
 
         val column:ColumnInSelect = valueFromExpression.column?:return false
 

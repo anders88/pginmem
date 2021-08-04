@@ -7,7 +7,7 @@ import no.anksoft.pginmem.values.NullCellValue
 import java.sql.SQLException
 import java.util.*
 
-private class LinkedValue(val column: Column,val index:Int?,var value:(Pair<DbTransaction,Row?>)->CellValue={NullCellValue})
+private class LinkedValue(val column: Column,val index:Int?,var value:ValueFromExpression=FixedValueFromExpression(NullCellValue))
 
 class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val dbTransaction: DbTransaction,private val sql:String) : StatementWithSet(dbTransaction) {
     private val tableForUpdate:Table = dbTransaction.tableForUpdate(statementAnalyzer.word(2)?:throw SQLException("Expected table name"))
@@ -69,7 +69,7 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
                     null
                 )
                     ?: throw SQLException("Could not read value in statement")
-                LinkedValue(columns[i], null, value.valuegen)
+                LinkedValue(columns[i], null, value)
             }
             linkedValues.add(linkedValue)
             val nextexp = if (i == columns.size - 1) ")" else ","
@@ -86,9 +86,8 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             return
         }
         val linkedValue:LinkedValue = linkedValues.firstOrNull { it.index == parameterIndex }?:throw SQLException("Unknown binding index $parameterIndex")
-        val setVal = linkedValue.column.columnType.validateValue(x)
-        val genvalue:(Pair<DbTransaction,Row?>)->CellValue = {setVal}
-        linkedValue.value= genvalue
+        val setVal:CellValue = linkedValue.column.columnType.validateValue(x)
+        linkedValue.value= FixedValueFromExpression(setVal)
     }
 
 
@@ -100,9 +99,9 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
                 val index = columns.indexOfFirst { it == col }
                 val value: CellValue = if (index == -1) {
                     if (col.defaultValue != null) {
-                        col.defaultValue.invoke(Pair(dbTransaction, null))
+                        col.defaultValue.genereateValue(dbTransaction, null)
                     } else NullCellValue
-                } else linkedValues[index].value.invoke(Pair(dbTransaction, null))
+                } else linkedValues[index].value.genereateValue(dbTransaction, null)
                 if (col.isNotNull && value == NullCellValue) {
                     throw SQLException("Cannot insert null into column $col")
                 }
@@ -119,7 +118,7 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
                 val index = columns.indexOfFirst { it == col }
                 val value: CellValue = if (index == -1) {
                     if (col.defaultValue != null) {
-                        col.defaultValue.invoke(Pair(dbTransaction, null))
+                        col.defaultValue.genereateValue(dbTransaction, null)
                     } else NullCellValue
                 } else selectResultSet.valueAt(index+1,rowno)
                 if (col.isNotNull && value == NullCellValue) {

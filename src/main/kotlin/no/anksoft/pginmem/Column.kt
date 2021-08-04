@@ -90,7 +90,7 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
     }
 }
 
-class Column private constructor(override val name:String,val columnType: ColumnType,override val tablename:String,val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)?,val isNotNull:Boolean):ColumnInSelect {
+class Column private constructor(override val name:String,val columnType: ColumnType,override val tablename:String,val defaultValue:ValueFromExpression?,val isNotNull:Boolean):ColumnInSelect {
 
 
 
@@ -112,16 +112,15 @@ class Column private constructor(override val name:String,val columnType: Column
 
             statementAnalyzer.addIndex(1)
 
-            val defaultValue:((Pair<DbTransaction,Row?>)->CellValue)? = when {
+            val defaultValue:ValueFromExpression? = when {
                 (columnType == ColumnType.SERIAL) -> {
                     val sequenceName = "${tablename}_${columnName}_seq"
                     dbTransaction.addSequence(sequenceName)
-                    val d: (Pair<DbTransaction,Row?>) -> CellValue = { it.first.sequence(sequenceName).nextVal() }
-                    d
+                    SequenceValueFromExpression(sequenceName)
                 }
                 (statementAnalyzer.word() == "default") -> {
                     statementAnalyzer.addIndex()
-                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap(), null).valuegen
+                    statementAnalyzer.readValueFromExpression(dbTransaction, emptyMap(), null)
                 }
                 else -> null
             }
@@ -150,7 +149,7 @@ class Column private constructor(override val name:String,val columnType: Column
         isNotNull = isNotNull
     )
 
-    fun setDefault(defvalue:((Pair<DbTransaction,Row?>)->CellValue)?):Column = Column(
+    fun setDefault(defvalue:ValueFromExpression?):Column = Column(
         name = name,
         columnType = columnType,
         tablename = tablename,

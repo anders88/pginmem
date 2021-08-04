@@ -38,9 +38,9 @@ abstract class BinaryClause(
             throw SQLException("Binding not set")
         }
         if (rightValue != null) {
-            valueToMatch = rightValue.valuegen.invoke(Pair(dbTransaction, Row(cells)))
+            valueToMatch = rightValue.genereateValue(dbTransaction, Row(cells))
         }
-        val leftValue = leftValueFromExpression.valuegen.invoke(Pair(dbTransaction,Row(cells)))
+        val leftValue = leftValueFromExpression.genereateValue(dbTransaction,Row(cells))
         return matchValues(leftValue,valueToMatch)
     }
 

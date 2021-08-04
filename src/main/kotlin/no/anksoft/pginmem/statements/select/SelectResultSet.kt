@@ -27,7 +27,7 @@ private fun computeSelectSet(
     for (i in 0 until selectRowProvider.size()) {
         val row:Row = selectRowProvider.readRow(i)
         val valuesThisRow:List<CellValue> = colums.map { colProvider ->
-            colProvider.valueFromExpression.valuegen.invoke(Pair(dbTransaction,row))
+            colProvider.valueFromExpression.genereateValue(dbTransaction,row)
         }
         if (disinctFlag) {
             var isDistinct=true

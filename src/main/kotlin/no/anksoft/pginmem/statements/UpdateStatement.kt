@@ -114,7 +114,7 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
             val rowCells:List<Cell> = table.colums.map { column ->
                 val colvalue:CellValue = toUpdateByBinding.firstOrNull { it.column == column }?.value
                     ?: toUpdateByFunction.firstOrNull { it.column == column }
-                        ?.valueFromExpression?.valuegen?.invoke(Pair(dbTransaction,selectResultSet.selectRowProviderGiven.readRow(matchedUpdateRow)))
+                        ?.valueFromExpression?.genereateValue(dbTransaction,selectResultSet.selectRowProviderGiven.readRow(matchedUpdateRow))
                     ?: selectResultSet.valueAt(table.name + "." + column.name,matchedUpdateRow)
                 Cell(column,colvalue)
             }
