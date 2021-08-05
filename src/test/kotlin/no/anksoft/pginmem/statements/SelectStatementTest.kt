@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.Timestamp
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 class SelectStatementTest {
@@ -796,6 +797,18 @@ class SelectStatementTest {
                 ps.executeQuery().use {
                     assertThat(it.next()).isTrue()
                     assertThat(it.getInt(1)).isEqualTo(42)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun toDate() {
+        connection.use { conn ->
+            conn.prepareStatement("select to_date('20150101','yyyymmdd')").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getTimestamp(1).toLocalDateTime().toLocalDate()).isEqualTo(LocalDate.of(2015,1,1))
                 }
             }
         }

@@ -3,9 +3,7 @@ package no.anksoft.pginmem.statements.select
 import no.anksoft.pginmem.DbTransaction
 import no.anksoft.pginmem.Row
 import no.anksoft.pginmem.statements.OrderPart
-import no.anksoft.pginmem.values.ByteArrayCellValue
-import no.anksoft.pginmem.values.CellValue
-import no.anksoft.pginmem.values.NullCellValue
+import no.anksoft.pginmem.values.*
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -13,6 +11,7 @@ import java.net.URL
 import java.sql.*
 import java.sql.Array
 import java.sql.Date
+import java.time.ZoneOffset
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -308,6 +307,15 @@ class SelectResultSet(
         return value.myBytes
     }
 
+    private fun getTimeStamp(value: CellValue):Timestamp? {
+        return when {
+            value == NullCellValue -> null
+            value is DateTimeCellValue -> Timestamp.valueOf(value.myValue)
+            value is DateCellValue -> Timestamp.valueOf(value.myValue.atStartOfDay())
+            else -> throw SQLException("Cannot convert $value to timestamp")
+        }
+    }
+
     override fun getBytes(columnIndex: Int): ByteArray? {
         return getByteArray(readCell(columnIndex))
     }
@@ -316,6 +324,8 @@ class SelectResultSet(
         return getByteArray(readCell(columnLabel))
 
     }
+
+
 
 
     override fun getLong(columnIndex: Int): Long {
@@ -384,8 +394,8 @@ class SelectResultSet(
         TODO("Not yet implemented")
     }
 
-    override fun getTimestamp(columnIndex: Int): Timestamp {
-        TODO("Not yet implemented")
+    override fun getTimestamp(columnIndex: Int): Timestamp? {
+        return getTimeStamp(readCell(columnIndex))
     }
 
 

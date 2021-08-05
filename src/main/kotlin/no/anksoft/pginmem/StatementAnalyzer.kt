@@ -8,8 +8,10 @@ import no.anksoft.pginmem.values.*
 import org.jsonbuddy.JsonObject
 import org.jsonbuddy.parse.JsonParser
 import java.sql.SQLException
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.*
 
 private fun splitStringToWords(sqlinp:String):List<String> {
@@ -275,6 +277,7 @@ private fun convertToJavaDateFormat(sqlFormat:String):DateTimeFormatter {
         resFormat.append(when (c) {
             'Y' -> 'y'
             'D' -> 'd'
+            'm' -> 'M'
             else -> c
         })
     }
@@ -288,10 +291,16 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
 
     override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
         val toConvert:CellValue = startValue.genereateValue(dbTransaction,row)
-        return if (toConvert == NullCellValue) {
-            NullCellValue
-        } else {
-            toConvert.valueAsDate()
+        return when {
+            (toConvert == NullCellValue) -> NullCellValue
+            (toConvert is StringCellValue) -> DateTimeCellValue(
+                try {
+                    LocalDateTime.parse(toConvert.myValue, dateTimeFormatter)
+                } catch (e:DateTimeParseException) {
+                    LocalDate.parse(toConvert.myValue, dateTimeFormatter).atStartOfDay()
+                }
+            )
+            else -> throw SQLException("Can only convert to_date from string")
         }
     }
 
@@ -584,6 +593,9 @@ class StatementAnalyzer {
                 val dateformat = addIndex().word()
                 if (!(dateformat?.startsWith("'") == true && dateformat.endsWith("'") && dateformat.length >= 3)) {
                     throw SQLException("Expected dateformat after to_date")
+                }
+                if (addIndex().word() != ")") {
+                    throw SQLException("Expected ) after to date")
                 }
                 ToDateValue(fromExpression,dateformat.substring(1,dateformat.length-1))
             }
