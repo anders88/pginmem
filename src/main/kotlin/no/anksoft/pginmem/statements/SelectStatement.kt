@@ -214,7 +214,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
                 SelectColumnProvider(
                     colindex = index+1,
                     alias = column.name,
-                    valueFromExpression = column.myValueFromExpression,
+                    valueFromExpression = ColumnValueFromExpression(column),
                     aggregateFunction = null,
                     tableAliases = aliasMapping
                 )

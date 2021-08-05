@@ -305,8 +305,8 @@ class AdvancedStatementsTest {
             conn.prepareStatement("select * from (select name,sum(amount) as sumam from mytable group by name) as usedtable").use { ps ->
                 ps.executeQuery().use {
                     assertThat(it.next()).isTrue()
-                    assertThat(it.getString(1)).isEqualTo("luke")
-                    assertThat(it.getBigDecimal(2)).isCloseTo(BigDecimal(42.0), Offset.offset(BigDecimal(0.001)))
+                    assertThat(it.getString("name")).isEqualTo("luke")
+                    assertThat(it.getBigDecimal("sumam")).isCloseTo(BigDecimal(42.0), Offset.offset(BigDecimal(0.001)))
                     assertThat(it.next()).isTrue()
                     assertThat(it.next()).isFalse()
                 }
@@ -314,5 +314,57 @@ class AdvancedStatementsTest {
 
         }
     }
+
+    @Test
+    fun selectColoumnAggregate() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table product(id integer,name text)")
+            conn.createStatement().execute("create table sale(productid int,customername text)")
+            val insProdAct:(Pair<Int,String>)->Unit = { input ->
+                conn.prepareStatement("insert into product(id,name) values (?,?)").use {
+                    it.setInt(1,input.first)
+                    it.setString(2,input.second)
+                    it.executeUpdate()
+                }
+            }
+            val insSaleAct:(Pair<Int,String>)->Unit = { input ->
+                conn.prepareStatement("insert into sale(productid,customername) values (?,?)").use {
+                    it.setInt(1,input.first)
+                    it.setString(2,input.second)
+                    it.executeUpdate()
+                }
+            }
+            insProdAct.invoke(Pair(1,"Lightsaber"))
+            insProdAct.invoke(Pair(2,"Blaster"))
+            insSaleAct.invoke(Pair(1,"Luke"))
+            insSaleAct.invoke(Pair(2,"Luke"))
+            insSaleAct.invoke(Pair(1,"Darth"))
+
+            conn.prepareStatement("select count(distinct customername) from sale").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt(1)).isEqualTo(2)
+                    assertThat(it.next()).isFalse()
+
+                }
+            }
+
+            val resset:MutableList<Pair<String,Int>> = mutableListOf()
+            conn.prepareStatement("select p.name,(select count(distinct s.customername) from sale s where s.productid = p.id) as numcust from product p").use { ps ->
+                ps.executeQuery().use {
+                    while (it.next()) {
+                        val name = it.getString("name")
+                        val count = it.getInt("numcust")
+                        resset.add(Pair(name,count))
+                    }
+                }
+            }
+            assertThat(resset).hasSize(2)
+            assertThat(resset.first { it.first == "Lightsaber" }.second).isEqualTo(2)
+            assertThat(resset.first { it.first == "Blaster" }.second).isEqualTo(1)
+        }
+    }
+
+
 
 }

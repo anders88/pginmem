@@ -83,8 +83,8 @@ private fun computeSelectSet(
         if (matchRow == null) {
             val currentNew:List<Pair<CellValue,AggregateFunction?>> = genrow.mapIndexed { myindex,acell ->
                 val af:AggregateFunction? = colums[myindex].aggregateFunction?.newInstanse()
-                af?.addValue(acell)
-                Pair(acell,af)
+                val startval:CellValue = af?.addValue(acell)?:acell
+                Pair(startval,af)
             }
             resArr.add(currentNew)
             continue
