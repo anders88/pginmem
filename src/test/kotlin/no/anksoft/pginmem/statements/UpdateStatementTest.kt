@@ -3,6 +3,7 @@ package no.anksoft.pginmem.statements
 import no.anksoft.pginmem.PgInMemDatasource
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.jsonbuddy.JsonObject
 import org.junit.jupiter.api.Test
 
 class UpdateStatementTest {
@@ -112,6 +113,22 @@ class UpdateStatementTest {
                 }
             }
 
+        }
+    }
+
+    @Test
+    fun updateWithBindingConverted() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text,jsonval jsonb)")
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"a")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("update mytable set jsonval = ?::jsonb where id = ?").use {
+                it.setString(1,JsonObject().toJson())
+                it.setString(2,"a")
+                it.executeUpdate()
+            }
         }
     }
 }

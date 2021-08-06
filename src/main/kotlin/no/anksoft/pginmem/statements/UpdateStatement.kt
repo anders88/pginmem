@@ -62,6 +62,9 @@ class UpdateStatement(statementAnalyzer: StatementAnalyzer, private val dbTransa
             if (statementAnalyzer.addIndex().word() == "?") {
                 updateByBindings.add(CellToUpdateByBinding(column))
                 statementAnalyzer.addIndex()
+                if (statementAnalyzer.word() == "::") {
+                    statementAnalyzer.addIndex(2)
+                }
             } else {
                 val function = statementAnalyzer.readValueFromExpression(dbTransaction,tableAliases,null)
                 statementAnalyzer.addIndex()
