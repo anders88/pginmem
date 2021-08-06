@@ -122,27 +122,10 @@ private fun computeSelectSet(
 
 private fun compareRowsForSelect(a: Pair<List<CellValue>,Row>, b: Pair<List<CellValue>,Row>, orderParts: List<OrderPart>,colums: List<SelectColumnProvider>):Int {
     for (orderPart in orderParts) {
-        val index = colums.indexOfFirst {
-            if (it.alias != null) {
-                orderPart.column.matches("",it.alias)
-            } else {
-                it.isMatch(orderPart.column.tablename + "." + orderPart.column.name)
-            }
+        val partcomp = orderPart.compareRowsForSelect(a,b,colums)
+        if (partcomp != 0) {
+            return partcomp
         }
-        val (aVal:CellValue,bVal:CellValue) = if (index != -1) {
-            Pair(a.first[index],b.first[index])
-        } else {
-            val colind =
-                a.second.cells.indexOfFirst { orderPart.column.matches(it.column.tablename, it.column.name) }
-            Pair(a.second.cells[colind].value,b.second.cells[colind].value)
-        }
-
-        //val aVal = a[index]
-        //val bVal = b[index]
-        if (aVal == bVal) {
-            continue
-        }
-        return if (orderPart.ascending) aVal.compareMeTo(bVal,orderPart.nullsFirst) else bVal.compareMeTo(aVal,orderPart.nullsFirst)
     }
     return 0
 }

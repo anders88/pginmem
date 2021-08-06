@@ -815,6 +815,31 @@ class SelectStatementTest {
     }
 
     @Test
+    fun dateTrunc() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(atime timestamp)")
+            val insact:(LocalDateTime)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(atime) values (?)").use {
+                    it.setTimestamp(1, Timestamp.valueOf(input))
+                    it.executeUpdate()
+                }
+            }
+            insact.invoke(LocalDateTime.of(2021,1,5,20,0))
+            insact.invoke(LocalDateTime.of(2021,2,6,20,0))
+            insact.invoke(LocalDateTime.of(2021,2,7,20,0))
+            conn.prepareStatement("select distinct date_trunc('month', atime) from mytable order by 1 desc").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getTimestamp(1).toLocalDateTime().toLocalDate()).isEqualTo(LocalDate.of(2021,2,1))
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getTimestamp(1).toLocalDateTime().toLocalDate()).isEqualTo(LocalDate.of(2021,1,1))
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
+    @Test
     fun orderByComputetCol() {
         connection.use { conn->
             conn.createStatement().execute("create table mytable(myvalue text)")

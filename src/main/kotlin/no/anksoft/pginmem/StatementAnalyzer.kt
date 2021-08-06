@@ -308,6 +308,24 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
     override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
 }
 
+private class DateTruncValue(val startValue: ValueFromExpression,val trunSpec:String):ValueFromExpression {
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val toConvert:CellValue = startValue.genereateValue(dbTransaction,row)
+        if (toConvert == NullCellValue) {
+            return NullCellValue
+        }
+        if (trunSpec != "'month'") {
+            throw SQLException("Only supporting month in date trunc")
+        }
+        val truncedDate:LocalDateTime = toConvert.valueAsTimestamp().myValue.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0)
+        return DateTimeCellValue(truncedDate)
+    }
+
+    override val column: Column? = null
+    override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
+}
+
 private class ToNumberValue(val startValue:ValueFromExpression):ValueFromExpression {
 
     override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
@@ -598,6 +616,24 @@ class StatementAnalyzer {
                     throw SQLException("Expected ) after to date")
                 }
                 ToDateValue(fromExpression,dateformat.substring(1,dateformat.length-1))
+            }
+            aword == "date_trunc" -> {
+                if (addIndex().word() != "(") {
+                    throw SQLException("Expected ( after to_date")
+                }
+                val truncspec:String? = addIndex().word()
+                if (!(truncspec?.startsWith("'") == true && truncspec.endsWith("'") && truncspec.length >= 3)) {
+                    throw SQLException("Expected truncspec after date_trunc")
+                }
+                if (addIndex().word() != ",") {
+                    throw SQLException("Expecting , in date_trunc")
+                }
+                addIndex()
+                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables,indexToUse)
+                if (addIndex().word() != ")") {
+                    throw SQLException("Expected ) after date_trunc")
+                }
+                DateTruncValue(fromExpression,truncspec)
             }
             aword == "to_number" -> {
                 if (addIndex().word() != "(") {

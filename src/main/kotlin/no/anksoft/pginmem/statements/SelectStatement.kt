@@ -9,7 +9,41 @@ import no.anksoft.pginmem.values.*
 import java.sql.ResultSet
 import java.sql.SQLException
 
-class OrderPart(val column: ColumnInSelect,val ascending:Boolean,val nullsFirst:Boolean)
+class OrderPart(val column: ColumnInSelect?,val colindex:Int?,val ascending:Boolean,val nullsFirst:Boolean) {
+    init {
+        if (column == null && colindex == null) {
+            throw NullPointerException("column and colindex cannot both be null in order part")
+        }
+    }
+
+    fun compareRowsForSelect(a: Pair<List<CellValue>,Row>, b: Pair<List<CellValue>,Row>,colums: List<SelectColumnProvider>):Int {
+        val (aVal:CellValue,bVal:CellValue) = if (colindex != null) {
+            Pair(a.first[colindex],b.first[colindex])
+        } else {
+            column!!
+            val index = colums.indexOfFirst {
+                if (it.alias != null) {
+                    this.column.matches("", it.alias)
+                } else {
+                    it.isMatch(this.column.tablename + "." + this.column.name)
+                }
+            }
+            if (index != -1) {
+                Pair(a.first[index], b.first[index])
+            } else {
+                val colind =
+                    a.second.cells.indexOfFirst { this.column.matches(it.column.tablename, it.column.name) }
+                Pair(a.second.cells[colind].value, b.second.cells[colind].value)
+            }
+
+        }
+
+        if (aVal == bVal) {
+            return 0
+        }
+        return if (this.ascending) aVal.compareMeTo(bVal,this.nullsFirst) else bVal.compareMeTo(aVal,this.nullsFirst)
+    }
+}
 
 private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Map<String,TableInSelect>,selectedColumns:List<SelectColumnProvider>):List<OrderPart> {
     if (statementAnalyzer.word() != "order") {
@@ -28,7 +62,13 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
         if (setOf("group").contains(colnameText)) {
             break
         }
-        val column:ColumnInSelect = statementAnalyzer.findColumnFromIdentifier(colnameText,tablesUsed,selectedColumns)
+
+        val colidentidier:Pair<ColumnInSelect?,Int?> = colnameText.toIntOrNull()?.let { colno ->
+            if (colno < 1 || colno > selectedColumns.size) {
+                throw SQLException("Invalid column number $colno in order by")
+            }
+            Pair(null,colno-1)
+        }?:Pair(statementAnalyzer.findColumnFromIdentifier(colnameText,tablesUsed,selectedColumns),null)
         val nextWord = statementAnalyzer.addIndex().word()
 
         var ascending:Boolean = true
@@ -47,7 +87,7 @@ private fun computeOrderParts(statementAnalyzer: StatementAnalyzer,tablesUsed:Ma
             statementAnalyzer.addIndex()
             res
         } else true
-        orderPats.add(OrderPart(column,ascending,nullsFirst))
+        orderPats.add(OrderPart(colidentidier.first,colidentidier.second,ascending,nullsFirst))
         if (setOf("fetch","limit","offset").contains(statementAnalyzer.word()?:"fetch")) {
             break
         }
