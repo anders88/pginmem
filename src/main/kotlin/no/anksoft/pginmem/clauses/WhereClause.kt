@@ -111,8 +111,10 @@ private fun readWhereClausePart(
                 statementAnalyzer.addIndex(2)
                 IsNotNullClause(dbTransaction,leftValueFromExpression)
             }
-            statementAnalyzer.word(1) == "true" -> EqualCase(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
-            statementAnalyzer.word(1) == "false" -> EqualCase(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+            statementAnalyzer.matchesWord(listOf("is","true")) -> BooleanIsClause(leftValueFromExpression,dbTransaction,true,false)
+            statementAnalyzer.matchesWord(listOf("is","false")) -> BooleanIsClause(leftValueFromExpression,dbTransaction,false,false)
+            statementAnalyzer.matchesWord(listOf("is","not","false")) -> BooleanIsClause(leftValueFromExpression,dbTransaction,false,true)
+            statementAnalyzer.matchesWord(listOf("is","not","true")) -> BooleanIsClause(leftValueFromExpression,dbTransaction,true,true)
             else -> throw SQLException("Syntax error after is")
         }
         "in" -> InClause(dbTransaction,leftValueFromExpression, statementAnalyzer,nextIndexToUse,tables)

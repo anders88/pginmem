@@ -862,4 +862,27 @@ class SelectStatementTest {
             }
         }
     }
+
+    @Test
+    fun isNotTrueOrFalse() {
+        connection.use { conn ->
+            val testrun:(Pair<String,Int>)->Unit = { (sql, exprows) ->
+                conn.prepareStatement(sql).use { ps ->
+                    ps.executeQuery().use {
+                        for (i in 1..exprows) {
+                            assertThat(it.next()).isTrue()
+                        }
+                        assertThat(it.next()).isFalse()
+                    }
+                }
+            }
+            testrun.invoke(Pair("select 1 where null is false",0))
+            testrun.invoke(Pair("select 1 where null is not false",1))
+            testrun.invoke(Pair("select 1 where false is not false",0))
+            testrun.invoke(Pair("select 1 where true is true",1))
+            testrun.invoke(Pair("select 1 where null is true",0))
+        }
+
+
+    }
 }
