@@ -885,4 +885,21 @@ class SelectStatementTest {
 
 
     }
+
+    @Test
+    fun withBoolsAndWithOr() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(boolone boolean, booltwo boolean)")
+            conn.prepareStatement("insert into mytable(boolone,booltwo) values(?,?)").use {
+                it.setBoolean(1,true)
+                it.setBoolean(2,false)
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select * from mytable where boolone is not true or booltwo is not true").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+        }
+    }
 }

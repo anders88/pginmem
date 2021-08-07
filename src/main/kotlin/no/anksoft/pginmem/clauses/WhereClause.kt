@@ -89,6 +89,10 @@ private fun readWhereClausePart(
     val leftValueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tables,nextIndexToUse)
 
     statementAnalyzer.addIndex()
+    val giveAndAdd:(Pair<WhereClause,Int>)->WhereClause = {
+        statementAnalyzer.addIndex(it.second)
+        it.first
+    }
     return when (statementAnalyzer.word()) {
         "=" -> if (statementAnalyzer.matchesWord(listOf("=","any","(","?",")")))
                 AnyClause(leftValueFromExpression,nextIndexToUse,dbTransaction)
@@ -111,10 +115,10 @@ private fun readWhereClausePart(
                 statementAnalyzer.addIndex(2)
                 IsNotNullClause(dbTransaction,leftValueFromExpression)
             }
-            statementAnalyzer.matchesWord(listOf("is","true")) -> BooleanIsClause(leftValueFromExpression,dbTransaction,true,false)
-            statementAnalyzer.matchesWord(listOf("is","false")) -> BooleanIsClause(leftValueFromExpression,dbTransaction,false,false)
-            statementAnalyzer.matchesWord(listOf("is","not","false")) -> BooleanIsClause(leftValueFromExpression,dbTransaction,false,true)
-            statementAnalyzer.matchesWord(listOf("is","not","true")) -> BooleanIsClause(leftValueFromExpression,dbTransaction,true,true)
+            statementAnalyzer.matchesWord(listOf("is","true")) -> giveAndAdd(Pair(BooleanIsClause(leftValueFromExpression,dbTransaction,true,false),1))
+            statementAnalyzer.matchesWord(listOf("is","false")) -> giveAndAdd(Pair(BooleanIsClause(leftValueFromExpression,dbTransaction,false,false),1))
+            statementAnalyzer.matchesWord(listOf("is","not","false")) -> giveAndAdd(Pair(BooleanIsClause(leftValueFromExpression,dbTransaction,false,true),2))
+            statementAnalyzer.matchesWord(listOf("is","not","true")) -> giveAndAdd(Pair(BooleanIsClause(leftValueFromExpression,dbTransaction,true,true),2))
             else -> throw SQLException("Syntax error after is")
         }
         "in" -> InClause(dbTransaction,leftValueFromExpression, statementAnalyzer,nextIndexToUse,tables)
