@@ -902,4 +902,25 @@ class SelectStatementTest {
             }
         }
     }
+
+    @Test
+    fun charachterStream() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text)")
+            conn.prepareStatement("insert into mytable(id) values (?)").use {
+                it.setString(1,"something")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select id from mytable").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    val reader = it.getCharacterStream("id")
+                    assertThat(reader).isNotNull()
+                    assertThat(reader.readText()).isEqualTo("something")
+                    assertThat(it.next()).isFalse()
+
+                }
+            }
+        }
+    }
 }

@@ -227,7 +227,6 @@ class SelectResultSet(
 
     override fun getInt(columnLabel: String?): Int {
         return getInt(readCell(columnLabel))
-
     }
 
     override fun getInt(columnIndex: Int): Int {
@@ -458,12 +457,19 @@ class SelectResultSet(
         TODO("Not yet implemented")
     }
 
-    override fun getCharacterStream(columnIndex: Int): Reader {
-        TODO("Not yet implemented")
+    private fun getReader(cellValue: CellValue):Reader? {
+        if (cellValue == NullCellValue) {
+            return null
+        }
+        return cellValue.valueAsText().myValue.reader()
     }
 
-    override fun getCharacterStream(columnLabel: String?): Reader {
-        TODO("Not yet implemented")
+    override fun getCharacterStream(columnIndex: Int): Reader? {
+        return getReader(readCell(columnIndex))
+    }
+
+    override fun getCharacterStream(columnLabel: String?): Reader? {
+        return getReader(readCell(columnLabel))
     }
 
     override fun isBeforeFirst(): Boolean {
