@@ -924,4 +924,32 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun distinctWithOn() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(vala text,valb text)")
+            val insact:(Pair<String,String>)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(vala,valb) values (?,?)").use {
+                    it.setString(1,input.first)
+                    it.setString(2,input.second)
+                    it.executeUpdate()
+                }
+            }
+            insact(Pair("b","a"))
+            insact(Pair("b","b"))
+            insact(Pair("a","b"))
+            conn.prepareStatement("select distinct on (vala) * from mytable order by vala, valb desc").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("vala")).isEqualTo("a")
+                    assertThat(it.getString("valb")).isEqualTo("b")
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("vala")).isEqualTo("b")
+                    assertThat(it.getString("valb")).isEqualTo("b")
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
 }
