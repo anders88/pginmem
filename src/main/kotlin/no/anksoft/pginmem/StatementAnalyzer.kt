@@ -308,6 +308,22 @@ private class ToDateValue(val startValue:ValueFromExpression,dateformat:String):
     override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
 }
 
+private class DateTimeToDateValue(val startValue:ValueFromExpression):ValueFromExpression {
+
+    override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
+        val toConvert:CellValue = startValue.genereateValue(dbTransaction,row)
+        return when {
+            (toConvert == NullCellValue) -> NullCellValue
+            (toConvert is DateCellValue) -> toConvert
+            (toConvert is DateTimeCellValue) -> DateCellValue(toConvert.myValue.toLocalDate())
+            else -> throw SQLException("Cannot use date function on $toConvert")
+        }
+    }
+
+    override val column: Column? = null
+    override fun registerBinding(index:Int,value: CellValue):Boolean = startValue.registerBinding(index,value)
+}
+
 private class DateTruncValue(val startValue: ValueFromExpression,val trunSpec:String):ValueFromExpression {
 
     override fun genereateValue(dbTransaction: DbTransaction, row: Row?): CellValue {
@@ -616,6 +632,17 @@ class StatementAnalyzer {
                     throw SQLException("Expected ) after to date")
                 }
                 ToDateValue(fromExpression,dateformat.substring(1,dateformat.length-1))
+            }
+            aword == "date" -> {
+                if (addIndex().word() != "(") {
+                    throw SQLException("Expected ( after to_date")
+                }
+                addIndex()
+                val fromExpression:ValueFromExpression = readValueFromExpression(dbTransaction,tables,indexToUse)
+                if (addIndex().word() != ")") {
+                    throw SQLException("Expected ) after date")
+                }
+                DateTimeToDateValue(fromExpression)
             }
             aword == "date_trunc" -> {
                 if (addIndex().word() != "(") {

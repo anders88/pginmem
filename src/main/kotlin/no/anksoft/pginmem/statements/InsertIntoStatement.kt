@@ -61,6 +61,9 @@ class InsertIntoStatement constructor(statementAnalyzer: StatementAnalyzer, val 
             val insertcolval = statementAnalyzer.addIndex().word()
             val linkedValue: LinkedValue = if (insertcolval == "?") {
                 linkedIndex++
+                if (statementAnalyzer.word(1) == "::") {
+                    statementAnalyzer.addIndex(2)
+                }
                 LinkedValue(columns[i], linkedIndex)
             } else {
                 val value = statementAnalyzer.readValueFromExpression(

@@ -78,7 +78,7 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
         return when (this) {
             TEXT -> if (value is String) StringCellValue(value) else TODO()
             TIMESTAMP -> TODO()
-            DATE -> TODO()
+            DATE -> if (value is LocalDate) DateCellValue(value) else TODO()
             INTEGER -> TODO()
             BOOLEAN -> TODO()
             NUMERIC -> TODO()

@@ -183,4 +183,16 @@ class InsertIntoTest {
         }
     }
 
+    @Test
+    fun insertWithBindingConverted() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id text,jsonval jsonb)")
+            conn.prepareStatement("insert into mytable(id,jsonval) values (?,?::json)").use {
+                it.setString(1,"a")
+                it.setString(2,JsonObject().toJson())
+                it.executeUpdate()
+            }
+        }
+    }
+
 }
