@@ -38,14 +38,12 @@ class IntegerCellValue(val myValue:Long):CellValue {
 
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as IntegerCellValue
-
-        if (myValue != other.myValue) return false
-
-        return true
+        return when {
+            this === other -> true
+            (other is IntegerCellValue) -> (this.myValue == other.myValue)
+            (other is NumericCellValue) -> (BigDecimal.valueOf(this.myValue).compareTo(other.myValue) == 0)
+            else -> false
+        }
     }
 
     override fun hashCode(): Int {

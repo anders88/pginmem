@@ -952,4 +952,26 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun decimalAndIndShouldBeEqual() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(intval int,decval numeric)")
+            val insact:(Pair<Int,BigDecimal>)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(intval,decval) values (?,?)").use {
+                    it.setInt(1,input.first)
+                    it.setBigDecimal(2,input.second)
+                    it.executeUpdate()
+                }
+            }
+            insact(Pair(42, BigDecimal(42.0)))
+            insact(Pair(8, BigDecimal.TEN))
+            conn.prepareStatement("select * from mytable where intval = decval").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
 }

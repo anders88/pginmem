@@ -2,9 +2,17 @@ package no.anksoft.pginmem.values
 
 import java.sql.SQLException
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatterBuilder
+import java.time.temporal.ChronoField
 
 class DateTimeCellValue(val myValue:LocalDateTime):CellValue {
-    override fun valueAsText(): StringCellValue = StringCellValue(myValue.toString())
+    override fun valueAsText(): StringCellValue {
+        val formatter = DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd HH:mm:ss")
+            .appendFraction(ChronoField.MICRO_OF_SECOND, 0, 6, true)
+            .toFormatter()
+        return StringCellValue(myValue.format(formatter))
+    }
 
     override fun valueAsInteger(): IntegerCellValue {
         throw SQLException("Cannot get timestamp as integer")

@@ -32,18 +32,16 @@ class NumericCellValue(val myValue: BigDecimal):CellValue {
 
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as NumericCellValue
-
-        if (myValue != other.myValue) return false
-
-        return true
+        return when {
+            (this === other) -> true
+            ((other is NumericCellValue)) -> (this.myValue.compareTo(other.myValue) == 0)
+            ((other is IntegerCellValue)) -> (this.myValue.compareTo(BigDecimal.valueOf(other.myValue)) == 0)
+            else -> false
+        }
     }
 
     override fun hashCode(): Int {
-        return myValue.hashCode()
+        return myValue.toInt().hashCode()
     }
 
     override fun toString(): String {
