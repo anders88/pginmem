@@ -358,22 +358,37 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     }
     val orderParts:List<OrderPart> = computeOrderParts(statementAnalyzer, tablesUsed,selectedColumns)
 
-    val (limitRowsTo:Int?,offsetRows:Int) = if (setOf("fetch","limit").contains(statementAnalyzer.word())) {
-        val isFetch = (statementAnalyzer.word() == "fetch")
-        if (isFetch) {
+    val (limitRowsTo:Int?,offsetRows:Int) = if (setOf("fetch","limit","offset").contains(statementAnalyzer.word())) {
+        var limit:Int? = null
+        var offset:Int? = null
+        while (setOf("fetch","limit","offset").contains(statementAnalyzer.word())) {
+            if (statementAnalyzer.word() == "offset") {
+                if (limit != null) {
+                    throw SQLException("Cannot define offset twice")
+                }
+                offset = statementAnalyzer.addIndex(1).word()?.toIntOrNull()?:throw SQLException("Expected numeric limit")
+                statementAnalyzer.addIndex()
+                continue
+            }
+            if (statementAnalyzer.word() == "limit") {
+                if (limit != null) {
+                    throw SQLException("Cannot define limit twice")
+                }
+                limit = statementAnalyzer.addIndex(1).word()?.toIntOrNull()?:throw SQLException("Expected numeric limit")
+                statementAnalyzer.addIndex()
+                continue
+            }
+            // offset
+            if (limit != null) {
+                throw SQLException("Cannot define fetch limit twice")
+            }
             if (!setOf("first","next").contains(statementAnalyzer.addIndex().word())) {
                 throw SQLException("expecting first or next")
             }
+            limit = statementAnalyzer.addIndex(1).word()?.toIntOrNull()?:throw SQLException("Expected numeric limit after fetch")
+            statementAnalyzer.addIndex(3)
         }
-        statementAnalyzer.addIndex()
-        val limit:Int = statementAnalyzer.word()?.toIntOrNull()?:throw SQLException("Limit must be numeric")
-
-        val offset:Int = if (isFetch) 0 else {
-            if (statementAnalyzer.word(1) == "offset") {
-                statementAnalyzer.addIndex(2).word()?.toIntOrNull()?:throw SQLException("Expected numeric offset")
-            } else 0
-        }
-        Pair(limit,offset)
+        Pair(limit,offset?:0)
     } else Pair(null,0)
 
     val selectRowProvider:SelectRowProvider = if (fromInd != -1)
