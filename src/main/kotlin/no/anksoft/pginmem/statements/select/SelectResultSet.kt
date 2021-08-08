@@ -183,7 +183,7 @@ class SelectResultSet(
     override fun next(): Boolean {
         rowindex++
         val limit:Int? = selectRowProviderGiven.limit
-        return (rowindex < numberOfRows && (limit == null || rowindex < limit))
+        return (rowindex < numberOfRows && (limit == null || rowindex < limit+selectRowProviderGiven.offset))
     }
 
     override fun getString(columnLabel: String?): String? {
