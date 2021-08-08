@@ -100,7 +100,7 @@ class SelectAnalyze constructor(
     val selectRowProvider: SelectRowProvider,
     val whereClause: WhereClause,
     val orderParts:List<OrderPart>,
-    val distinctFlag:Boolean) {
+    val selectDistinctCondition:SelectDistinctCondition?) {
 
     fun registerBinding(index:Int,value: CellValue):Boolean {
         for (sc in selectedColumns) {
@@ -128,7 +128,7 @@ class SelectColumnValue(val selectAnalyze:SelectAnalyze):ValueFromExpression {
             selectAnalyze.selectedColumns,
             rowProvider,
             dbTransaction,
-            selectAnalyze.distinctFlag
+            selectAnalyze.selectDistinctCondition
         )
         return if (selectResultSet.numberOfRows < 1) {
             NullCellValue
@@ -221,10 +221,24 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
     val allColumns:List<ColumnInSelect> = tablesUsed.map { it.value.colums }.flatten()
     statementAnalyzer.addIndex()
 
-    val distinctFlag:Boolean = if (statementAnalyzer.word() == "distinct") {
+    val selectDistinctCondition:SelectDistinctCondition? = if (statementAnalyzer.word() == "distinct") {
         statementAnalyzer.addIndex()
-        true
-    } else false
+        val conditions:List<ValueFromExpression> = if (statementAnalyzer.word() == "on") {
+            if (statementAnalyzer.addIndex().word() != "(") {
+                throw SQLException("Excpected ( after distinct on")
+            }
+            val distparts:MutableList<ValueFromExpression> = mutableListOf()
+            while (statementAnalyzer.word()?:")" != ")") {
+                statementAnalyzer.addIndex()
+                val valueFromExpression = statementAnalyzer.readValueFromExpression(dbTransaction,tablesUsed,indexToUse)
+                distparts.add(valueFromExpression)
+                statementAnalyzer.addIndex()
+            }
+            statementAnalyzer.addIndex()
+            distparts
+        } else emptyList()
+        SelectDistinctCondition(conditions)
+    } else null
 
 
 
@@ -361,7 +375,7 @@ private fun analyseSelect(statementAnalyzer:StatementAnalyzer, dbTransaction: Db
         else ImplicitOneRowSelectProvider(whereClause)
 
 
-    return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts,distinctFlag)
+    return SelectAnalyze(selectedColumns,selectRowProvider,whereClause,orderParts,selectDistinctCondition)
 
 }
 
@@ -376,7 +390,7 @@ class SelectStatement(statementAnalyzer: StatementAnalyzer, val dbTransaction: D
 
     override fun executeQuery(): ResultSet = internalExecuteQuery()
 
-    fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider,dbTransaction,selectAnalyze.distinctFlag)
+    fun internalExecuteQuery():SelectResultSet = SelectResultSet(selectAnalyze.selectedColumns,selectAnalyze.selectRowProvider,dbTransaction,selectAnalyze.selectDistinctCondition)
 
 
 

@@ -13,18 +13,19 @@ private class InItem(
     var givenValue:CellValue? = null
 }
 
-class InClause(
+class InClause constructor(
     val dbTransaction: DbTransaction,
     val leftValueFromExpression: ValueFromExpression,
     statementAnalyzer: StatementAnalyzer,
     nextIndexToUse: IndexToUse,
-    tables: Map<String, TableInSelect>
+    tables: Map<String, TableInSelect>,
+    val isNotIn:Boolean
 ):WhereClause {
     private val inValues:List<InItem>
     private val selectStatement:SelectStatement?
 
     init {
-        if (statementAnalyzer.addIndex().word() != "(") {
+        if (statementAnalyzer.addIndex(if (isNotIn) 2 else 1).word() != "(") {
             throw SQLException("Expected ( in in")
         }
         val givenValue:MutableList<InItem> = mutableListOf()
@@ -65,19 +66,18 @@ class InClause(
             for (rowindex in 0 until queryRes.numberOfRows) {
                 val valueAt = queryRes.valueAt(1, rowindex)
                 if (valueAt == value) {
-                    return true
+                    return !isNotIn
                 }
             }
         }
         for (initem in inValues) {
             val invalue:CellValue = initem.givenValue?:
-                initem.valueFromExpression?.genereateValue(dbTransaction,Row(cells))?:
-                NullCellValue
+                initem.valueFromExpression?.genereateValue(dbTransaction,Row(cells))?: NullCellValue
             if (invalue == value) {
-                return true
+                return !isNotIn
             }
         }
-        return false
+        return isNotIn
     }
 
     override fun registerBinding(index: Int, value: CellValue): Boolean {

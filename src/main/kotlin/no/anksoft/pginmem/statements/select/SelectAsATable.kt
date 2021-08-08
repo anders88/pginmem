@@ -15,7 +15,7 @@ class SelectAsATable(override val name: String,private val selectAnalyze: Select
             selectAnalyze.selectedColumns,
             selectAnalyze.selectRowProvider,
             dbTransaction,
-            selectAnalyze.distinctFlag
+            selectAnalyze.selectDistinctCondition
         )
 
         val res:MutableList<Row> = mutableListOf()

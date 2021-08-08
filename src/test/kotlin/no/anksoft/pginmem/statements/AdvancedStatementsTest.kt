@@ -365,6 +365,40 @@ class AdvancedStatementsTest {
         }
     }
 
+    @Test
+    fun selectWithNotInAndSubselect() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table product(id integer,name text)")
+            conn.createStatement().execute("create table sale(productid int,customername text)")
+            val insProdAct: (Pair<Int, String>) -> Unit = { input ->
+                conn.prepareStatement("insert into product(id,name) values (?,?)").use {
+                    it.setInt(1, input.first)
+                    it.setString(2, input.second)
+                    it.executeUpdate()
+                }
+            }
+            val insSaleAct: (Pair<Int, String>) -> Unit = { input ->
+                conn.prepareStatement("insert into sale(productid,customername) values (?,?)").use {
+                    it.setInt(1, input.first)
+                    it.setString(2, input.second)
+                    it.executeUpdate()
+                }
+            }
+            insProdAct(Pair(1,"Lightsaber"))
+            insProdAct(Pair(2,"Garbage"))
+            insSaleAct(Pair(1,"Luke"))
+
+            conn.prepareStatement("select name from product p where id not in (select productid from sale)").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getString("name")).isEqualTo("Garbage")
+                    assertThat(it.next()).isFalse()
+
+                }
+            }
+        }
+    }
+
 
 
 }

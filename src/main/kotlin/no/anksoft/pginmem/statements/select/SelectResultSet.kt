@@ -11,16 +11,14 @@ import java.net.URL
 import java.sql.*
 import java.sql.Array
 import java.sql.Date
-import java.time.ZoneOffset
 import java.util.*
-import kotlin.collections.ArrayList
 
 
 private fun computeSelectSet(
     colums: List<SelectColumnProvider>,
     selectRowProvider: SelectRowProvider,
     dbTransaction: DbTransaction,
-    disinctFlag: Boolean
+    selectDistinctCondition:SelectDistinctCondition?
 ):List<List<CellValue>> {
     val res:MutableList<Pair<List<CellValue>,Row>> = mutableListOf()
     for (i in 0 until selectRowProvider.size()) {
@@ -28,7 +26,7 @@ private fun computeSelectSet(
         val valuesThisRow:List<CellValue> = colums.map { colProvider ->
             colProvider.valueFromExpression.genereateValue(dbTransaction,row)
         }
-        if (disinctFlag) {
+        if (selectDistinctCondition?.conditions?.isEmpty() == true) {
             var isDistinct=true
             for (exsisting:Pair<List<CellValue>,Row> in res) {
                 var disinctThisRow = false
@@ -55,6 +53,9 @@ private fun computeSelectSet(
     }
 
     if (colums.none { it.aggregateFunction != null }) {
+        if (selectDistinctCondition?.conditions?.isNotEmpty() == true) {
+            return selectDistinctCondition.doFilter(res,dbTransaction)
+        }
         return res.map { it.first }
     }
     val resArr:ArrayList<List<Pair<CellValue,AggregateFunction?>>> = ArrayList()
@@ -135,12 +136,12 @@ class SelectResultSet(
     val colums: List<SelectColumnProvider>,
     val selectRowProviderGiven: SelectRowProvider,
     dbTransaction: DbTransaction,
-    disinctFlag:Boolean,
+    val selectDistinctCondition:SelectDistinctCondition?
 ):ResultSet {
 
 
     private val selectSet:List<List<CellValue>> by lazy {
-        computeSelectSet(colums,selectRowProviderGiven,dbTransaction,disinctFlag)
+        computeSelectSet(colums,selectRowProviderGiven,dbTransaction,selectDistinctCondition)
     }
 
 

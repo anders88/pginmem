@@ -121,7 +121,14 @@ private fun readWhereClausePart(
             statementAnalyzer.matchesWord(listOf("is","not","true")) -> giveAndAdd(Pair(BooleanIsClause(leftValueFromExpression,dbTransaction,true,true),2))
             else -> throw SQLException("Syntax error after is")
         }
-        "in" -> InClause(dbTransaction,leftValueFromExpression, statementAnalyzer,nextIndexToUse,tables)
+        "in" -> InClause(dbTransaction,leftValueFromExpression, statementAnalyzer,nextIndexToUse,tables,false)
+        "not" -> {
+            if (statementAnalyzer.word(1) == "in") {
+                InClause(dbTransaction,leftValueFromExpression, statementAnalyzer,nextIndexToUse,tables,true)
+            } else {
+                throw SQLException("Unknown syntax after not ${statementAnalyzer.word(1)}")
+            }
+        }
         else -> throw SQLException("Syntax error in where clause. Not recognicing word ${statementAnalyzer.word()}")
     }
 }
