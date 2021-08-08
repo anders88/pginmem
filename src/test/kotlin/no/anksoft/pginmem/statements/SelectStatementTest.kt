@@ -974,4 +974,32 @@ class SelectStatementTest {
         }
     }
 
+    @Test
+    fun orderByDescNullsFirst() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table mytable(id int,name text)")
+            val insact:(Pair<Int,String?>)->Unit = { input ->
+                conn.prepareStatement("insert into mytable(id,name) values (?,?)").use {
+                    it.setInt(1,input.first)
+                    it.setString(2,input.second)
+                    it.executeUpdate()
+                }
+            }
+            insact(Pair(1,"Darth"))
+            insact(Pair(2,"Luke"))
+            insact(Pair(3,null))
+
+            conn.prepareStatement("select id from mytable order by name desc nulls first").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isEqualTo(3)
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isEqualTo(2)
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isEqualTo(1)
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
 }
