@@ -27,7 +27,7 @@ class JsonCellValue(val myvalue:JsonObject):CellValue {
         throw SQLException("Cannot cast jsonvalue to numeric")
     }
 
-    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int {
+    override fun compareMeTo(other: CellValue): Int {
         throw SQLException("Cannot comapare jsonvalue")
     }
 

@@ -25,9 +25,9 @@ object NullCellValue:CellValue {
         TODO("Not yet implemented")
     }
 
-    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int = when (other) {
+    override fun compareMeTo(other: CellValue): Int = when (other) {
         this -> 0
-        else -> if (nullsFirst) -1 else 1
+        else -> throw SQLException("Cannot compare NullCellvalue to $other")
     }
 
     override fun toString(): String {

@@ -20,9 +20,8 @@ class NumericCellValue(val myValue: BigDecimal):CellValue {
 
     override fun valueAsNumeric(): NumericCellValue = this
 
-    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int = when {
+    override fun compareMeTo(other: CellValue): Int = when {
         this == other -> 0
-        other == NullCellValue -> if (nullsFirst) 1 else -1
         other is IntegerCellValue -> this.myValue.compareTo(other.myValue.toBigDecimal())
         other is NumericCellValue -> this.myValue.compareTo(other.myValue)
         else -> throw SQLException("Cannot compare $this and $other")

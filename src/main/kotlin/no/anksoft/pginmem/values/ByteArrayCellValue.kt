@@ -30,7 +30,7 @@ class ByteArrayCellValue(givenArr:ByteArray):CellValue {
         throw SQLException("Cannot read bytearray as numeric")
     }
 
-    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int {
+    override fun compareMeTo(other: CellValue): Int {
         throw SQLException("Cannot compare byte array")
     }
 

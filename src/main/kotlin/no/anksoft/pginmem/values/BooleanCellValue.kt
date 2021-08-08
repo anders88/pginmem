@@ -20,10 +20,9 @@ class BooleanCellValue(val myValue:Boolean):CellValue {
 
     override fun valueAsNumeric(): NumericCellValue = NumericCellValue(if (myValue) BigDecimal.ONE else BigDecimal.ZERO)
 
-    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int {
+    override fun compareMeTo(other: CellValue): Int {
         if (this == other) return 0
         return when {
-            (other is NullCellValue) -> if (nullsFirst) 1 else -1
             (other is BooleanCellValue) -> this.myValue.compareTo(other.myValue)
             else -> throw SQLException("Cannot compare $this to $other")
         }

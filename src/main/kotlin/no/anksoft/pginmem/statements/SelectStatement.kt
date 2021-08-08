@@ -41,7 +41,14 @@ class OrderPart(val column: ColumnInSelect?,val colindex:Int?,val ascending:Bool
         if (aVal == bVal) {
             return 0
         }
-        return if (this.ascending) aVal.compareMeTo(bVal,this.nullsFirst) else bVal.compareMeTo(aVal,this.nullsFirst)
+        if (aVal == NullCellValue || bVal == NullCellValue) {
+            return if (nullsFirst) {
+                if (aVal == NullCellValue) -1 else 1
+            } else {
+                if (aVal == NullCellValue) 1 else -1
+            }
+        }
+        return if (this.ascending) aVal.compareMeTo(bVal) else bVal.compareMeTo(aVal)
     }
 }
 

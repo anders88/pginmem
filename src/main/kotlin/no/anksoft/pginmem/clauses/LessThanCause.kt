@@ -16,7 +16,7 @@ class LessThanCause(
 
     override fun matchValues(left: CellValue, right: CellValue): Boolean {
         if (left == NullCellValue || right == NullCellValue) return false
-        return (left.compareMeTo(right,false) < 0)
+        return (left.compareMeTo(right) < 0)
     }
 
 

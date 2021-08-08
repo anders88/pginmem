@@ -194,7 +194,7 @@ class TablesSelectRowProvider constructor(
             if (aVal == bVal) {
                 continue
             }
-            return if (orderPart.ascending) aVal.compareMeTo(bVal,orderPart.nullsFirst) else bVal.compareMeTo(aVal,orderPart.nullsFirst)
+            return if (orderPart.ascending) aVal.compareMeTo(bVal) else bVal.compareMeTo(aVal)
         }
         return 0
     }

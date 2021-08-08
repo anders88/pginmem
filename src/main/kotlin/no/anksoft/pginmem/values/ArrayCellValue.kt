@@ -25,7 +25,7 @@ class ArrayCellValue(val myValues:List<CellValue>):CellValue {
         TODO("Not yet implemented")
     }
 
-    override fun compareMeTo(other: CellValue, nullsFirst: Boolean): Int {
+    override fun compareMeTo(other: CellValue): Int {
         TODO("Not yet implemented")
     }
 

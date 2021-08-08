@@ -8,7 +8,7 @@ interface CellValue {
     fun valueAsTimestamp():DateTimeCellValue
     fun valueAsNumeric():NumericCellValue
 
-    fun compareMeTo(other:CellValue,nullsFirst:Boolean):Int
+    fun compareMeTo(other: CellValue):Int
 
     fun add(cellValue: CellValue):CellValue
 }
