@@ -150,7 +150,6 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         sql.toLowerCase().startsWith("select t.table_name from information_schema.tables") -> return StatementToReturnFixed(emptyList(),sql)
         sql.toLowerCase().startsWith("select relname from pg_catalog.pg_class") -> return StatementToReturnFixed(relnames,sql)
         sql.toLowerCase().startsWith("select exists (") -> return StatementToReturnFixed(listOf(listOf(Pair("",true))),sql)
-        //sql.toLowerCase().startsWith("select count(*) from pg_namespace") -> return MockCountStatement(1)
         sql.toLowerCase().startsWith("select count(*) from pg_namespace") -> return StatementToReturnFixed(listOf(listOf(Pair("",1))),sql)
         sql.toLowerCase().startsWith("select set_config") -> return NoopStatement()
         sql.toLowerCase().startsWith("set role") -> return NoopStatement()
@@ -158,7 +157,6 @@ fun createPreparedStatement(sql:String,dbTransaction: DbTransaction):DbPreparedS
         sql.toLowerCase() == "select current_user" -> return SelectOneValueStatement("localdevuser")
         sql.toLowerCase() == "select version()" -> return SelectOneValueStatement("PostgreSQL 10.6 Pginmemver")
         sql.toLowerCase() == "show search_path" -> return SelectOneValueStatement("\"\$user\", public")
-        //sql.toLowerCase().startsWith("select *,(case when to_number(application::json->>'loanamount','99999999') = totpledged then 1 else 0 end) as fullypledged") -> return StatementToReturnFixed(emptyList(),sql)
 
 
         statementAnalyzer.word(0) == "create" && statementAnalyzer.word(1) == "table" -> return CreateTableStatement(statementAnalyzer,dbTransaction)
