@@ -41,7 +41,7 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             SERIAL -> if (value is IntegerCellValue) value else null
             JSON -> when {
                 (value is JsonCellValue) -> value
-                (value is StringCellValue) -> JsonCellValue(JsonParser.parseToObject(value.myValue))
+                (value is StringCellValue) -> JsonCellValue(JsonObject.parse(value.myValue))
                 else -> null
             }
             UNSPECIFIED -> throw SQLException("Cannot validate unspecified")
@@ -66,7 +66,7 @@ enum class ColumnType(private val altNames:Set<String> = emptySet()) {
             TEXT -> cellValue.valueAsText()
             INTEGER -> cellValue.valueAsInteger()
             BOOLEAN -> cellValue.valueAsBoolean()
-            JSON -> if (cellValue is StringCellValue) JsonCellValue(JsonParser.parseToObject(cellValue.myValue)) else throw SQLException("Cannot convert to Json")
+            JSON -> if (cellValue is StringCellValue) JsonCellValue(JsonObject.parse(cellValue.myValue)) else throw SQLException("Cannot convert to Json")
             else -> throw SQLException("Conversion not supported for ${this.name}")
         }
     }

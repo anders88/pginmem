@@ -140,7 +140,7 @@ private class ReadJsonProperty(val inputValue:ValueFromExpression,jsonPropertyTe
         val startVal:CellValue = inputValue.genereateValue(dbTransaction,row)
         val jsonObject: JsonObject? = when {
             startVal is JsonCellValue -> startVal.myvalue
-            startVal is StringCellValue -> JsonParser.parseToObject(startVal.myValue)
+            startVal is StringCellValue -> JsonObject.parse(startVal.myValue)
             startVal is NullCellValue -> null
             else -> throw SQLException("Expected string as json")
         }
@@ -222,7 +222,7 @@ private class ReadJsonObject(val inputValue:ValueFromExpression,jsonPropertyText
         val startVal:CellValue = inputValue.genereateValue(dbTransaction,row)
         val jsonObject:JsonObject? = when {
             startVal is JsonCellValue -> startVal.myvalue
-            startVal is StringCellValue -> JsonParser.parseToObject(startVal.myValue)
+            startVal is StringCellValue -> JsonObject.parse(startVal.myValue)
             startVal is NullCellValue -> null
             else -> throw SQLException("Expected string as json")
         }
