@@ -399,6 +399,57 @@ class AdvancedStatementsTest {
         }
     }
 
+    @Test
+    fun likeClause() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table texttable(id integer,content text)")
+            conn.prepareStatement("insert into texttable(id,content) values (?,?)").use {
+                it.setInt(1,1)
+                it.setString(2,"To match with where")
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select id from texttable where content like 'To match with where'").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+            conn.prepareStatement("select id from texttable where content like 'To match%'").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+            conn.prepareStatement("select id from texttable where content like '%match with%'").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                }
+            }
+            conn.prepareStatement("select id from texttable where content like 'match with%'").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isFalse()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun jsonBooleanWirhLike() {
+        connection.use { conn ->
+            conn.createStatement().execute("create table withjson(id integer,content text)")
+            conn.prepareStatement("insert into withjson(id,content) values (?,?)").use {
+                it.setInt(1,1)
+                it.setString(2,JsonObject().put("boolval",true).toJson())
+                it.executeUpdate()
+            }
+            conn.prepareStatement("select id from withjson where content::json ->> 'boolval' like 'true'").use { ps ->
+                ps.executeQuery().use {
+                    assertThat(it.next()).isTrue()
+                    assertThat(it.getInt("id")).isEqualTo(1)
+                }
+            }
+
+        }
+    }
+
 
 
 }

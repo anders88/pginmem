@@ -102,6 +102,7 @@ private fun readWhereClausePart(
         "<" -> LessThanCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "<=" -> LessThanOrEqualCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "<>" -> NotEqualCause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
+        "like" -> LikeClause(leftValueFromExpression, nextIndexToUse, statementAnalyzer, dbTransaction, tables)
         "is" -> when {
             statementAnalyzer.word(1) == "distinct" && statementAnalyzer.word(2) == "from" -> {
                 statementAnalyzer.addIndex(2)
